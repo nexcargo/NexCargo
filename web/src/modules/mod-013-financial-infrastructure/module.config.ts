@@ -1,6 +1,9 @@
 // NexCargo Module Template — MOD-013 Payments, Escrow & Financial Infrastructure
 // Generated per PROMPT 1 + PROMPT 3 architecture template
 // Domain: Financial Infrastructure | Constraint: ABSOLUTE No Custody
+// Dependencies reconciled against PROMPT 0 v1.1 Authoritative Module Dependency Relationship Table (lines 834–836)
+
+import type { TypedDependency, ReverseDependency } from '@/shared/types/enums';
 
 export const MODULE_CONFIG = {
   id: 'MOD-013',
@@ -8,8 +11,14 @@ export const MODULE_CONFIG = {
   domain: 'financial',
   version: '1.0.0',
   status: 'SCHEDULED' as const,
-  dependencies: ['MOD-002', 'MOD-003', 'MOD-006', 'MOD-010', 'MOD-012', 'MOD-015', 'MOD-016'],
-  usedBy: ['MOD-005'],
+  dependencies: [
+    { target: 'MOD-005', types: ['BC'], bidirectional: true },
+    { target: 'MOD-011', types: ['IS', 'AU'] },
+    { target: 'MOD-017', types: ['OB'] },
+  ] satisfies TypedDependency[],
+  usedBy: [
+    { moduleId: 'MOD-005', types: ['BC'], bidirectional: true },
+  ] satisfies ReverseDependency[],
   constraints: [
     'ABSOLUTE: NexCargo MUST NEVER hold customer funds',
     'External banks are ONLY execution authority',

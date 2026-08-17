@@ -180,3 +180,38 @@ export enum FinancialIntegrationStatus {
   FAILED = 'FAILED',
   REVERSED = 'REVERSED',
 }
+
+/**
+ * Dependency types defined by PROMPT 0 v1.1 — CLOSED AUTHORITATIVE TAXONOMY (lines 371–564).
+ * No new dependency types may be invented without human-approved architecture revision.
+ */
+export type DependencyType =
+  | 'SC'   // Specification Contract
+  | 'IC'   // Implementation Contract / Code Dependency
+  | 'DO'   // Data Ownership / Data Access
+  | 'ES'   // Event Subscription
+  | 'AU'   // API / Contract Usage Dependency
+  | 'IS'   // Infrastructure Service Dependency
+  | 'BC'   // Bidirectional Coordination
+  | 'OB';  // Observability / Monitoring
+
+/**
+ * A typed dependency as defined in PROMPT 0 v1.1 Authoritative Module Dependency Relationship Table.
+ * `types` is a closed taxonomy — see DependencyType.
+ * Multi-type relationships (e.g., IS/AU) are represented as an array of types.
+ */
+export interface TypedDependency {
+  target: string;
+  types: DependencyType[];
+  bidirectional?: boolean;
+}
+
+/**
+ * Reverse dependency — represents modules that depend on this module.
+ * Derived mechanically from the authoritative relationship model.
+ */
+export interface ReverseDependency {
+  moduleId: string;
+  types: DependencyType[];
+  bidirectional?: boolean;
+}

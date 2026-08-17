@@ -1,6 +1,9 @@
 // NexCargo Module Template — MOD-018 Marketplace Growth & Pricing
 // Generated per PROMPT 1 + PROMPT 3 architecture template
 // Domain: Commercial | Constraint: Does NOT set/enforce prices
+// Dependencies reconciled against PROMPT 0 v1.1 Authoritative Module Dependency Relationship Table (lines 848–851)
+
+import type { TypedDependency, ReverseDependency } from '@/shared/types/enums';
 
 export const MODULE_CONFIG = {
   id: 'MOD-018',
@@ -8,8 +11,16 @@ export const MODULE_CONFIG = {
   domain: 'commercial',
   version: '1.0.0',
   status: 'SCHEDULED' as const,
-  dependencies: ['MOD-001', 'MOD-003', 'MOD-006', 'MOD-009', 'MOD-012', 'MOD-014', 'MOD-017'],
-  usedBy: ['MOD-001', 'MOD-013', 'MOD-016'],
+  dependencies: [
+    { target: 'MOD-001', types: ['DO', 'ES'] },
+    { target: 'MOD-006', types: ['ES', 'DO'] },
+    { target: 'MOD-012', types: ['DO', 'AU'] },
+    { target: 'MOD-016', types: ['IS', 'ES'] },
+  ] satisfies TypedDependency[],
+  usedBy: [
+    { moduleId: 'MOD-001', types: ['DO', 'ES'] },
+    { moduleId: 'MOD-006', types: ['ES', 'DO'] },
+  ] satisfies ReverseDependency[],
   constraints: [
     'Does NOT set/enforce prices, execute financial incentives, modify escrow/payment logic',
     'All outputs are non-binding recommendations only',

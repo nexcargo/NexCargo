@@ -1,6 +1,9 @@
 // NexCargo Module Template — MOD-014 Asset & Logistics Operations Management
 // Generated per PROMPT 1 + PROMPT 3 architecture template
 // Domain: Logistics/Assets | Constraint: Read-only asset registry
+// Dependencies reconciled against PROMPT 0 v1.1 Authoritative Module Dependency Relationship Table (lines 837–840)
+
+import type { TypedDependency, ReverseDependency } from '@/shared/types/enums';
 
 export const MODULE_CONFIG = {
   id: 'MOD-014',
@@ -8,8 +11,15 @@ export const MODULE_CONFIG = {
   domain: 'logistics',
   version: '1.0.0',
   status: 'SCHEDULED' as const,
-  dependencies: ['MOD-001', 'MOD-002', 'MOD-003', 'MOD-006', 'MOD-009', 'MOD-010', 'MOD-012'],
-  usedBy: ['MOD-001', 'MOD-007'],
+  dependencies: [
+    { target: 'MOD-003', types: ['DO', 'AU'] },
+    { target: 'MOD-009', types: ['BC'], bidirectional: true },
+    { target: 'MOD-011', types: ['IS', 'AU'] },
+    { target: 'MOD-016', types: ['IS', 'ES'] },
+  ] satisfies TypedDependency[],
+  usedBy: [
+    { moduleId: 'MOD-009', types: ['BC'], bidirectional: true },
+  ] satisfies ReverseDependency[],
   constraints: [
     'Read-only asset registry',
     'Does NOT dispatch vehicles, assign shipments, manage fleets operationally',
