@@ -17,8 +17,8 @@ export const MODULE_CONFIG = {
     { target: 'MOD-011', types: ['IS', 'AU'] },
     { target: 'MOD-016', types: ['IS', 'ES'] },
   ] satisfies TypedDependency[],
+  // Mechanical reverse lookup of all modules that explicitly depend on MOD-003.
   usedBy: [
-    { moduleId: 'MOD-002', types: ['DO', 'ES'] },
     { moduleId: 'MOD-004', types: ['DO', 'AU'] },
     { moduleId: 'MOD-007', types: ['AU'] },
     { moduleId: 'MOD-008', types: ['DO', 'AU'] },

@@ -16,7 +16,7 @@ export const MODULE_CONFIG = {
   version: '1.0.0',
   status: 'SCHEDULED' as const, // SCHEDULED | IN_PROGRESS | COMPLETED | FROZEN
   dependencies: [
-    { target: 'MOD-002', types: ['BC'] },
+    { target: 'MOD-002', types: ['BC'], bidirectional: true },
     { target: 'MOD-011', types: ['IS', 'AU'] },
     { target: 'MOD-016', types: ['IS', 'ES'] },
     { target: 'MOD-018', types: ['DO', 'ES'] },

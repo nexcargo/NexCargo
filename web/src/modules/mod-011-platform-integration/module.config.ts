@@ -16,15 +16,16 @@ export const MODULE_CONFIG = {
   dependencies: [
     { target: 'All Modules', types: ['IS', 'ES', 'OB'] },
   ] satisfies TypedDependency[],
-  // Mechanical reverse lookup of all modules that depend on MOD-011 [IS/AU].
+  // Mechanical reverse lookup of all modules that explicitly depend on MOD-011 [IS/AU]
+  // per PROMPT 0 v1.1 Authoritative Module Dependency Relationship Table.
+  // Note: MOD-011.dependencies uses 'All Modules' as a special infrastructure declaration (Rule DS-009).
+  //       The reverse lookup enumerates only modules with explicit IS/AU → MOD-011 relationships.
   usedBy: [
     { moduleId: 'MOD-001', types: ['IS', 'AU'] },
     { moduleId: 'MOD-002', types: ['IS', 'AU'] },
     { moduleId: 'MOD-003', types: ['IS', 'AU'] },
     { moduleId: 'MOD-004', types: ['IS', 'AU'] },
     { moduleId: 'MOD-005', types: ['IS', 'AU'] },
-    { moduleId: 'MOD-006', types: ['IS', 'AU'] },
-    { moduleId: 'MOD-007', types: ['IS', 'AU'] },
     { moduleId: 'MOD-008', types: ['IS', 'AU'] },
     { moduleId: 'MOD-009', types: ['IS', 'AU'] },
     { moduleId: 'MOD-010', types: ['IS', 'AU'] },
@@ -33,8 +34,6 @@ export const MODULE_CONFIG = {
     { moduleId: 'MOD-014', types: ['IS', 'AU'] },
     { moduleId: 'MOD-015', types: ['IS', 'AU'] },
     { moduleId: 'MOD-016', types: ['IS', 'AU'] },
-    { moduleId: 'MOD-017', types: ['IS', 'AU'] },
-    { moduleId: 'MOD-018', types: ['IS', 'AU'] },
   ] satisfies ReverseDependency[],
   constraints: [
     'No ad-hoc integrations allowed',
