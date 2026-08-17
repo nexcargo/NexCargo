@@ -1,32 +1,54 @@
-MOD-014 — AI ERPS Asset \& Logistics Operations Management Module v1.0
+\# MOD-014 — AI ERPS Asset \& Logistics Operations Management
 
 
 
-Interpret all NexCargo specifications according to the AI Specification Interpretation Policy v1.0. (1-nexcargo-ai-specification-interpretation-policy.md)
+\*\*Module ID:\*\* MOD-014  
+
+\*\*Module Name:\*\* AI ERPS Asset \& Logistics Operations Management Module  
+
+\*\*Version:\*\* 1.1  
+
+\*\*Last Updated:\*\* 2026-08-07  
+
+\*\*System:\*\* NexCargo  
+
+\*\*Type:\*\* Domain Specification Module  
 
 
 
-1\. MODULE IDENTITY
+\---
 
 
 
-Module ID: MOD-014
-
-Module Name: AI ERPS Asset \& Logistics Operations Management Module
-
-Version: 1.0
-
-System: NexCargo
-
-Type: Domain Specification Module
+\## 1. Module Identity
 
 
 
-2\. PURPOSE
+| Attribute | Value |
+
+|-----------|-------|
+
+| Module ID | MOD-014 |
+
+| Module Name | AI ERPS Asset \& Logistics Operations Management Module |
+
+| Version | 1.1 |
+
+| System | NexCargo |
+
+| Type | Domain Specification Module |
 
 
 
-This module defines the physical asset representation layer of NexCargo.
+\---
+
+
+
+\## 2. Purpose
+
+
+
+This module defines the \*\*transporter asset representation layer\*\* of NexCargo.
 
 
 
@@ -34,169 +56,131 @@ It governs how:
 
 
 
-\- vehicles, drivers, and logistics assets are structured and registered within the system
+\- fleets, vehicles, and drivers are \*\*registered\*\* by transporters for marketplace participation
 
-\- fleet hierarchy and grouping are represented
+\- capacity and availability data is \*\*structured\*\* for matching (MOD-001)
 
-\- vehicle health and maintenance status are tracked
+\- compliance status (licences, insurance, permits) is \*\*declared and validated\*\*
 
-\- driver profiles and qualifications are managed
+\- cross-border documentation is \*\*declared\*\* for corridor-based matching
 
-\- asset availability and capacity are structured for marketplace matching
 
-\- cross-border fleet compliance is tracked across SADC corridors
 
+\*\*Critical constraint:\*\* NexCargo does \*\*NOT\*\* own, operate, dispatch, or manage fleets. All operational decisions (maintenance, driver assignment, vehicle utilisation) remain the \*\*sole responsibility\*\* of the transporter.
 
 
-Critical constraint:
 
+This module only \*\*structures and stores\*\* the data that transporters provide for marketplace participation.
 
 
-This module is a read-only asset registry. It does NOT:
 
+\---
 
 
-\- dispatch vehicles
 
-\- assign shipments to drivers
+\## 3. Domain Scope
 
-\- manage fleets operationally
 
-\- perform routing or optimisation
 
-\- execute operational logistics decisions
+MOD-014 governs the \*\*representation\*\* of transporter assets:
 
 
 
-This module defines the canonical model of physical logistics assets used by operational modules (MOD-001, MOD-002, MOD-003) for matching and visibility purposes only.
+\### 3.1 Fleet Structure Representation
 
+\- fleet registration and grouping
 
+\- ownership linking to transporter accounts
 
-3\. DOMAIN SCOPE
 
 
+\### 3.2 Vehicle Asset Registry
 
-MOD-014 governs:
+\- vehicle identity and capacity attributes
 
+\- registration and compliance declaration
 
+\- availability declaration
 
-3.1 Asset Registry
 
 
+\### 3.3 Driver Entity Representation
 
-\- fleet ownership representation and grouping
+\- driver identity and licence declaration
 
-\- vehicle identity structure and types
+\- assignment eligibility declaration
 
-\- driver identity model and qualifications
 
-\- asset registration as single source of truth
 
+\### 3.4 Asset Availability Declaration
 
+\- availability states declared by transporter
 
-3.2 Asset Structure
+\- capacity exposure for marketplace matching
 
 
 
-\- vehicle types (heavy trucks, light delivery, trailers, refrigerated, specialised)
+\### 3.5 Cross-Border Compliance Declaration
 
-\- capacity attributes (weight, volume, type)
+\- declaration of permits and insurance
 
-\- driver licensing and certification metadata
+\- support for temporary permits obtainable at border
 
 
 
-3.3 Asset State Representation
+\### 3.6 Assignment Tracking
 
+\- linkage between assets and shipment assignments (MOD-003)
 
+\- historical assignment record
 
-\- availability states (available / assigned / inactive / maintenance / suspended)
 
-\- structural scheduling constraints (not operational)
 
-\- capacity exposure rules for marketplace matching
+\---
 
 
 
-3.4 Maintenance Tracking
+\## 4. Core Domain Entities
 
 
 
-\- maintenance schedules and vehicle health status
+These are asset representations only.
 
-\- configurable maintenance intervals
 
-\- immutable maintenance logs
 
+\### 4.1 Fleet Object
 
 
-3.5 Fleet Performance Scoring (Advisory)
 
+Represents a logistics fleet owned by a transporter.
 
 
-\- on-time delivery rate, fuel efficiency, load acceptance rate, incident frequency
 
-\- score influences AI matching (MOD-006) — advisory only
+| Attribute | Type | Description |
 
-\- periodic recalculation
+|-----------|------|-------------|
 
+| fleetId | string | Unique identifier |
 
+| ownerId | string | Transporter account ID |
 
-3.6 Cross-Border Compliance Tracking
+| fleetName | string | Display name |
 
+| region | string | Primary operating region |
 
+| assetCount | number | Number of assets in fleet |
 
-\- country-specific regulatory requirements (MOD-009)
+| operationalStatus | enum | ACTIVE / INACTIVE / SUSPENDED |
 
-\- insurance and permit validity per corridor
+| complianceStatus | string | Linked to MOD-010 / ESS-006 |
 
-\- compliance-based assignment restrictions
+| createdAt | datetime | Creation timestamp |
 
+| updatedAt | datetime | Last update timestamp |
 
 
-4\. CORE DOMAIN ENTITIES
 
-
-
-These are asset registry representations only.
-
-
-
-4.1 Fleet Object
-
-
-
-Represents a logistics fleet owned by an operator.
-
-
-
-Required attributes:
-
-
-
-\- fleetId
-
-\- ownerId – transporter ID
-
-\- fleetName
-
-\- region – primary operating region
-
-\- assetCount
-
-\- operationalStatus – ACTIVE / INACTIVE / SUSPENDED
-
-\- complianceStatus – linked to MOD-010 / ESS-006
-
-\- createdAt
-
-\- updatedAt
-
-
-
-Business rules:
-
-
+\*\*Business rules:\*\*
 
 \- Fleets must be linked to verified transporter accounts (MOD-010).
 
@@ -204,7 +188,7 @@ Business rules:
 
 
 
-4.2 Vehicle Asset Object
+\### 4.2 Vehicle Asset Object
 
 
 
@@ -212,55 +196,55 @@ Represents a physical logistics vehicle.
 
 
 
-Attributes:
+| Attribute | Type | Description |
+
+|-----------|------|-------------|
+
+| vehicleId | string | Unique identifier |
+
+| fleetId | string | Fleet reference |
+
+| vehicleType | enum | HEAVY\_TRUCK / LIGHT\_DELIVERY / TRAILER / REFRIGERATED / SPECIALISED |
+
+| registrationNumber | string | Vehicle registration |
+
+| capacityWeight | number | Weight capacity in kg |
+
+| capacityVolume | number | Volume capacity in cubic metres |
+
+| registrationStatus | enum | REGISTERED / PENDING / EXPIRED |
+
+| availabilityState | enum | AVAILABLE / ASSIGNED / INACTIVE / SUSPENDED |
+
+| complianceStatus | string | Linked to MOD-010 / ESS-006 |
+
+| insuranceValidity | datetime | Optional insurance expiry date |
+
+| licenceJurisdiction | string | Licensing jurisdiction (e.g., "Mozambique") |
+
+| licenceValidityNationwide | boolean | Whether licence is valid nationwide (always true for Mozambique) |
+
+| crossBorderPermitStatus | enum | NONE / TEMPORARY\_OBTAINABLE / PRE\_EXISTING |
+
+| insuranceStatus | JSON | Structured insurance status |
+
+| createdAt | datetime | Creation timestamp |
+
+| updatedAt | datetime | Last update timestamp |
 
 
 
-\- vehicleId
-
-\- fleetId
-
-\- vehicleType – HEAVY\_TRUCK / LIGHT\_DELIVERY / TRAILER / REFRIGERATED / SPECIALISED
-
-\- registrationNumber
-
-\- capacityWeight – in kg
-
-\- capacityVolume – in cubic metres
-
-\- registrationStatus – REGISTERED / PENDING / EXPIRED
-
-\- maintenanceStatus – OPERATIONAL / MAINTENANCE\_DUE / UNDER\_MAINTENANCE / OUT\_OF\_SERVICE
-
-\- availabilityState – AVAILABLE / ASSIGNED / INACTIVE / MAINTENANCE / SUSPENDED
-
-\- lastMaintenanceDate
-
-\- nextMaintenanceDate – optional
-
-\- currentOdometer – optional
-
-\- complianceStatus – linked to MOD-010 / ESS-006
-
-\- insuranceValidity – optional
-
-
-
-Business rules:
-
-
+\*\*Business rules:\*\*
 
 \- Each asset must be uniquely registered.
 
-\- Asset status must be one of: ACTIVE / INACTIVE / ASSIGNED / MAINTENANCE / SUSPENDED.
+\- Asset statuses are declared by the transporter.
 
-\- Vehicles under maintenance cannot be assigned.
-
-\- Maintenance logs are immutable.
+\- In Mozambique, licences are valid nationwide.
 
 
 
-4.3 Driver Object
+\### 4.3 Driver Object
 
 
 
@@ -268,357 +252,231 @@ Represents a logistics operator (human resource).
 
 
 
-Attributes:
+| Attribute | Type | Description |
 
+|-----------|------|-------------|
 
+| driverId | string | Unique identifier |
 
-\- driverId
+| fleetId | string | Fleet reference |
 
-\- fleetId
+| firstName | string | Driver's first name |
 
-\- firstName
+| lastName | string | Driver's last name |
 
-\- lastName
+| licenseType | string | Type of licence held |
 
-\- licenseType
+| licenseNumber | string | Licence number |
 
-\- licenseNumber
+| licenseExpiryDate | datetime | Licence expiry date |
 
-\- licenseExpiryDate
+| certificationStatus | enum | VERIFIED / PENDING / EXPIRED / SUSPENDED |
 
-\- certificationStatus – VERIFIED / PENDING / EXPIRED / SUSPENDED
+| availabilityState | enum | AVAILABLE / ASSIGNED / OFF\_DUTY / UNAVAILABLE |
 
-\- availabilityState – AVAILABLE / ASSIGNED / OFF\_DUTY / UNAVAILABLE
+| complianceStatus | string | Linked to MOD-010 / ESS-006 |
 
-\- assignedVehicleId – optional
+| contactNumber | string | Driver's contact number |
 
-\- complianceStatus – linked to MOD-010 / ESS-006
+| createdAt | datetime | Creation timestamp |
 
-\- performanceScore – optional (from MOD-006)
+| updatedAt | datetime | Last update timestamp |
 
-\- contactNumber
 
-\- createdAt
 
-\- updatedAt
+\*\*Business rules:\*\*
 
+\- Drivers must be linked to a verified fleet.
 
+\- Driver eligibility depends on licence and compliance status.
 
-Business rules:
 
 
+\### 4.4 Asset Assignment Object
 
-\- Drivers must be KYC-verified (MOD-010).
 
-\- Drivers must be assigned to at least one fleet.
 
-\- Driving eligibility depends on license and compliance status.
+Represents linkage between assets and shipment assignments.
 
 
 
-4.4 Asset Assignment Object
+| Attribute | Type | Description |
 
+|-----------|------|-------------|
 
+| assignmentId | string | Unique identifier |
 
-Represents advisory linkage between assets and operational tasks. This is a recommendation record, not an execution command.
+| vehicleId | string | Vehicle reference |
 
+| driverId | string | Driver reference |
 
+| shipmentId | string | MOD-003 reference |
 
-Attributes:
+| assignmentStatus | enum | PLANNED / ACTIVE / COMPLETED / CANCELLED |
 
+| startTime | datetime | Scheduled start time |
 
+| endTime | datetime | Scheduled end time |
 
-\- assignmentId
+| actualStartTime | datetime | Optional actual start time |
 
-\- vehicleId
+| actualEndTime | datetime | Optional actual end time |
 
-\- driverId
+| assignedBy | string | Transporter or system reference |
 
-\- shipmentId – MOD-003 reference
 
-\- assignmentStatus – PROPOSED / RECOMMENDED / MATCHED / EXECUTED\_BY\_MOD003 / CANCELLED
 
-\- startTime – proposed
+\*\*Business rules:\*\*
 
-\- endTime – proposed
+\- Drivers and vehicles are linked to shipments.
 
-\- actualStartTime – optional
+\- No double-booking of vehicles or drivers is permitted.
 
-\- actualEndTime – optional
 
-\- recommendedBy – system or AI reference
 
+\### 4.5 CrossBorder Compliance Record
 
 
-Business rules:
 
+Represents declared compliance for cross-border corridors.
 
 
-\- This is an advisory assignment record.
 
-\- Actual assignment execution is performed by MOD-002 / MOD-003.
+| Attribute | Type | Description |
 
-\- No implicit pairing is allowed.
+|-----------|------|-------------|
 
-\- No operational execution occurs in this module.
+| complianceId | string | Unique identifier |
 
+| vehicleId | string | Vehicle reference |
 
+| corridorId | string | MOD-009 reference |
 
-4.5 Maintenance Record
+| countryCode | string | Country code |
 
+| permitType | enum | INSURANCE / TRANSPORT\_PERMIT / CUSTOMS\_BOND / OPERATING\_LICENSE |
 
+| permitNumber | string | Permit identifier |
 
-Represents vehicle maintenance tracking.
+| issueDate | datetime | Issue date |
 
+| expiryDate | datetime | Expiry date |
 
+| status | enum | VALID / EXPIRING / EXPIRED / PENDING\_RENEWAL |
 
-Attributes:
+| temporaryPermit | boolean | Whether permit is temporary (obtained for specific shipment) |
 
 
 
-\- maintenanceId
-
-\- vehicleId
-
-\- maintenanceType – SCHEDULED / UNSCHEDULED / EMERGENCY
-
-\- scheduledDate
-
-\- completedDate – optional
-
-\- maintenanceDescription
-
-\- cost – optional
-
-\- status – SCHEDULED / IN\_PROGRESS / COMPLETED / CANCELLED
-
-\- serviceProvider – optional
-
-\- mileageAtMaintenance – optional
-
-\- createdAt
-
-\- updatedAt
-
-
-
-Business rules:
-
-
-
-\- Maintenance intervals must be configurable.
-
-\- Vehicles under maintenance cannot be assigned.
-
-\- Maintenance logs are immutable.
-
-
-
-4.6 Fleet Performance Score Object
-
-
-
-Represents fleet performance scoring structure (advisory only).
-
-
-
-Attributes:
-
-
-
-\- performanceId
-
-\- fleetId
-
-\- timePeriod – WEEKLY / MONTHLY / QUARTERLY
-
-\- onTimeDeliveryRate – percentage
-
-\- fuelEfficiency – litres per 100 km
-
-\- loadAcceptanceRate – percentage
-
-\- incidentFrequency – incidents per 100 trips
-
-\- averageTurnaroundTime – hours
-
-\- overallScore – 0–100
-
-\- calculatedAt
-
-\- validUntil
-
-
-
-Business rules:
-
-
-
-\- Scores influence AI matching (MOD-006) — advisory only.
-
-\- Scores are recalculated periodically.
-
-\- Scores are based on operational history from MOD-003 and MOD-012.
-
-
-
-4.7 CrossBorder Compliance Record
-
-
-
-Represents fleet compliance across SADC corridors.
-
-
-
-Attributes:
-
-
-
-\- complianceId
-
-\- vehicleId
-
-\- corridorId – MOD-009 reference
-
-\- countryCode
-
-\- permitType – INSURANCE / TRANSPORT\_PERMIT / CUSTOMS\_BOND / OPERATING\_LICENSE
-
-\- permitNumber
-
-\- issueDate
-
-\- expiryDate
-
-\- status – VALID / EXPIRING / EXPIRED / PENDING\_RENEWAL
-
-
-
-Business rules:
-
-
+\*\*Business rules:\*\*
 
 \- Vehicles must meet country-specific regulatory requirements (MOD-009).
 
-\- Insurance and permits must be valid per corridor.
-
-\- Non-compliant vehicles are restricted from cross-border assignments.
+\- Temporary permits may be obtained at the border for specific shipments.
 
 
 
-4.8 Backhaul Opportunity Object
+\### 4.6 BackhaulOpportunity Object
 
 
 
-Represents empty backhaul optimisation structure (advisory only).
+Represents empty backhaul optimisation structure.
 
 
 
-Attributes:
+| Attribute | Type | Description |
+
+|-----------|------|-------------|
+
+| backhaulId | string | Unique identifier |
+
+| shipmentId | string | Primary shipment reference |
+
+| vehicleId | string | Vehicle reference |
+
+| currentLocation | string | Current location |
+
+| destination | string | Destination |
+
+| returnRoute | string | Return route description |
+
+| suggestedLoadId | string | Optional AI-suggested load (MOD-006) |
+
+| estimatedCostRecovery | number | Estimated cost recovery |
+
+| status | enum | IDENTIFIED / MATCHED / DECLINED / BOOKED |
 
 
 
-\- backhaulId
+\*\*Business rules:\*\*
 
-\- shipmentId – primary shipment
+\- AI suggests return loads based on route matching (MOD-006).
 
-\- vehicleId
-
-\- currentLocation
-
-\- destination
-
-\- returnRoute
-
-\- suggestedLoadId – optional (from MOD-006 AI)
-
-\- estimatedCostRecovery
-
-\- status – IDENTIFIED / RECOMMENDED / MATCHED / DECLINED / BOOKED\_BY\_MOD001
+\- Integrated with Marketplace (MOD-001).
 
 
 
-Business rules:
+\---
 
 
 
-\- AI suggests return loads based on route matching (MOD-006) — advisory only.
-
-\- Prioritises cost recovery for empty trips.
-
-\- Actual booking is executed by MOD-001.
+\## 5. Asset Model
 
 
 
-5\. ASSET MODEL
+\### 5.1 Capacity Representation
 
 
 
-5.1 Capacity Representation Model
+All logistics capacity is represented through:
 
-
-
-All logistics capacity MUST be represented through:
-
-
-
-\- vehicle attributes
-
-\- fleet aggregation logic
+\- vehicle attributes (weight, volume)
 
 \- availability state model
 
 
 
-No inferred capacity calculations are allowed here.
+\### 5.2 Asset State Model
 
 
 
-5.2 Asset State Model
+Each asset maintains a declared state:
 
 
 
-Each asset MUST maintain deterministic state:
+| State | Description |
+
+|-------|-------------|
+
+| AVAILABLE | Declared available for matching |
+
+| ASSIGNED | Linked to a shipment assignment |
+
+| INACTIVE | Not currently operational |
+
+| SUSPENDED | Compliance-related suspension |
 
 
 
-\- ACTIVE – available for matching
-
-\- INACTIVE – not currently operational
-
-\- ASSIGNED – currently assigned to a shipment (reflected from MOD-003)
-
-\- MAINTENANCE – under maintenance
-
-\- SUSPENDED – compliance-related suspension
+State transitions are event-driven.
 
 
 
-State transitions MUST be event-driven.
+\### 5.3 Asset Lifecycle
 
-
-
-5.3 Asset Lifecycle Model
-
-
-
-ASSET REGISTERED (vehicle/driver created)
+ASSET REGISTERED (fleet/vehicle/driver created by transporter)
 
 ↓
 
-AVAILABLE (ready for marketplace matching)
+AVAILABLE (declared for marketplace matching)
 
 ↓
 
-RECOMMENDED (AI suggests asset for shipment — MOD-006)
+ASSIGNED TO SHIPMENT (linked to MOD-003)
 
 ↓
 
-MATCHED (MOD-001 suggests match — advisory)
-
-↓
-
-ASSIGNED (MOD-002/003 executes assignment)
+IN TRANSIT (tracking active via MOD-003)
 
 ↓
 
@@ -626,7 +484,7 @@ COMPLETED (shipment delivered)
 
 ↓
 
-MAINTENANCE / IDLE (return to available state)
+AVAILABLE (return to available state)
 
 
 
@@ -634,93 +492,61 @@ text
 
 
 
-6\. RESPONSIBILITIES
+\---
 
 
 
-MOD-014 is responsible for:
+\## 6. Responsibilities
 
 
 
-6.1 Asset Representation
+MOD-014 is responsible for \*\*receiving and storing\*\* data from transporters:
 
 
 
-\- defining vehicle and driver structures
+\- asset registration and schema enforcement
 
-\- ensuring consistency of physical asset modelling
+\- compliance metadata storage (MOD-010/ESS-006 alignment)
 
-\- maintaining asset registry as single source of truth
-
-
-
-6.2 Availability Representation
+\- availability state management for matching
 
 
 
-\- defining asset availability states
+\*\*MOD-014 does NOT:\*\*
 
-\- ensuring correct representation of operational readiness
+\- dispatch vehicles
 
-\- supporting capacity visibility for marketplace matching
+\- schedule maintenance
 
+\- optimise fleet utilisation
 
+\- assign drivers to trips
 
-6.3 Maintenance Tracking
+\- track vehicle health
 
+\- calculate fuel efficiency
 
+\- manage fleet operations
 
-\- defining maintenance tracking structures
-
-\- ensuring maintenance status impacts availability
-
-\- maintaining immutable maintenance logs
-
-
-
-6.4 Compliance Attribute Structuring
+\- operate any physical asset
 
 
 
-\- linking asset compliance metadata to MOD-010 / ESS-006
-
-\- tracking cross-border compliance requirements
+\---
 
 
 
-6.5 Performance Structuring (Advisory)
-
-\- defining fleet performance scoring structures
-
-\- enabling AI matching influence (MOD-006 — advisory)
+\## 7. Rules of Operation
 
 
 
-6.6 Backhaul Structuring (Advisory)
-
-
-
-\- defining backhaul optimisation structures
-
-\- enabling AI-driven load suggestions (MOD-006 — advisory)
-
-
-
-7\. RULES OF OPERATION
-
-
-
-7.1 No Dispatch Rule (CRITICAL)
+\### 7.1 No Dispatch Rule (CRITICAL)
 
 
 
 MOD-014 MUST NOT:
 
-
-
 \- assign shipments to drivers
-
-\- dispatch vehicles
 
 \- optimise routing
 
@@ -730,95 +556,39 @@ MOD-014 MUST NOT:
 
 
 
-That belongs to: MOD-002 + MOD-003.
+\### 7.2 Asset Truth Rule
 
 
 
-7.2 No Fleet Management Rule (CRITICAL)
-
-
-
-MOD-014 does NOT manage fleets operationally. It is a read-only asset registry used for marketplace matching and visibility.
-
-
-
-7.3 Asset Truth Rule
-
-
-
-MOD-014 is the SINGLE source of truth for asset structure.
-
-
+MOD-014 is the \*\*single source of truth\*\* for declared asset structure.
 
 No other module may redefine asset schema.
 
 
 
-Each asset must be uniquely registered.
-
-
-
-7.4 State Integrity Rule
+\### 7.3 State Integrity Rule
 
 
 
 Asset states MUST be event-driven.
 
-
-
-Manual state overrides are prohibited.
-
-
-
-All transitions MUST be auditable.
+No double-booking of vehicles or drivers is permitted.
 
 
 
-7.5 Separation of Concerns Rule
+\### 7.4 Separation of Concerns Rule
 
 
 
-\- Vehicles ≠ shipments (MOD-003 owns shipments)
+\- Vehicles ≠ shipments
 
-\- Drivers ≠ dispatch logic (MOD-002 owns assignment execution)
+\- Drivers ≠ dispatch logic
 
-\- Fleets ≠ pricing logic (MOD-018 owns pricing)
-
-
-
-Each belongs to separate modules.
+\- Fleets ≠ pricing logic
 
 
 
-7.6 Availability Neutrality Rule
-
-
-
-Availability is structural, not predictive.
-
-
-
-No forecasting is allowed in this module.
-
-
-
-Capacity planning is structural only.
-
-
-
-7.7 Maintenance Rule
-
-
-
-\- Maintenance intervals must be configurable.
-
-\- Vehicles under maintenance cannot be assigned.
-
-\- Maintenance logs are immutable.
-
-
-
-7.8 Compliance Rule
+\### 7.5 Compliance Rule
 
 
 
@@ -826,167 +596,27 @@ Capacity planning is structural only.
 
 \- Non-compliant vehicles are restricted from cross-border assignments.
 
-\- Compliance status is visible per asset.
+\- Temporary permits may be obtained at the border for specific shipments.
 
 
 
-8\. EVENT MODEL (SPECIFICATION ONLY)
+\### 7.6 Licensing Scope Rule
 
 
 
-Declared asset events:
+\- A transport licence issued in Mozambique is valid nationwide.
 
+\- No vehicle may be blocked from a domestic shipment based on "operating region".
 
 
-\- FleetRegistered
 
-\- FleetUpdated
-
-\- FleetSuspended
-
-\- VehicleAddedToFleet
-
-\- VehicleUpdated
-
-\- VehicleMaintenanceScheduled
-
-\- VehicleMaintenanceCompleted
-
-\- VehicleDeactivated
-
-\- DriverRegistered
-
-\- DriverUpdated
-
-\- DriverSuspended
-
-\- AssetAssigned (reflected from MOD-003)
-
-\- AssetReleased (reflected from MOD-003)
-
-\- AssetMaintenanceScheduled
-
-\- AssetDeactivated
-
-\- ComplianceStatusUpdated
-
-\- CrossBorderComplianceValidated
-
-\- CrossBorderComplianceExpired
-
-\- FleetPerformanceScoreCalculated
-
-\- BackhaulOpportunityIdentified
-
-\- BackhaulOpportunityMatched
-
-
-
-Consumed by:
-
-
-
-\- MOD-001 → marketplace capacity visibility
-
-\- MOD-002 → contract-to-asset matching
-
-\- MOD-003 → tracking association
-
-\- MOD-005 → operational settlement validation
-
-\- MOD-006 → anomaly detection and optimisation recommendations
-
-\- MOD-010 → compliance enforcement
-
-\- MOD-012 → fleet analytics and performance reporting
-
-\- MOD-017 → observability
-
-
-
-9\. INTEGRATION BOUNDARIES
-
-
-
-MOD-014 interacts conceptually with:
-
-
-
-\- MOD-001 → marketplace visibility of transport capacity
-
-\- MOD-002 → contract-to-asset matching
-
-\- MOD-003 → shipment execution tracking (asset linked to shipment)
-
-\- MOD-005 → financial settlement dependency validation
-
-\- MOD-006 → AI optimisation, backhaul suggestions, performance scoring
-
-\- MOD-009 → cross-border compliance and corridor context
-
-\- MOD-010 → compliance and governance rules
-
-\- MOD-011 → external asset systems (future integrations)
-
-\- MOD-012 → fleet analytics and performance reporting
-
-
-
-MOD-014 does NOT:
-
-
-
-\- dispatch vehicles
-
-\- assign loads
-
-\- calculate optimisation routes
-
-\- execute operational logistics decisions
-
-\- manage fleets operationally
-
-
-
-10\. ESS DEPENDENCY REFERENCES (CANONICAL)
-
-
-
-MOD-014 is constrained by:
-
-
-
-\- ESS-006 → Compliance \& Audit Specification (primary compliance authority)
-
-\- ESS-004 → Integration Contracts Specification
-
-\- ESS-007 → Coding Standards Specification
-
-\- ESS-009 → Data Governance Specification
-
-\- ESS-003 → AI Behaviour Constraints (no operational inference)
-
-\- ESS-001C → retry and reliability constraints
-
-\- ESS-001E → error standardisation rules
-
-
-
-11\. ARCHITECTURE BOUNDARY RULE
+\### 7.7 Neutrality Rule
 
 
 
 MOD-014 MUST NOT:
 
-
-
-\- dispatch vehicles
-
-\- assign shipments to drivers
-
-\- manage fleets operationally
-
-\- optimise fleet utilisation
+\- perform dispatch decisions
 
 \- simulate operational planning
 
@@ -996,59 +626,193 @@ MOD-014 MUST NOT:
 
 
 
-MOD-014 IS:
+\---
 
 
 
-a read-only asset registry of logistics assets (vehicles, drivers) that defines the physical capacity layer of NexCargo for marketplace matching and visibility — without operational decision-making authority.
+\## 8. Event Model (Specification Only)
 
 
 
-12\. OUTPUT EXPECTATION FOR AI BUILDER
+Declared asset events:
 
 
 
-When generating implementation from MOD-014, the AI App Builder MUST:
+| Event | Trigger |
+
+|-------|---------|
+
+| `FleetRegistered` | New fleet registered |
+
+| `VehicleAddedToFleet` | New vehicle registered |
+
+| `DriverRegistered` | New driver registered |
+
+| `AssetAssigned` | Asset linked to shipment |
+
+| `AssetReleased` | Asset released from shipment |
+
+| `ComplianceStatusUpdated` | Compliance status changed |
+
+| `CrossBorderComplianceValidated` | Cross-border compliance validated |
+
+| `TemporaryPermitAcquired` | Temporary permit declared |
+
+| `BackhaulOpportunityIdentified` | Backhaul opportunity found |
 
 
 
-\- implement asset schema strictly (single source of truth)
+\*\*Consumed by:\*\*
 
-\- enforce state-driven asset lifecycle rules (event-driven transitions)
+\- MOD-001 → marketplace capacity visibility
 
-\- ensure event-driven assignment tracking (no double-booking)
+\- MOD-002 → assignment validation
 
-\- integrate compliance metadata from MOD-010 and ESS-006
+\- MOD-003 → tracking association
 
-\- link assets to shipment execution via MOD-003 only
+\- MOD-006 → anomaly detection
 
-\- implement maintenance tracking system with configurable intervals and immutable logs
+\- MOD-010 → compliance enforcement
 
-\- implement fleet performance scoring structure (advisory only)
+\- MOD-012 → fleet analytics
 
-\- implement cross-border fleet compliance tracking
 
-\- implement backhaul optimisation structure (AI-driven suggestions — advisory only)
 
-\- include edge-case handling (maintenance override, compliance expiry, double-booking prevention, asset suspension)
+\---
 
-\- ensure all assignments are auditable and traceable
 
-\- ensure vehicles under maintenance cannot be assigned
 
-\- never implement dispatch or fleet management logic
+\## 9. Integration Boundaries
+
+
+
+| Module | Interaction |
+
+|--------|-------------|
+
+| MOD-001 | Marketplace listing of transport capacity |
+
+| MOD-002 | Contract-to-asset matching |
+
+| MOD-003 | Shipment execution tracking |
+
+| MOD-005 | Settlement dependency validation |
+
+| MOD-006 | AI recommendations |
+
+| MOD-009 | Cross-border compliance |
+
+| MOD-010 | Compliance and governance |
+
+| MOD-012 | Fleet analytics |
+
+| INT-005 | Fleet Telematics \& GPS integration |
+
+
+
+MOD-014 does \*\*NOT\*\*:
+
+\- dispatch vehicles
+
+\- assign loads
+
+\- execute operational logistics decisions
+
+
+
+\---
+
+
+
+\## 10. ESS Dependency References
+
+
+
+| ESS | Application |
+
+|-----|-------------|
+
+| ESS-006 | Compliance \& Audit (primary compliance authority) |
+
+| ESS-004 | Integration Contracts |
+
+| ESS-003 | AI Behaviour Constraints |
+
+| ESS-009 | Data Governance |
+
+
+
+\---
+
+
+
+\## 11. Architecture Boundary Rule
+
+
+
+MOD-014 \*\*MUST NOT\*\*:
+
+\- perform dispatch decisions
+
+\- simulate operational planning
+
+\- override shipment assignment logic
+
+\- modify tracking states directly (MOD-003 authority)
+
+
+
+MOD-014 \*\*IS\*\*:
+
+\- a deterministic structural registry of transporter assets (fleets, vehicles, drivers)
+
+\- a framework for compliance declaration and backhaul optimisation
+
+
+
+\---
+
+
+
+\## 12. Output Expectation for AI Builder
+
+
+
+When generating implementation from MOD-014, the AI App Builder \*\*MUST\*\*:
+
+
+
+\- implement fleet/vehicle/driver schema strictly (single source of truth)
+
+\- enforce event-driven asset state transitions
+
+\- integrate compliance metadata from MOD-010
+
+\- link assets to shipment execution via MOD-003
+
+\- implement cross-border compliance declaration with temporary permit support
+
+\- implement nationwide licensing rule for Mozambique
+
+\- ensure vehicles are not blocked based on "operating region" alone
+
+\- prevent double-booking
+
+\- ensure all assignments are auditable
 
 
 
 If incomplete:
 
-
-
-Output: TODO: requires specification from MOD-014
+\- \*\*Output:\*\* `TODO: requires specification from MOD-014`
 
 
 
-13\. DESIGN PRINCIPLE
+\---
+
+
+
+\## 13. Design Principle
 
 
 
@@ -1056,9 +820,11 @@ MOD-014 ensures:
 
 
 
-NexCargo maintains a clean, deterministic representation of real-world logistics assets without mixing structural asset data with operational decision logic.
+\- NexCargo maintains a clean, deterministic representation of transporter assets
 
+\- asset data is structured, compliant, and integrated into marketplace matching
 
+\- Mozambique's nationwide licensing framework is correctly represented
 
-Assets are structured, compliant, and fully integrated into marketplace, AI, and financial systems — but never managed or dispatched by this module.
+\- cross-border compliance is declared and validated
 

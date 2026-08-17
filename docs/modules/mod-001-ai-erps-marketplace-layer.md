@@ -478,11 +478,455 @@ The quote is visible to the shipper alongside the listing.
 
 
 
-6\. MARKETPLACE RULES (DESIGN CONSTRAINTS)
+
+
+6\. Matching Engine
 
 
 
-6.1 Matching Principle
+6.1 Purpose
+
+
+
+The matching engine is a \*\*user-initiated, advisory-only\*\* system that identifies and ranks compatible transporters for a given shipment listing. It provides recommendations but \*\*never executes\*\* the final selection.
+
+
+
+The engine operates within the \*\*SADC logistics context\*\*, respecting Mozambique's nationwide licensing framework and the region's cross-border permit flexibility.
+
+
+
+6.2 Matching Engine Objectives
+
+
+
+| Objective | Description |
+
+|-----------|-------------|
+
+| \*\*Return all compatible transporters\*\* | Every transporter passing hard filters is returned, sorted by score |
+
+| \*\*Highlight Top 5\*\* | The highest-scoring 5 transporters are marked as "Recommended" |
+
+| \*\*Never auto-select\*\* | The final choice always belongs to the shipper |
+
+| \*\*User override always allowed\*\* | Users may select any transporter regardless of rank |
+
+| \*\*Price-balanced ranking\*\* | Price is one factor among many — not the dominant one |
+
+
+
+6\.3 Trigger Model
+
+
+
+Matching is \*\*user-initiated\*\*:
+
+
+
+| Flow | Description |
+
+|------|-------------|
+
+| \*\*Shipper-initiated (Primary)\*\* | Shipper publishes a listing → clicks "Find Transporters" → engine returns ranked matches |
+
+| \*\*Transporter-initiated (Secondary)\*\* | Transporter searches loads → system highlights best-fit loads based on transporter's profile and route |
+
+
+
+\*\*Caching \& Invalidation:\*\*
+
+\- Results are cached for the listing's active duration.
+
+\- Results are invalidated if the listing changes (route, price, cargo, pickup date, etc.).
+
+\- Transporters may request a re-match if their availability changes.
+
+
+
+6.4 Compatibility Factors
+
+
+
+6\.4.1 Mandatory (Hard Filters — Block)
+
+
+
+If any of these fail, the transporter is \*\*never considered\*\*:
+
+
+
+| Hard Filter | Rationale |
+
+|-------------|-----------|
+
+| Vehicle type matches cargo type | A flatbed cannot carry refrigerated cargo |
+
+| Vehicle capacity ≥ shipment weight | Cannot exceed physical weight limits |
+
+| Vehicle volume ≥ shipment volume | Cannot exceed physical volume limits |
+
+| Pickup date falls within transporter availability | Transporter must be available on that date |
+
+| Delivery deadline is achievable | Transporter must be able to meet the deadline |
+
+| Account is active (not suspended) | Platform-level ban |
+
+| Licences are valid and unexpired | Legal operation required |
+
+| For cross-border: required documentation is valid | Includes COMESA Yellow Card or equivalent insurance, and any temporary permits required for the journey (obtainable at the border if not already held) |
+
+
+
+\*\*Important Notes on Licensing:\*\*
+
+\- In Mozambique, a transport licence is \*\*valid nationwide\*\*. There are no regional restrictions within the country.
+
+\- For cross-border SADC trips, temporary permits can be obtained at the border for specific shipments.
+
+\- "Operating region" is \*\*not\*\* a hard filter.
+
+
+
+6\.4.2 Important (Scoring Factors)
+
+
+
+These influence the match score:
+
+
+
+| Factor | Weight | Rationale |
+
+|--------|--------|-----------|
+
+| Corridor match (Maputo, Beira, Nacala) | High | Transporters with corridor experience are more efficient |
+
+| Route alignment | High | Origin and destination alignment reduces deadheading |
+
+| Route overlap percentage | High | Higher overlap = lower empty mileage |
+
+| Origin distance | Medium-High | Closer transporters reduce cost and time |
+
+| Transporter availability (capacity) | Medium-High | Spare capacity is valuable |
+
+| Cross-border experience | Medium | Experience with customs and border procedures |
+
+| Hazardous cargo capability | Medium | Special permits and equipment required |
+
+| Refrigeration capability | Medium | Required for cold chain cargo |
+
+| Verified documents | Medium | Trust signal for both parties |
+
+| Transporter rating | Medium | Quality signal |
+
+| Completed trips | Medium | Experience signal |
+
+| Cancellation rate (lower = better) | Medium | Reliability signal |
+
+| Acceptance rate (higher = better) | Medium | Reliability signal |
+
+| Response time (faster = better) | Medium | Responsiveness signal |
+
+| Price competitiveness | Medium | Commercial factor — balanced, not dominant |
+
+| Relationship score (existing partners) | Low-Medium | Relationship-based market requires this |
+
+
+
+6\.4.3 Optional (Bonus Factors)
+
+
+
+These provide small score boosts:
+
+
+
+| Factor | Rationale |
+
+|--------|-----------|
+
+| Insurance coverage | Nice-to-have |
+
+| GPS availability | Enables real-time tracking |
+
+| Language compatibility | Portuguese for domestic, English for regional |
+
+| Preferred partner status | Existing relationship |
+
+| AI confidence score | Internal only — never exposed |
+
+
+
+6\.5. Ranking Algorithm
+
+
+
+\### Step 1: Hard Filter Pass
+
+Apply all Mandatory filters. Transporters failing any are \*\*excluded entirely\*\*.
+
+
+
+Step 2: Priority Tiers
+
+Within the remaining set, apply tiered ranking:
+
+
+
+| Tier | Factor | Weight |
+
+|------|--------|--------|
+
+| 1 | Corridor match | \*\*High\*\* |
+
+| 2 | Route compatibility (origin/destination alignment) | \*\*High\*\* |
+
+| 3 | Capacity \& cargo fit (weight/volume margin) | Medium-High |
+
+| 4 | Reliability score (rating × completed trips × acceptance rate / cancellation rate) | Medium |
+
+| 5 | Price competitiveness | Medium |
+
+| 6 | Relationship score (preferred partners, past trips, existing contracts) | Low-Medium |
+
+
+
+Step 3: Weighted Score Calculation
+
+Each transporter receives a composite score (0–100) based on the weighted factors above.
+
+
+
+Step 4: Highlight Top 5
+
+The Top 5 scoring transporters are highlighted as \*\*"Recommended"\*\* in the UI.
+
+
+
+Step 5: User Override
+
+Users may:
+
+\- Sort by price, rating, or ETA.
+
+\- Select any transporter regardless of rank.
+
+\- Select unranked transporters.
+
+\- Ignore all AI recommendations.
+
+
+
+6\.6. AI Role
+
+
+
+| AI May | AI May Not |
+
+|--------|------------|
+
+| Suggest weight adjustments based on market conditions | Auto-select a transporter |
+
+| Highlight "Recommended" transporters in the UI | Override user choice |
+
+| Flag anomalies (e.g., sudden rating drops) | Modify rankings without human visibility |
+
+| Generate confidence scores (internal only) | Execute any action autonomously |
+
+| Learn from historical match-to-contract conversion data | |
+
+
+
+\*\*AI Governance:\*\* All AI behavior is governed by \*\*ESS-003\*\* and \*\*MOD-006\*\*.
+
+
+
+6\.7. Price Handling
+
+
+
+| Approach | Status |
+
+|----------|--------|
+
+| Cheapest first | ❌ Rejected — race to the bottom |
+
+| Price only | ❌ Rejected — ignores quality and reliability |
+
+| Quality first | ⚠️ Partial — suitable for high-value cargo only |
+
+| \*\*Balanced score\*\* | ✅ \*\*Default\*\* — price + quality + reliability combined |
+
+| User-configurable sorting | ✅ \*\*Supported\*\* — users may sort by price, rating, or ETA |
+
+
+
+\*\*Default:\*\* Balanced score. Never default to cheapest-first.
+
+
+
+6\.8. No Match Handling
+
+
+
+If no transporter passes hard filters:
+
+
+
+| Step | Action |
+
+|------|--------|
+
+| 1 | Return empty list with a clear explanation (e.g., "No transporters meet your requirements") |
+
+| 2 | Suggest relaxation of optional criteria (e.g., expand radius, allow similar vehicle types) |
+
+| 3 | Optionally expand search radius beyond the immediate corridor |
+
+| 4 | Notify eligible transporters in the broader region |
+
+| 5 | For cross-border shipments: notify transporters who can obtain temporary permits at the border |
+
+| 6 | Escalate to manual search for urgent/high-value shipments |
+
+
+
+\*\*Relaxation order (least impactful to most impactful):\*\*
+
+1\. Expand radius (50km → 100km → 200km)
+
+2\. Relax vehicle type (allow "similar" types)
+
+3\. Relax rating requirements
+
+4\. Expand to adjacent corridors
+
+5\. Include transporters without immediate availability (future availability window)
+
+
+
+6\.9. Match Success Definition
+
+
+
+| Milestone | Considered Success? |
+
+|-----------|---------------------|
+
+| Recommendation generated | ❌ No — just a suggestion |
+
+| Transporter invited | ❌ No — invitation ≠ commitment |
+
+| Transporter accepted | ❌ No — acceptance is provisional |
+
+| \*\*Contract signed (MOD-002)\*\* | ✅ \*\*Yes\*\* — formal agreement binding both parties |
+
+| \*\*Escrow initiated (MOD-005)\*\* | ✅ \*\*Yes\*\* — financial commitment |
+
+
+
+\*\*Tracking:\*\*
+
+\- Match is recorded when the shipper selects a transporter.
+
+\- Match-to-contract conversion rate is tracked as a key performance metric.
+
+\- Conversion rate informs AI learning and ranking adjustments.
+
+
+
+6\.10. Event Model
+
+
+
+The matching engine emits the following events:
+
+
+
+| Event | Trigger |
+
+|-------|---------|
+
+| `MatchRequested` | User initiated matching |
+
+| `MatchResultsGenerated` | Ranking complete |
+
+| `MatchSelected` | Shipper selected a transporter |
+
+| `MatchExpired` | Listing expired without selection |
+
+| `NoMatchFound` | No compatible transporters |
+
+
+
+\*\*Consumed by:\*\*
+
+\- MOD-002 (Booking \& Contract Management) — for contract initiation
+
+\- MOD-006 (AI Intelligence Platform) — for learning and improvement
+
+\- MOD-012 (Data Platform Analytics) — for performance tracking
+
+\- MOD-016 (Notifications) — for alerts
+
+
+
+6\.11. Performance Metrics
+
+
+
+| Metric | Description |
+
+|--------|-------------|
+
+| Match-to-contract conversion rate | % of matches that become contracts |
+
+| Average time to select | Time between match generation and selection |
+
+| User satisfaction | User feedback on recommendations |
+
+| No-match rate | % of listings with no compatible transporters |
+
+| AI recommendation acceptance rate | % of users selecting a "Recommended" transporter |
+
+
+
+6\.12. Related Documents
+
+
+
+| Document | Relationship |
+
+|----------|--------------|
+
+| MOD-002 | Contract initiation after match selection |
+
+| MOD-003 | Tracking data for route/ETA validation |
+
+| MOD-006 | AI learning and recommendation improvements |
+
+| MOD-009 | Cross-border permit flexibility and corridor definitions |
+
+| MOD-012 | Analytics and performance tracking |
+
+| MOD-014 | Fleet and licence management |
+
+| MOD-016 | Notifications for match alerts |
+
+| ESS-003 | AI governance (advisory-only) |
+
+| INT-004 | Mapping \& Geospatial Services |
+
+| INT-007 | Government \& Regulatory Integration |
+
+
+
+7\. MARKETPLACE RULES (DESIGN CONSTRAINTS)
+
+
+
+7.1 Matching Principle
 
 
 
@@ -502,7 +946,7 @@ Ranking logic (route, performance, price, urgency) is advisory and explainable.
 
 
 
-6.2 Pricing Principle
+7.2 Pricing Principle
 
 
 
@@ -522,7 +966,7 @@ Advisory quotes are non‑binding aids.
 
 
 
-6.3 Neutrality Principle
+7.3 Neutrality Principle
 
 
 
@@ -542,7 +986,7 @@ transparent in offer evaluation criteria (ranking logic is documented).
 
 
 
-6.4 State Isolation Rule
+7.4 State Isolation Rule
 
 
 
@@ -560,7 +1004,7 @@ All financial flow is handled by MOD-005 + ESS-001F.
 
 
 
-7\. EVENT MODEL (SPECIFICATION ONLY)
+8\. EVENT MODEL (SPECIFICATION ONLY)
 
 
 
@@ -624,7 +1068,7 @@ MOD-012 (Analytics)
 
 
 
-8\. INTEGRATION BOUNDARIES
+9\. INTEGRATION BOUNDARIES
 
 
 
@@ -652,7 +1096,7 @@ MOD-001 does not directly integrate with external systems. All external integrat
 
 
 
-9\. ESS DEPENDENCY REFERENCES (CANONICAL ONLY)
+10\. ESS DEPENDENCY REFERENCES (CANONICAL ONLY)
 
 
 
@@ -692,7 +1136,7 @@ ESS-001F → financial boundary rules (via MOD-005 handoff only).
 
 
 
-10\. ARCHITECTURE BOUNDARY RULE
+11\. ARCHITECTURE BOUNDARY RULE
 
 
 
@@ -740,7 +1184,7 @@ a container for advisory behaviours (ranking, quoting) that never cross into enf
 
 
 
-11\. OUTPUT EXPECTATION FOR AI BUILDER
+12\. OUTPUT EXPECTATION FOR AI BUILDER
 
 
 
@@ -784,7 +1228,7 @@ Output: TODO: requires specification from MOD-001
 
 
 
-12\. DESIGN PRINCIPLE
+13\. DESIGN PRINCIPLE
 
 
 

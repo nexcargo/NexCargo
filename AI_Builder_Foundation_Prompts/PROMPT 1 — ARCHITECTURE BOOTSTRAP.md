@@ -1,4 +1,4 @@
-\# NEXCARGO PROMPT ENVELOPE v1.0
+﻿\# NEXCARGO PROMPT ENVELOPE v1.0
 
 
 
@@ -114,7 +114,7 @@ You are operating under:
 
 
 
-\*\*PROMPT 0 — NEXCARGO MASTER SYSTEM PROMPT (v1.0)\*\*
+\*\*PROMPT 0 — NEXCARGO MASTER SYSTEM_v1.1.md\*\*
 
 
 

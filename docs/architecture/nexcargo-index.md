@@ -1,4 +1,4 @@
-NEXCARGO SPECIFICATION INDEX \& KNOWLEDGE ROUTING MAP v1.0
+﻿NEXCARGO SPECIFICATION INDEX \& KNOWLEDGE ROUTING MAP v1.1
 
 
 
@@ -6,13 +6,15 @@ Document ID: NEXCARGO-INDEX
 
 Document Name: NexCargo Specification Index \& Knowledge Routing Map
 
-Version: v1.0
+Version: v1.1
 
 Status: Approved
 
 Classification: Canonical Registry
 
 Audience: AI Builders, Software Engineers, Architects, Technical Reviewers
+
+**Changelog:** v1.1 — Updated Version Registry (§7) to reflect HAO decision 2026-08-17: PROMPT 0 v1.0 DEPRECATED, PROMPT 0 v1.1 CURRENT / AUTHORITATIVE.
 
 
 
@@ -280,10 +282,11 @@ These responsibilities belong exclusively to their respective specifications.
 
 |Document|Responsibility|
 |-|-|
-|NEXCARGO\_BOOT.md|Behavioural Kernel|
-|NEXCARGO\_INDEX.md|Knowledge Routing Layer|
+|NEXCARGO_BOOT.md|Behavioural Kernel|
+|NEXCARGO_INDEX.md|Knowledge Routing Layer|
 |Development Manifest|Development Workflow|
 |Arbitration Layer|Conflict Resolution|
+|Development State Registry|Current Project Status and Progress Tracking|
 
 
 
@@ -333,6 +336,7 @@ AI-EPRS		Product Requirements Specification
 
 
 7\. Version Registry
+### 7.1 Layer Version Registry
 
 
 
@@ -343,7 +347,7 @@ Each documentation layer evolves independently.
 |Layer|Version|
 |-|-|
 |BOOT|v1.0|
-|INDEX|v1.0|
+|INDEX|v1.1|
 |AI-EPRS|v1.0|
 |Development Manifest|v1.0|
 |ESS Specifications|v1.0|
@@ -354,6 +358,16 @@ Each documentation layer evolves independently.
 
 
 
+
+
+### 7.2 PROMPT 0 Version Registry
+
+PROMPT 0 versions are tracked separately due to the dependency taxonomy revision introduced by v1.1.
+
+|Version|Status|Effective Date|Notes|
+|-|-|-|-|
+|v1.0|DEPRECATED|2026-08-17|Superseded by v1.1 per HAO decision. Retained as historical reference only.|
+|v1.1|CURRENT / AUTHORITATIVE|2026-08-17|Sole active version. Introduces dependency taxonomy (SC, IC, DO, ES, AU, IS, BC, OB). Does NOT establish implementation sequence.|
 
 
 Version updates within one layer shall not imply changes to any other layer unless explicitly stated.

@@ -1,28 +1,50 @@
-MOD-009 — AI ERPS Regional \& Cross-Border Logistics Operations Module v1.0
+MOD-009 — Regional \& Cross-Border Logistics Operations
 
 
 
-Interpret all NexCargo specifications according to the AI Specification Interpretation Policy v1.0. (1-nexcargo-ai-specification-interpretation-policy.md)
+Module ID: MOD-009  
+
+Module Name: AI ERPS Regional \& Cross-Border Logistics Operations Module  
+
+Version: 1.0  
+
+Last Updated: 2026-08-07  
+
+System: NexCargo  
+
+Type: Domain Specification Module  
 
 
 
-1\. MODULE IDENTITY
+\---
 
 
 
-Module ID: MOD-009
-
-Module Name: AI ERPS Regional \& Cross-Border Logistics Operations Module
-
-Version: 1.0
-
-System: NexCargo
-
-Type: Domain Specification Module
+\## 1. Module Identity
 
 
 
-2\. PURPOSE
+| Attribute | Value |
+
+|-----------|-------|
+
+| Module ID | MOD-009 |
+
+| Module Name | AI ERPS Regional \& Cross-Border Logistics Operations Module |
+
+| Version | 1.1 |
+
+| System | NexCargo |
+
+| Type | Domain Specification Module |
+
+
+
+\---
+
+
+
+\## 2. Purpose
 
 
 
@@ -34,35 +56,25 @@ It governs how:
 
 
 
-shipments moving across regions, countries, and regulatory zones are structured, represented, and validated within the system
+\- shipments moving across regions, countries, and regulatory zones are structured, represented, and validated within the system
+
+\- cross-border trade complexity is abstracted across the SADC logistics ecosystem
+
+\- customs workflows, corridor optimisation, and multi-currency operations are integrated
+
+\- shipments are mapped to predefined logistics corridors (Beira, Nacala, Maputo, North-South)
 
 
 
-cross-border trade complexity is abstracted across the SADC logistics ecosystem
+\*\*Critical constraint:\*\* This module does \*\*NOT\*\* execute customs clearance, legal compliance, or regulatory enforcement. All legal enforcement belongs to external systems + ESS-006 constraints.
 
 
 
-customs workflows, corridor optimisation, and multi-currency operations are integrated into a unified logistics execution layer
+\---
 
 
 
-shipments are mapped to predefined logistics corridors (Beira, Nacala, Maputo, North-South)
-
-
-
-border events are treated as formal shipment milestones
-
-
-
-Critical constraint: This module does NOT execute customs clearance, legal compliance, or regulatory enforcement. All legal enforcement belongs to external systems + ESS-006 constraints.
-
-
-
-This module defines the structural rules for modelling cross-border logistics complexity inside the platform.
-
-
-
-3\. DOMAIN SCOPE
+\## 3. Domain Scope
 
 
 
@@ -70,115 +82,87 @@ MOD-009 governs:
 
 
 
-3.1 Regional Logistics Structuring
+\### 3.1 Regional Logistics Structuring
 
+\- regional segmentation of logistics operations across SADC countries
 
+\- country-level and corridor-level modelling
 
-regional segmentation of logistics operations across SADC countries
+\- route segmentation (logical, not physical routing)
 
+\- multi-country operations layer (Mozambique, South Africa, Zimbabwe, Zambia, Malawi, Botswana, DRC, Eswatini)
 
 
-country-level and corridor-level modelling
 
+\### 3.2 Cross-Border Shipment Modelling
 
+\- border crossing states (abstract representation)
 
-route segmentation (logical, not physical routing)
+\- multi-jurisdiction shipment flows
 
+\- transit segmentation across regions
 
+\- lifecycle stages: Domestic Pickup → Export Processing → Border Exit → Transit → Border Entry → Import Processing → Final Delivery
 
-multi-country operations layer (Mozambique, South Africa, Zimbabwe, Zambia, Malawi, Botswana, DRC, Eswatini)
 
 
+\### 3.3 Corridor-Based Logistics Flow
 
-3.2 Cross-Border Shipment Modelling
+\- structured movement across predefined logistics corridors:
 
+&#x20; - Beira Corridor (Mozambique – Zimbabwe – Zambia)
 
+&#x20; - Nacala Corridor (Mozambique – Malawi – Zambia)
 
-border crossing states (abstract representation)
+&#x20; - Maputo Corridor (Mozambique – South Africa – Eswatini – Botswana)
 
+&#x20; - North-South Corridor (DRC – Zambia – Zimbabwe – South Africa)
 
+\- handoff points between jurisdictions (state transitions only)
 
-multi-jurisdiction shipment flows
+\- corridor performance tracking and congestion intelligence
 
 
 
-transit segmentation across regions
+\### 3.4 Regulatory Zone Abstraction
 
+\- representation of customs zones and border posts
 
+\- restricted vs unrestricted corridors (logical classification only)
 
-lifecycle stages: Domestic Pickup → Export Processing → Border Exit → Transit → Border Entry → Import Processing → Final Delivery
+\- compliance dependency markers (linked to ESS-006)
 
 
 
-3.3 Corridor-Based Logistics Flow
+\### 3.5 Multi-Currency Handling
 
+\- financial operations across multiple currencies (MZN, ZAR, USD)
 
+\- currency conversion and settlement context
 
-structured movement across predefined logistics corridors:
+\- AI-driven currency optimisation suggestions (advisory)
 
 
 
-Beira Corridor (Mozambique – Zimbabwe – Zambia)
+\### 3.6 Cross-Border Permit Flexibility
 
 
 
-Nacala Corridor (Mozambique – Malawi – Zambia)
+\- Transporters may obtain temporary cross-border permits for specific shipments.
 
+\- Permits may be issued at the border.
 
+\- The system MUST support transporters who are otherwise eligible but lack pre-existing cross-border documentation.
 
-Maputo Corridor (Mozambique – South Africa – Eswatini – Botswana)
+\- MOD-001 matching engine MUST treat missing cross-border documentation as a validation step, not a hard block (with appropriate notifications).
 
 
 
-North-South Corridor (DRC – Zambia – Zimbabwe – South Africa)
+\---
 
 
 
-handoff points between jurisdictions (state transitions only)
-
-
-
-corridor performance tracking and congestion intelligence
-
-
-
-3.4 Regulatory Zone Abstraction
-
-
-
-representation of customs zones and border posts
-
-
-
-restricted vs unrestricted corridors (logical classification only)
-
-
-
-compliance dependency markers (linked to ESS-006)
-
-
-
-One-Stop Border Post (OSBP) digital coordination support
-
-
-
-3.5 Multi-Currency Handling
-
-
-
-financial operations across multiple currencies (MZN, ZAR, USD)
-
-
-
-currency conversion and settlement context
-
-
-
-AI-driven currency optimisation suggestions (advisory)
-
-
-
-4\. CORE DOMAIN ENTITIES
+\## 4. Core Domain Entities
 
 
 
@@ -186,7 +170,7 @@ These are structural logistics representations only.
 
 
 
-4.1 Region Entity
+\### 4.1 Region Entity
 
 
 
@@ -194,55 +178,39 @@ Represents a geographic logistics zone.
 
 
 
-Required attributes:
+\*\*Required attributes:\*\*
 
 
 
-4.1 Region Entity
+| Attribute | Type | Description |
+
+|-----------|------|-------------|
+
+| regionId | string | Unique identifier |
+
+| regionName | string | Display name |
+
+| countryList | string\[] | Array of country codes |
+
+| regulatoryClassification | string | Classification for compliance |
+
+| operationalConstraints | JSON | Operational rules for the region |
+
+| activeStatus | boolean | Whether region is active |
+
+| defaultLanguage | string | Default language (pt / en) |
+
+| supportedLanguages | string\[] | Supported languages for the region |
+
+| currencyCode | string | Primary currency for the region |
+
+| crossBorderPermitRules | JSON | Structured rules for temporary permit availability at borders |
+
+| insuranceRequirements | JSON | Insurance requirements (e.g., COMESA Yellow Card availability via B2B) |
 
 
 
-Required attributes:
-
-
-
-regionId
-
-
-
-regionName
-
-
-
-countryList\[] - array of country codes
-
-
-
-regulatoryClassification
-
-
-
-operationalConstraints
-
-
-
-activeStatus
-
-
-
-defaultLanguage (pt / en)
-
-
-
-supportedLanguages\[]
-
-
-
-supportedCurrencies - array of currency codes: MZN / ZAR / USD
-
-
-
-4.2 CrossBorderShipment Segment
+\### 4.2 CrossBorderShipment Segment
 
 
 
@@ -250,71 +218,49 @@ Represents a shipment segment between two jurisdictions.
 
 
 
-Required attributes:
+\*\*Attributes:\*\*
 
 
 
-segmentId
+| Attribute | Type | Description |
+
+|-----------|------|-------------|
+
+| segmentId | string | Unique identifier |
+
+| trackingId | string | MOD-003 reference |
+
+| originRegion | string | Origin region ID |
+
+| destinationRegion | string | Destination region ID |
+
+| borderStatus | enum | PENDING / IN\_PROGRESS / COMPLETED / DELAYED |
+
+| segmentStatus | enum | PLANNED / ACTIVE / COMPLETED |
+
+| complianceFlags | JSON | Structured compliance metadata |
+
+| customsDocuments | array | Array of document references (MOD-004) |
+
+| corridorId | string | Assigned corridor reference |
+
+| entryTimestamp | datetime | Entry timestamp |
+
+| exitTimestamp | datetime | Optional exit timestamp |
 
 
 
-trackingId – MOD-003 reference
+\*\*Business rules:\*\*
+
+\- Every cross-border shipment MUST be split into logical segments.
+
+\- Segments MUST retain full traceability to original shipment.
+
+\- Each border crossing is treated as a formal shipment milestone.
 
 
 
-originRegion
-
-
-
-destinationRegion
-
-
-
-borderStatus – PENDING / IN\_PROGRESS / COMPLETED / DELAYED
-
-
-
-segmentStatus – PLANNED / ACTIVE / COMPLETED
-
-
-
-complianceFlags – structured compliance metadata
-
-
-
-customsDocuments – array of document references (MOD-004)
-
-
-
-corridorId – assigned corridor reference
-
-
-
-entryTimestamp
-
-
-
-exitTimestamp – optional
-
-
-
-Business rules:
-
-
-
-Every cross-border shipment MUST be split into logical segments.
-
-
-
-Segments MUST retain full traceability to original shipment.
-
-
-
-Each border crossing is treated as a formal shipment milestone.
-
-
-
-4.3 Logistics Corridor
+\### 4.3 Logistics Corridor
 
 
 
@@ -322,67 +268,47 @@ Represents a predefined logistics route abstraction.
 
 
 
-Attributes:
+\*\*Attributes:\*\*
 
 
 
-corridorId
+| Attribute | Type | Description |
+
+|-----------|------|-------------|
+
+| corridorId | string | Unique identifier |
+
+| corridorName | string | Display name |
+
+| originRegion | string | Origin region ID |
+
+| destinationRegion | string | Destination region ID |
+
+| intermediateRegions | array | Array of region references |
+
+| permittedTransportModes | array | Allowed transport modes |
+
+| riskLevel | enum | LOW / MEDIUM / HIGH |
+
+| operationalRules | JSON | Structured rules for corridor usage |
+
+| activeStatus | boolean | Whether corridor is active |
+
+| averageTransitTime | number | Historical average (advisory) |
 
 
 
-corridorName
+\*\*Business rules:\*\*
+
+\- All cross-border shipments MUST map to at least one corridor.
+
+\- Corridor selection influences pricing, ETA, and risk scoring.
+
+\- AI (MOD-006) provides corridor optimisation suggestions.
 
 
 
-originRegion
-
-
-
-destinationRegion
-
-
-
-intermediateRegions – array of region references
-
-
-
-permittedTransportModes
-
-
-
-riskLevel – LOW / MEDIUM / HIGH
-
-
-
-operationalRules – structured rules for corridor usage
-
-
-
-activeStatus
-
-
-
-averageTransitTime – historical average (advisory)
-
-
-
-Business rules:
-
-
-
-All cross-border shipments MUST map to at least one corridor.
-
-
-
-Corridor selection influences pricing, ETA, and risk scoring.
-
-
-
-AI (MOD-006) provides corridor optimisation suggestions.
-
-
-
-4.4 Border Transition Event
+\### 4.4 Border Transition Event
 
 
 
@@ -390,67 +316,47 @@ Represents crossing between jurisdictions.
 
 
 
-Attributes:
+\*\*Attributes:\*\*
 
 
 
-eventId
+| Attribute | Type | Description |
+
+|-----------|------|-------------|
+
+| eventId | string | Unique identifier |
+
+| trackingId | string | MOD-003 reference |
+
+| fromRegion | string | Origin region ID |
+
+| toRegion | string | Destination region ID |
+
+| borderPostId | string | Border post identifier |
+
+| timestamp | datetime | Event timestamp |
+
+| validationStatus | enum | PENDING / VALIDATED / COMPLETED / DELAYED |
+
+| eventSource | enum | GPS / MANUAL / OSBP\_INTEGRATION |
+
+| clearanceStatus | enum | PENDING / PRE\_CLEARED / CLEARED / HELD |
+
+| delayMinutes | number | Optional delay duration |
 
 
 
-trackingId
+\*\*Business rules:\*\*
+
+\- Border detection is triggered by geofencing (MOD-003).
+
+\- Border transition event immediately forces a GPS location update.
+
+\- Customs documentation must be validated before border crossing.
 
 
 
-fromRegion
-
-
-
-toRegion
-
-
-
-borderPostId
-
-
-
-timestamp
-
-
-
-validationStatus – PENDING / VALIDATED / COMPLETED / DELAYED
-
-
-
-eventSource – GPS / MANUAL / OSBP\_INTEGRATION
-
-
-
-clearanceStatus – PENDING / PRE\_CLEARED / CLEARED / HELD
-
-
-
-delayMinutes – optional delay duration
-
-
-
-Business rules:
-
-
-
-Border detection is triggered by geofencing (MOD-003).
-
-
-
-Border transition event immediately forces a GPS location update.
-
-
-
-Customs documentation must be validated before border crossing.
-
-
-
-4.5 CountryCompliance Profile
+\### 4.5 CountryCompliance Profile
 
 
 
@@ -458,67 +364,47 @@ Represents country-specific regulatory requirements.
 
 
 
-Attributes:
+\*\*Attributes:\*\*
 
 
 
-profileId
+| Attribute | Type | Description |
+
+|-----------|------|-------------|
+
+| profileId | string | Unique identifier |
+
+| countryCode | string | ISO country code |
+
+| regulatoryRules | JSON | Structured compliance rules |
+
+| requiredDocuments | array | Array of document types required |
+
+| vehicleLicensingRequirements | JSON | Vehicle licensing rules |
+
+| driverAuthorizationRequirements | JSON | Driver authorization rules |
+
+| cargoRestrictions | JSON | Structured cargo restrictions |
+
+| insuranceRequirements | JSON | Insurance requirements |
+
+| activeStatus | boolean | Whether profile is active |
 
 
 
-countryCode
+\*\*Business rules:\*\*
+
+\- Country-specific rules apply automatically based on route.
+
+\- Regulatory constraints are enforced via configuration.
+
+\- Legal compliance rules vary by jurisdiction.
+
+\- Non-compliant shipments are flagged for review.
 
 
 
-regulatoryRules – structured JSON of compliance rules
-
-
-
-requiredDocuments – array of document types required
-
-
-
-vehicleLicensingRequirements
-
-
-
-driverAuthorizationRequirements
-
-
-
-cargoRestrictions – structured restrictions
-
-
-
-insuranceRequirements
-
-
-
-activeStatus
-
-
-
-Business rules:
-
-
-
-Country-specific rules apply automatically based on route.
-
-
-
-Regulatory constraints are enforced via configuration.
-
-
-
-Legal compliance rules vary by jurisdiction.
-
-
-
-Non-compliant shipments are flagged for review.
-
-
-
-4.6 MultiCurrencyTransaction Context
+\### 4.6 MultiCurrencyTransaction Context
 
 
 
@@ -526,59 +412,43 @@ Represents financial context for cross-border transactions.
 
 
 
-Attributes:
+\*\*Attributes:\*\*
 
 
 
-transactionId
+| Attribute | Type | Description |
+
+|-----------|------|-------------|
+
+| transactionId | string | Unique identifier |
+
+| shipmentId | string | Shipment reference |
+
+| originCurrency | string | Origin currency code |
+
+| destinationCurrency | string | Destination currency code |
+
+| settlementCurrency | string | Escrow settlement currency |
+
+| conversionRate | number | Applied conversion rate |
+
+| rateTimestamp | datetime | Rate timestamp |
+
+| rateSource | string | Source of the rate |
 
 
 
-shipmentId
+\*\*Business rules:\*\*
+
+\- Currency conversion rates must be stored per transaction.
+
+\- Escrow (MOD-005) defines settlement currency.
+
+\- AI pricing (MOD-006) may suggest optimal currency.
 
 
 
-originCurrency
-
-
-
-destinationCurrency
-
-
-
-settlementCurrency – escrow settlement currency
-
-
-
-conversionRate – applied rate
-
-
-
-rateTimestamp
-
-
-
-rateSource
-
-
-
-Business rules:
-
-
-
-Currency conversion rates must be stored per transaction.
-
-
-
-Escrow (MOD-005) defines settlement currency.
-
-
-
-AI pricing (MOD-006) may suggest optimal currency.
-
-
-
-4.7 BorderCongestion Report
+\### 4.7 BorderCongestion Report
 
 
 
@@ -586,147 +456,167 @@ Represents intelligence on border delays and congestion.
 
 
 
-Attributes:
+\*\*Attributes:\*\*
 
 
 
-reportId
+| Attribute | Type | Description |
+
+|-----------|------|-------------|
+
+| reportId | string | Unique identifier |
+
+| borderPostId | string | Border post reference |
+
+| averageWaitTime | number | Historical average wait time |
+
+| currentWaitTimeEstimate | number | Real-time estimate |
+
+| congestionLevel | enum | LOW / MEDIUM / HIGH / SEVERE |
+
+| reportTimestamp | datetime | Report timestamp |
+
+| dataSources | array | Array of source references |
+
+| confidenceScore | number | Confidence in the estimate |
 
 
 
-borderPostId
+\*\*Business rules:\*\*
+
+\- Predictions are advisory only.
+
+\- Border congestion affects ETA calculations (MOD-006).
+
+\- Alerts generated for high-delay risk crossings.
 
 
 
-averageWaitTime – historical average
+\---
 
 
 
-currentWaitTimeEstimate – real-time estimate
+\## 5. Cross-Border Flow Model
 
 
 
-congestionLevel – LOW / MEDIUM / HIGH / SEVERE
-
-
-
-reportTimestamp
-
-
-
-dataSources – array of source references
-
-
-
-confidenceScore
-
-
-
-Business rules:
-
-
-
-Predictions are advisory only.
-
-
-
-Border congestion affects ETA calculations (MOD-006).
-
-
-
-Alerts generated for high-delay risk crossings.
-
-
-
-5\. CROSS-BORDER FLOW MODEL
-
-
-
-5.1 Standard Cross-Border Lifecycle
-
-
+\### 5.1 Standard Cross-Border Lifecycle
 
 Domestic Pickup (MOD-003)
 
-&#x20;      ↓
+↓
 
 Export Preparation (MOD-004 + MOD-002 context)
 
-&#x20;      ↓
+↓
 
 Border Arrival
 
-&#x20;      ↓
+↓
 
 Border Transition Event (geofence triggered)
 
-&#x20;      ↓
+↓
 
 Customs Processing (external system, abstracted)
 
-&#x20;      ↓
+↓
 
 Import Entry
 
-&#x20;      ↓
+↓
 
 Domestic Delivery Segment
 
-&#x20;      ↓
+↓
 
 Final Delivery Confirmation
 
 
 
-5.2 Multi-Region Shipment Model
+text
 
 
 
-Shipments MUST be segmented per region transition.
+\### 5.2 Multi-Region Shipment Model
 
 
 
-Each segment MUST have independent tracking continuity.
+\- Shipments MUST be segmented per region transition.
+
+\- Each segment MUST have independent tracking continuity.
+
+\- Segments MUST be linked under one trackingId (MOD-003).
+
+\- Segment state transitions are tracked independently.
 
 
 
-Segments MUST be linked under one trackingId (MOD-003).
-
-
-
-Segment state transitions are tracked independently.
-
-
-
-5.3 Corridor Assignment Model
-
-
+\### 5.3 Corridor Assignment Model
 
 Shipment Created (MOD-001)
 
-&#x20;      ↓
+↓
 
 Origin/Destination Detected
 
-&#x20;      ↓
+↓
 
 Corridor Matching Applied
 
-&#x20;      ↓
+↓
 
 Corridor Assigned
 
-&#x20;      ↓
+↓
 
 \[Corridor influences pricing, ETA, risk]
 
-&#x20;      ↓
+↓
 
 Cross-Border Segment Generation
 
 
 
-6\. RESPONSIBILITIES
+text
+
+
+
+\### 5.4 Temporary Permit Flow
+
+Cross-Border Shipment Created
+
+↓
+
+Check: Transporter has pre-existing documentation?
+
+↓
+
+YES → Proceed with standard cross-border flow
+
+↓
+
+NO → Notify transporter: temporary permits obtainable at border
+
+↓
+
+Transporter confirms intent to obtain permit
+
+↓
+
+Proceed with shipment (permit validation at border)
+
+
+
+text
+
+
+
+\---
+
+
+
+\## 6. Responsibilities
 
 
 
@@ -734,127 +624,99 @@ MOD-009 is responsible for:
 
 
 
-6.1 Regional Structuring
+\### 6.1 Regional Structuring
 
-defining how regions are modelled in logistics context
+\- defining how regions are modelled in logistics context
 
+\- ensuring consistent segmentation rules across SADC countries
 
+\- maintaining corridor definitions and mappings
 
-ensuring consistent segmentation rules across SADC countries
 
 
+\### 6.2 Cross-Border Representation
 
-maintaining corridor definitions and mappings
+\- modelling shipment transitions across jurisdictions
 
+\- maintaining segment continuity logic
 
+\- defining border transition events as formal milestones
 
-6.2 Cross-Border Representation
 
 
+\### 6.3 Corridor Logic Definition
 
-modelling shipment transitions across jurisdictions
+\- defining allowable logistics pathways (logical only)
 
+\- structuring route dependencies
 
+\- tracking corridor performance and congestion
 
-maintaining segment continuity logic
 
 
+\### 6.4 Regulatory Abstraction
 
-defining border transition events as formal milestones
+\- representing compliance constraints as metadata only
 
+\- deferring enforcement to ESS-006
 
+\- defining country-specific compliance profiles
 
-6.3 Corridor Logic Definition
 
-defining allowable logistics pathways (logical only)
 
+\### 6.5 Multi-Currency Abstraction
 
+\- defining currency context for cross-border transactions
 
-structuring route dependencies
+\- ensuring settlement currency clarity
 
+\- maintaining conversion rate traceability
 
 
-tracking corridor performance and congestion
 
+\### 6.6 Border Intelligence Abstraction
 
+\- defining border congestion data structures
 
-6.4 Regulatory Abstraction
+\- integrating with ETA and delay prediction (MOD-006)
 
+\- generating congestion alerts
 
 
-representing compliance constraints as metadata only
 
+\### 6.7 Cross-Border Flexibility
 
+\- defining temporary permit availability rules
 
-deferring enforcement to ESS-006
+\- ensuring permit-issuance-at-border is supported
 
+\- coordinating with MOD-001 matching engine
 
 
-defining country-specific compliance profiles
 
+\---
 
 
-6.5 Multi-Currency Abstraction
 
+\## 7. Rules of Operation
 
 
-defining currency context for cross-border transactions
 
-
-
-ensuring settlement currency clarity
-
-
-
-maintaining conversion rate traceability
-
-
-
-6.6 Border Intelligence Abstraction
-
-
-
-defining border congestion data structures
-
-
-
-integrating with ETA and delay prediction (MOD-006)
-
-
-
-generating congestion alerts
-
-
-
-7\. RULES OF OPERATION
-
-
-
-7.1 No Legal Execution Rule (CRITICAL)
+\### 7.1 No Legal Execution Rule (CRITICAL)
 
 
 
 MOD-009 MUST NOT:
 
+\- enforce customs laws
 
+\- execute regulatory compliance decisions
 
-enforce customs laws
+\- interpret legal requirements
 
+\- validate real-world customs clearance
 
-
-execute regulatory compliance decisions
-
-
-
-interpret legal requirements
-
-
-
-validate real-world customs clearance
-
-
-
-enforce compliance independently of ESS-006
+\- enforce compliance independently of ESS-006
 
 
 
@@ -862,115 +724,117 @@ All legal enforcement belongs to external systems + ESS-006 constraints.
 
 
 
-7.2 Segmentation Rule
+\### 7.2 Segmentation Rule
 
 
 
-Every cross-border shipment MUST be split into logical segments.
+\- Every cross-border shipment MUST be split into logical segments.
+
+\- Segments MUST retain full traceability to original shipment.
+
+\- Each segment has independent tracking continuity.
 
 
 
-Segments MUST retain full traceability to original shipment.
+\### 7.3 Corridor Assignment Rule
 
 
 
-Each segment has independent tracking continuity.
+\- All cross-border shipments MUST map to at least one corridor.
+
+\- Corridor assignment influences pricing, ETA, and risk scoring.
+
+\- Corridor selection is advisory and may be overridden by user confirmation.
 
 
 
-7.3 Corridor Assignment Rule
+\### 7.4 Customs Readiness Rule
 
 
 
-All cross-border shipments MUST map to at least one corridor.
+\- Customs documentation MUST be validated before border crossing.
+
+\- Document Management Module (MOD-004) is the system of record.
+
+\- Incomplete documentation blocks cross-border movement at the planning level.
 
 
 
-Corridor assignment influences pricing, ETA, and risk scoring.
+\### 7.5 Currency Specification Rule
 
 
 
-Corridor selection is advisory and may be overridden by user confirmation.
+\- Every cross-border transaction MUST specify settlement currency.
+
+\- Currency conversion rates MUST be recorded per transaction.
+
+\- Currency context is advisory for pricing optimisation.
 
 
 
-7.4 Customs Readiness Rule
+\### 7.6 Compliance Checkpoint Rule
 
 
 
-Customs documentation MUST be validated before border crossing.
+\- Compliance checks MUST be performed before border crossing.
+
+\- Non-compliant shipments are flagged for review (not auto-blocked unless policy enforced by MOD-010).
+
+\- Compliance status is visible per shipment.
 
 
 
-Document Management Module (MOD-004) is the system of record.
+\### 7.7 Cross-Border Permit Flexibility Rule
 
 
 
-Incomplete documentation blocks cross-border movement at the planning level.
+\- Transporters may obtain temporary cross-border permits for specific shipments.
+
+\- Permits may be issued at the border.
+
+\- The system MUST NOT block transporters solely due to missing pre-existing documentation.
+
+\- MOD-001 matching engine MUST reflect this flexibility.
 
 
 
-7.5 Currency Specification Rule
+\### 7.8 Licensing Rule
 
 
 
-Every cross-border transaction MUST specify settlement currency.
+\- In Mozambique, transport licences are valid nationwide.
+
+\- No regional restrictions apply within the country.
+
+\- For cross-border SADC shipments, temporary permits may be obtained at the border.
+
+\- The matching engine MUST NOT block transporters based on "operating region" alone.
 
 
 
-Currency conversion rates MUST be recorded per transaction.
-
-
-
-Currency context is advisory for pricing optimisation.
-
-
-
-7.6 Compliance Checkpoint Rule
-
-
-
-Compliance checks MUST be performed before border crossing.
-
-
-
-Non-compliant shipments are flagged for review (not auto-blocked unless policy enforced by MOD-010).
-
-
-
-Compliance status is visible per shipment.
-
-
-
-7.7 Neutrality Rule
+\### 7.9 Neutrality Rule
 
 
 
 MOD-009 MUST NOT:
 
+\- optimise routing decisions
 
+\- calculate transport pricing
 
-optimise routing decisions
+\- execute operational dispatching
 
+\- override tracking states (MOD-003 authority)
 
-
-calculate transport pricing
-
-
-
-execute operational dispatching
-
-
-
-override tracking states (MOD-003 authority)
+\- simulate customs clearance or regulatory approval
 
 
 
-simulate customs clearance or regulatory approval
+\---
 
 
 
-8\. EVENT MODEL (SPECIFICATION ONLY)
+\## 8. Event Model (Specification Only)
 
 
 
@@ -978,103 +842,65 @@ Declared events:
 
 
 
-RegionEntered
+| Event | Trigger |
 
+|-------|---------|
 
+| `RegionEntered` | Shipment enters a region |
 
-RegionExited
+| `RegionExited` | Shipment exits a region |
 
+| `CrossBorderSegmentCreated` | Cross-border segment is created |
 
+| `CrossBorderSegmentCompleted` | Cross-border segment is completed |
 
-CrossBorderSegmentCreated
+| `BorderTransitionInitiated` | Border crossing begins |
 
+| `BorderTransitionCompleted` | Border crossing completed |
 
+| `BorderTransitionDelayed` | Border crossing delayed |
 
-CrossBorderSegmentCompleted
+| `CorridorAssigned` | Corridor assigned to shipment |
 
+| `CorridorViolationDetected` | Shipment deviates from assigned corridor |
 
+| `CustomsDocumentationValidated` | Customs docs validated |
 
-BorderTransitionInitiated
+| `CustomsDocumentationRejected` | Customs docs rejected |
 
+| `ComplianceCheckPassed` | Compliance check passed |
 
+| `ComplianceCheckFailed` | Compliance check failed |
 
-BorderTransitionCompleted
+| `CurrencyConversionApplied` | Currency conversion applied |
 
+| `BorderCongestionAlert` | Congestion alert triggered |
 
+| `TemporaryPermitObtained` | Temporary permit obtained at border |
 
-BorderTransitionDelayed
 
 
+\*\*Consumed by:\*\*
 
-CorridorAssigned
+\- MOD-003 → tracking state updates and border milestone marking
 
+\- MOD-006 → anomaly detection, delay prediction, risk analysis
 
+\- MOD-005 → settlement timing dependencies (cross-border delays)
 
-CorridorViolationDetected
+\- MOD-010 → compliance monitoring and enforcement
 
+\- MOD-012 → cross-border analytics and corridor performance
 
+\- MOD-016 → border-related notifications
 
-CustomsDocumentationValidated
 
 
+\---
 
-CustomsDocumentationRejected
 
 
-
-ComplianceCheckPassed
-
-
-
-ComplianceCheckFailed
-
-
-
-CurrencyConversionApplied
-
-
-
-BorderCongestionAlert
-
-
-
-OSBPClearanceInitiated
-
-
-
-OSBPClearanceCompleted
-
-
-
-Consumed by:
-
-
-
-MOD-003 → tracking state updates and border milestone marking
-
-
-
-MOD-006 → anomaly detection, delay prediction, risk analysis
-
-
-
-MOD-005 → settlement timing dependencies (cross-border delays)
-
-
-
-MOD-010 → compliance monitoring and enforcement
-
-
-
-MOD-012 → cross-border analytics and corridor performance
-
-
-
-MOD-016 → border-related notifications
-
-
-
-9\. INTEGRATION BOUNDARIES
+\## 9. Integration Boundaries
 
 
 
@@ -1082,67 +908,53 @@ MOD-009 interacts conceptually with:
 
 
 
-MOD-001 → marketplace context for cross-border shipments
+| Module | Interaction |
+
+|--------|-------------|
+
+| MOD-001 | Marketplace context for cross-border shipments |
+
+| MOD-002 | Contract-based region definitions and cross-border terms |
+
+| MOD-003 | Shipment tracking continuity and border event detection |
+
+| MOD-004 | Customs documentation structure and validation |
+
+| MOD-005 | Settlement dependencies across borders and multi-currency |
+
+| MOD-006 | Risk analysis and corridor optimisation |
+
+| MOD-008 | Mobile execution at borders |
+
+| MOD-010 | Compliance and regulatory enforcement |
+
+| MOD-011 | API exposure layer |
+
+| INT-004 | Mapping \& Geospatial Services |
+
+| INT-007 | Government \& Regulatory Integration |
 
 
 
-MOD-002 → contract-based region definitions and cross-border terms
+MOD-009 does \*\*NOT\*\*:
+
+\- perform customs processing
+
+\- integrate directly with border control systems
+
+\- execute legal compliance logic
+
+\- override shipment tracking state machines
+
+\- simulate regulatory approval
 
 
 
-MOD-003 → shipment tracking continuity and border event detection
+\---
 
 
 
-MOD-004 → customs documentation structure and validation
-
-
-
-MOD-005 → settlement dependencies across borders and multi-currency
-
-
-
-MOD-006 → risk analysis (cross-border delays/anomalies) and corridor optimisation
-
-
-
-MOD-008 → mobile execution at borders
-
-
-
-MOD-010 → compliance and regulatory enforcement
-
-
-
-MOD-011 → API exposure layer
-
-
-
-MOD-009 does NOT:
-
-
-
-perform customs processing
-
-
-
-integrate directly with border control systems
-
-
-
-execute legal compliance logic
-
-
-
-override shipment tracking state machines
-
-
-
-simulate regulatory approval
-
-
-
-10\. ESS DEPENDENCY REFERENCES (CANONICAL)
+\## 10. ESS Dependency References (Canonical)
 
 
 
@@ -1150,155 +962,119 @@ MOD-009 is constrained by:
 
 
 
-ESS-003 → AI constraints (no legal inference or execution)
+| ESS | Application |
 
+|-----|-------------|
 
+| ESS-003 | AI constraints (no legal inference or execution) |
 
-ESS-004 → integration contract rules
+| ESS-004 | Integration contract rules |
 
+| ESS-006 | Compliance abstraction rules (CRITICAL) |
 
+| ESS-007 | Coding standards for structured modelling |
 
-ESS-006 → compliance abstraction rules (CRITICAL)
+| ESS-008 | UI/UX regional visualisation rules |
 
-
-
-ESS-007 → coding standards for structured modelling
-
-
-
-ESS-008 → UI/UX regional visualisation rules
-
-
-
-ESS-009 → data governance rules
+| ESS-009 | Data governance rules |
 
 
 
 And indirectly:
 
+\- ESS-001A → external regulatory system integration catalog (future connectors)
 
+\- ESS-001G → future integration roadmap (cross-border expansion layer)
 
-ESS-001A → external regulatory system integration catalog (future connectors)
 
 
+\---
 
-ESS-001G → future integration roadmap (cross-border expansion layer)
 
 
+\## 11. Architecture Boundary Rule
 
-11\. ARCHITECTURE BOUNDARY RULE
 
 
+MOD-009 \*\*MUST NOT\*\*:
 
-MOD-009 MUST NOT:
+\- execute or simulate customs clearance
 
+\- enforce legal compliance independently
 
+\- modify tracking state directly (MOD-003 authority)
 
-execute or simulate customs clearance
+\- override contract logic (MOD-002 authority)
 
+\- bypass regional segmentation rules
 
+\- generate legal documents without MOD-004 integration
 
-enforce legal compliance independently
 
 
+MOD-009 \*\*IS\*\*:
 
-modify tracking state directly (MOD-003 authority)
+\- a structured abstraction layer for representing cross-border and regional logistics complexity within NexCargo without executing any real-world regulatory processes
 
+\- a framework for corridor management, multi-country operations, and border event modelling
 
+\- a system for multi-currency handling and border congestion intelligence
 
-override contract logic (MOD-002 authority)
 
 
+\---
 
-bypass regional segmentation rules
 
 
+\## 12. Output Expectation for AI Builder
 
-generate legal documents without MOD-004 integration
 
 
+When generating implementation from MOD-009, the AI App Builder \*\*MUST\*\*:
 
-MOD-009 IS:
 
 
+\- implement region and corridor data structures with all defined attributes
 
-a structured abstraction layer for representing cross-border and regional logistics complexity within NexCargo without executing any real-world regulatory processes
+\- enforce shipment segmentation across borders with tracking continuity
 
+\- ensure tracking continuity across MOD-003 (segments linked under one trackingId)
 
+\- integrate anomaly detection hooks (MOD-006) for border deviations
 
-a framework for corridor management, multi-country operations, and border event modelling
+\- maintain compliance metadata structures (ESS-006 aligned)
 
+\- implement customs documentation validation workflow (MOD-004 integration)
 
+\- implement multi-currency transaction context with conversion rate traceability
 
-a system for multi-currency handling and border congestion intelligence
+\- implement border congestion intelligence data structures
 
+\- implement corridor assignment logic (advisory, not mandatory execution)
 
+\- implement country-specific compliance profiles (configurable, not hard-coded)
 
-12\. OUTPUT EXPECTATION FOR AI BUILDER
+\- implement cross-border permit flexibility (temporary permits obtainable at border)
 
+\- implement nationwide licensing rule for Mozambique
 
+\- include edge-case handling (border geofence entry/exit, clearance holds, currency conversion failures, delayed border events)
 
-When generating implementation from MOD-009, the AI App Builder MUST:
-
-
-
-implement region and corridor data structures with all defined attributes
-
-
-
-enforce shipment segmentation across borders with tracking continuity
-
-
-
-ensure tracking continuity across MOD-003 (segments linked under one trackingId)
-
-
-
-integrate anomaly detection hooks (MOD-006) for border deviations
-
-
-
-maintain compliance metadata structures (ESS-006 aligned)
-
-
-
-implement customs documentation validation workflow (MOD-004 integration)
-
-
-
-implement multi-currency transaction context with conversion rate traceability
-
-
-
-implement border congestion intelligence data structures
-
-
-
-implement corridor assignment logic (advisory, not mandatory execution)
-
-
-
-implement country-specific compliance profiles (configurable, not hard-coded)
-
-
-
-include edge-case handling (border geofence entry/exit, clearance holds, currency conversion failures, delayed border events)
-
-
-
-provide conceptual API endpoints for corridor assignment, border event capture, compliance status, and cross-border segment tracking
+\- provide conceptual API endpoints for corridor assignment, border event capture, compliance status, and cross-border segment tracking
 
 
 
 If incomplete:
 
-
-
-Output: TODO: requires specification from MOD-009
+\- \*\*Output:\*\* `TODO: requires specification from MOD-009`
 
 
 
-13\. DESIGN PRINCIPLE
+\---
+
+
+
+\## 13. Design Principle
 
 
 
@@ -1306,25 +1082,19 @@ MOD-009 ensures:
 
 
 
-cross-border logistics complexity is modelled structurally, not executed operationally, preserving regulatory safety and system determinism
+\- cross-border logistics complexity is modelled structurally, not executed operationally, preserving regulatory safety and system determinism
+
+\- shipments operate seamlessly across SADC countries through standardised corridor and segment modelling
+
+\- customs compliance is validated, not enforced, by the platform
+
+\- border events are transparent, auditable, and visible to all stakeholders
+
+\- financial operations adapt to multi-currency contexts without introducing financial execution risk
+
+\- corridor and border intelligence enhances operational efficiency while remaining advisory
+
+\- temporary cross-border permits are supported, reflecting the practical reality of SADC logistics
 
 
-
-shipments operate seamlessly across SADC countries through standardised corridor and segment modelling
-
-
-
-customs compliance is validated, not enforced, by the platform
-
-
-
-border events are transparent, auditable, and visible to all stakeholders
-
-
-
-financial operations adapt to multi-currency contexts without introducing financial execution risk
-
-
-
-corridor and border intelligence enhances operational efficiency while remaining advisory
 

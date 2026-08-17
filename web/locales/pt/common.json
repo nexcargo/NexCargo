@@ -1,0 +1,13 @@
+{
+  "Common": {
+    "app_name": "NexCargo",
+    "loading": "A carregar...",
+    "error": "Erro",
+    "retry": "Tentar novamente"
+  },
+  "Navigation": {
+    "public": "Público",
+    "auth": "Autenticação",
+    "dashboard": "Painel de Controlo"
+  }
+}

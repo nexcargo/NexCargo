@@ -1,4 +1,4 @@
-# NEXCARGO PROMPT ENVELOPE v1.0
+﻿# NEXCARGO PROMPT ENVELOPE v1.0
 
 task_id: PROMPT-2.database.v1
 module: PROMPT-2
@@ -60,7 +60,7 @@ NexCargo Data Foundation (PostgreSQL + Event-Driven Architecture)
 
 You are operating under:
 
-- PROMPT 0 — Master System Prompt (v1.0)
+- PROMPT 0 — NEXCARGO MASTER SYSTEM_v1.1.md
 - PROMPT 1 — Architecture Bootstrap
 
 All rules, governance constraints, and architectural boundaries are inherited and MUST NOT be violated.
