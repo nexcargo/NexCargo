@@ -3,7 +3,6 @@
 
 import { NexCargoEvent, EventHandler } from './event-types';
 import { EventClassification, EventCriticality } from '@/shared/types/enums';
-import { v4 as uuidv4 } from 'uuid';
 
 /** In-memory event emitter for development and testing */
 export class InMemoryEventEmitter {
@@ -65,14 +64,14 @@ export class InMemoryEventEmitter {
     correlationId?: string;
   }): NexCargoEvent<T> {
     return {
-      event_id: uuidv4(),
+      event_id: crypto.randomUUID(),
       event_type: eventType,
       timestamp: new Date().toISOString(),
       source_module: sourceModule,
       aggregate_id: aggregateId,
       aggregate_type: aggregateType,
       payload,
-      correlation_id: correlationId || uuidv4(),
+      correlation_id: correlationId || crypto.randomUUID(),
       version: 1,
       classification,
       criticality,

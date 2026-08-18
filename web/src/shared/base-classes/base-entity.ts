@@ -1,8 +1,6 @@
 // NexCargo Base Entity — Foundation for all domain entities per PROMPT 1 + PROMPT 2
 // All entity models extend this class to ensure standard field consistency.
 
-import { v4 as uuidv4 } from 'uuid';
-
 export abstract class BaseEntity {
   id: string;
   created_at: Date;
@@ -10,7 +8,7 @@ export abstract class BaseEntity {
   version: number;
 
   constructor() {
-    this.id = uuidv4();
+    this.id = crypto.randomUUID();
     const now = new Date();
     this.created_at = now;
     this.updated_at = now;
@@ -25,6 +23,11 @@ export abstract class BaseEntity {
 
   /** Convert entity to plain object for serialization */
   toJSON(): Record<string, unknown> {
-    return { ...this };
+    return {
+      id: this.id,
+      created_at: this.created_at,
+      updated_at: this.updated_at,
+      version: this.version,
+    };
   }
 }

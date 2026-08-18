@@ -4,26 +4,9 @@
 import { UserRole, LanguagePreference, Region, CurrencyCode } from './enums';
 
 /** Standard base fields for every entity per PROMPT 2 */
-export interface BaseEntity {
-  id: string; // UUID
-  created_at: string; // ISO 8601 timestamp
-  updated_at: string; // ISO 8601 timestamp
-  version: number; // Optimistic locking version
-}
-
-/** Auditable entity with user tracking per ESS-009 */
-export interface AuditableEntity extends BaseEntity {
-  created_by: string; // userId
-  updated_by: string; // userId
-  correlation_id: string; // Traceability across modules
-}
-
-/** Soft-deletable entity per ESS-009 */
-export interface SoftDeletableEntity extends AuditableEntity {
-  is_deleted: boolean;
-  deleted_at?: string;
-  deleted_by?: string;
-}
+// NOTE: BaseEntity, AuditableEntity, and SoftDeletableEntity are exported as classes
+// from ./base-classes/ (base-entity, auditable-entity, soft-deletable-entity).
+// These interface stubs are removed to avoid TS2308 duplicate export conflicts.
 
 /** User profile per MOD-010 + PROMPT 2 */
 export interface UserProfile {
@@ -109,5 +92,7 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-/** Locale dictionary entry */
-export type LocaleDictionary = Record<string, string | LocaleDictionary>;
+/** Locale dictionary entry — supports nested translation objects of arbitrary depth */
+export interface LocaleDictionary {
+  [key: string]: string | LocaleDictionary;
+}
