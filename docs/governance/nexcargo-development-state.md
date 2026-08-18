@@ -8,9 +8,9 @@
 
 | Field | Value |
 |-------|-------|
-| Last Updated | 2026-08-17 |
-| Last Updated By | HAO Decision — PROMPT 0 v1.1 Promotion + Track A Housekeeping Pass 2 |
-| Session ID | 2026-08-17-track-a-housekeeping-pass-2 |
+| Last Updated | 2026-08-18 |
+| Last Updated By | Continuity Update — Foundation TS remediation committed + Development State synchronization + GitHub org transfer recorded |
+| Session ID | 2026-08-18-continuity-update |
 
 ---
 
@@ -40,6 +40,9 @@ Foundation / Module Implementation / Validation / Deployment / Mobile Preparatio
 | HAO-PROMPT0-001 | PROMPT 0 v1.0 deprecated; v1.1 promoted to sole authority | 2026-08-17 | HAO | All PROMPT 0 references must use v1.1. Dependency taxonomy is operational. No implementation sequence authorized. Existing unresolved HAO decisions remain unresolved. |
 | HAO-TRACKA-001 | Track A — Governance housekeeping approved | 2026-08-17 | HAO | INDEX updated (§7) with PROMPT 0 version registry. INDEX version bumped to v1.1. All docs validated for stale v1.0 references. |
 | HAO-TRACKA-002 | Track A Pass 2 — PROMPT 1–8 loader references corrected | 2026-08-17 | HAO | All 8 implementation prompts (PROMPT 1 through PROMPT 8) now reference PROMPT 0 — NEXCARGO MASTER SYSTEM_v1.1.md as the governing master prompt. No substantive content altered. Each prompt retains its own v1.0 version metadata. |
+| HAO-BASELINE-001 | Foundation baseline commit authorized | 2026-08-17 | HAO | Committed at `4451a14`. Includes all foundation scaffold, governance docs, module configs, i18n, test infrastructure, shared kernel, API routes, database migration. |
+| HAO-TRACKB-001 | Track B — Dependency Compliance Audit authorized | 2026-08-17 | HAO | Full audit performed. 18 modules audited against PROMPT 0 v1.1 dependency table. Remediation committed at `f979100` and `0ba2724`. Final state: 61 forward ↔ 61 reverse relationships, zero discrepancies. |
+| HAO-CONTINUITY-001 | Foundation TS remediation committed + Development State synchronized | 2026-08-18 | HAO | TS remediation committed at `3b1c4b1`. Development State updated to reflect completed work. GitHub organization transfer recorded. No remote configured locally yet. |
 
 ---
 
@@ -178,11 +181,104 @@ MOD-XXX (none yet)
 
 ## Current Work in Progress
 
-None. Architecture Bootstrap (PROMPT 1) completed. Prerequisites WEB-002, WEB-008, WEB-009 resolved. PROMPT 0 v1.1 dependency semantics established. Specification readiness audit completed. Awaiting HAO decision on HAD-001 through HAD-007 before any module implementation.
+**NONE — Foundation phase fully committed.** All foundation TypeScript remediation, Track B audit/remediation, and governance housekeeping are committed. Awaiting HAO review of outstanding HAD decisions before any module implementation.
 
 ---
 
-## Pending Decisions
+## Last Completed Work
+
+### Session: 2026-08-17 — Foundation/Governance Baseline + Track B Audit + TS Remediation
+
+| Field | Value |
+|-------|-------|
+| Date | 2026-08-17 |
+| Task | Governance housekeeping, dependency compliance audit, TypeScript error remediation |
+
+#### Sub-Task 1: PROMPT 0 v1.0 Cleanup (HAO-PROMPT0-V1.0-CLEANUP-001)
+- Reverted unauthorized +34-line "MODULE DEPENDENCY SEMANTICS" addition to deprecated PROMPT 0 v1.0
+- Verified byte-for-byte equivalence to HEAD `bd273aa`
+- No governance impact; v1.1 remains sole authority
+
+#### Sub-Task 2: Foundation Baseline Commit (HAO-BASELINE-001)
+- Committed at `4451a14`: "NexCargo Foundation and Governance Baseline — 2026-08-17"
+- 85 files committed (+12,265 / -4,696 lines)
+- Includes: PROMPT 0 v1.1, Development State, Track A governance updates, shared kernel, 18 module configs, API routes, database migration, i18n, Vitest, audit reports
+- Security verified: `.env.local` never tracked, no secrets committed
+
+#### Sub-Task 3: Track B — Dependency Compliance Audit (HAO-TRACKB-001)
+- **AUDIT COMPLETE** — Full audit of all 18 modules against PROMPT 0 v1.1 dependency table
+- Initial findings: 0 fully compliant modules; schema cannot represent typed dependencies; many unauthorized relationships
+- Remediation committed at `f979100`: "Track B — Dependency Compliance Remediation: typed deps, reverse usedBy, schema fix"
+  - Added `DependencyType`, `TypedDependency`, `ReverseDependency` types to enums.ts
+  - Repopulated all 18 module.config.ts with typed dependencies and mechanical reverse usedBy
+- Fix committed at `0ba2724`: "Track B fix: correct BC bidirectional flag, remove false positives in usedBy"
+  - Corrected MOD-001.bidirectional flag on dependency declaration
+  - Removed false-positive entries from MOD-003.usedBy and MOD-011.usedBy
+- Final validation: 61 forward = 61 reverse, zero mismatches, 12 BC flags across 3 pairs, zero new TS errors
+- Audit report file: `AUDIT_REPORT_TRACK_B_DEPENDENCY_COMPLIANCE_2026-08-17.md`
+
+#### Sub-Task 4: Foundation TypeScript Error Remediation
+- Resolved all 13 pre-existing TypeScript errors:
+  - `base-repository.ts`: Supabase PostgREST type narrowing → cast via imported `PostgrestFilterBuilder`
+  - `base-entity.ts`: removed `uuid` package → `crypto.randomUUID()`; fixed `toJSON()` spread on abstract class
+  - `emitter.ts`: removed `uuid` package → `crypto.randomUUID()`
+  - `events/index.ts`: added `export type` prefix to 5 type-only re-exports (isolatedModules)
+  - `core.ts`: removed duplicate BaseEntity/AuditableEntity/SoftDeletableEntity interfaces; changed recursive `LocaleDictionary` type alias to interface
+- Validation: `npx tsc --noEmit` returns 0 errors (exit code 0); `npm test` passes 7/7
+- Track B integrity confirmed unchanged (61 forward ↔ 61 reverse)
+- **COMMITTED** at `3b1c4b1`: "Foundation - Resolve 13 pre-existing TypeScript errors + dependency type schema"
+
+#### Sub-Task 5: Continuity State Update — 2026-08-17 End of Day
+- Documenting current state for tomorrow's session resumption
+- Pending action: commit already-authorized TS remediation, then post-commit validation
+
+**Files Modified Today (Uncommitted):** 5 files (base-repository.ts, base-entity.ts, emitter.ts, events/index.ts, core.ts) — awaiting commit authorization
+
+**Git Status:** Working tree has 5 modified files. Branch: `main`. Latest commit: `0ba2724`.
+
+---
+
+### Session: 2026-08-18 — Continuity Update + Development State Synchronization
+
+| Field | Value |
+|-------|-------|
+| Date | 2026-08-18 |
+| Task | Update Development State to reflect completed Foundation TS remediation; record GitHub organization transfer; verify Git remote |
+
+#### Sub-Task 1: Verify Repository State
+- Branch: `main` ✓
+- Latest commit: `3b1c4b1` (Foundation TS remediation) ✓
+- Only uncommitted file: `docs/governance/nexcargo-development-state.md` ✓
+- No unexpected source-code modifications ✓
+
+#### Sub-Task 2: Record Foundation TS Remediation Completion
+- Commit `3b1c4b1` produced:
+  - TypeScript: 0 errors
+  - Tests: 7/7 passed
+  - Track B: 61 forward ↔ 61 reverse, 0 discrepancies
+  - Previous history preserved (`0ba2724`, `f979100`, `4451a14` intact)
+  - No module implemented, no module authorized, no implementation sequence determined
+  - PROMPT 0 v1.1 remains authoritative
+
+#### Sub-Task 3: Record GitHub Organization Transfer
+- NexCargo repository transferred from personal GitHub account to GitHub organization: **NexCargo**
+- Organization URL: https://github.com/orgs/nexcargo/repositories
+- Current local Git configuration: **No remote configured** (origin not set)
+- Verified organization page shows 0 public repositories (repo may be private or transfer still in progress)
+- Attempted URLs verified as unavailable (404): `nexcargo/nexcargo`, `nexcargo/nexcargov2`, `nexcargo/NexCargo`
+- **Action required before push:** Configure correct origin URL once transferred repository is accessible
+
+#### Sub-Task 4: Future-Session Remote Verification Rule
+Future sessions MUST verify the Git remote before any repository operations, particularly before pushing:
+```
+git remote -v
+git remote get-url origin
+```
+This is an operational safeguard following the repository transfer. Do not assume the remote is correct.
+
+---
+
+### Session: 2026-08-05 (Initial Audit)
 
 | # | Decision Required | Impacted By | Notes |
 |---|-------------------|-------------|-------|
@@ -244,7 +340,9 @@ None. Architecture Bootstrap (PROMPT 1) completed. Prerequisites WEB-002, WEB-00
 
 ## Next Recommended Action
 
-The next controlled action is:
+**Foundation TypeScript remediation committed at `3b1c4b1`. Development State synchronized as of 2026-08-18.**
+
+The next controlled actions remain:
 
 **Await Human Architecture Owner Review of HAD-001 through HAD-007.**
 
@@ -259,6 +357,34 @@ Before any module implementation begins, the following must be resolved:
 7. **Configure CI pipeline** — establish automated build/test gates.
 
 **No implementation work should begin until HAD decisions are resolved and HAO authorises the implementation sequence.**
+
+---
+
+## What Has NOT Been Done
+
+| Item | Status |
+|------|--------|
+| Implementation sequence determined | NOT DONE — PROMPT 0 v1.1 does not establish sequence; no HAO decision made |
+| Any module authorized for implementation | NOT DONE — all modules remain at SCHEDULED status |
+| Any business module implemented | NOT DONE — all 18 modules contain only scaffolding/config |
+| Custom RLS policies implemented | NOT DONE — BLK-001 remains open |
+| CI pipeline configured | NOT DONE — BLK-011 remains open |
+| Track A/B remediation committed | COMMITTED — TS remediation at `3b1c4b1`; Track B audit/remediation at `f979100` + `0ba2724` |
+
+---
+
+## Continuity Notes for Next Session
+
+| Item | Details |
+|------|---------|
+| **Branch** | `main` |
+| **Latest commit** | `3b1c4b1` — "Foundation - Resolve 13 pre-existing TypeScript errors + dependency type schema" |
+| **Uncommitted changes** | Only this file (`docs/governance/nexcargo-development-state.md`) — being committed as continuity update |
+| **Track B frozen state** | All 18 module configs validated at 61 forward = 61 reverse — DO NOT modify |
+| **PROMPT 0 authority** | v1.1 = sole authority; v1.0 = deprecated (reverted to HEAD `bd273aa`) |
+| **Implementation authorization** | NONE — no module authorized |
+| **GitHub organization** | Repository transferred to `nexcargo` org (https://github.com/orgs/nexcargo/repositories). No remote currently configured locally. Verify before any push operations. |
+| **Remote verification rule** | Future sessions MUST run `git remote -v` and `git remote get-url origin` before repository operations |
 
 ---
 
