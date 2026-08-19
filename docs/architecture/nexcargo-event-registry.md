@@ -1,4 +1,4 @@
-# NexCargo Event Registry v1.0
+﻿# NexCargo Event Registry v1.0
 
 ---
 
@@ -100,6 +100,8 @@ Each registered event SHALL define the following metadata:
 |-|-|-|-|-|-|-|-|
 | listingCreated | MOD-001 | MOD-001 | MOD-002, MOD-012 | Business | High | Yes | A shipment listing has been created. |
 | bookingConfirmed | MOD-002 | MOD-002 | MOD-003, MOD-005 | Business | Critical | Yes | A booking has been confirmed. |
+
+NOTE: The example rows above illustrate the registry structure. They are not exhaustive. The full event catalogue is maintained in the Module Event Ownership sections (§13).
 
 The registry defines ownership and meaning only.
 
@@ -321,18 +323,26 @@ Example:
 
 - listingCreated
 - listingPublished
+- listingExpired
+- listingCancelled
+- listingBooked
 - offerSubmitted
 - offerWithdrawn
+- offerAccepted
+- offerRejected
+- offerExpired
 - matchProposed
+- matchAccepted
+- matchRejected
+- quoteGenerated
 
 Constraint:
 
-`matchProposed` is advisory only.
+matchProposed is advisory only.
 
 It SHALL NOT trigger automatic booking.
 
 ---
-
 ## MOD-002 Owned Events
 
 - bookingRequested
@@ -391,7 +401,7 @@ This strategy provides deterministic vocabulary for AI Builders while maintainin
 
 | Module | Owned Event Categories | Key Constraint |
 |-|-|-|
-| MOD-001 | Listing, offer, matching events | No Auto-Booking |
+| MOD-001 | listingCreated, listingPublished, listingExpired, listingCancelled, listingBooked, offerSubmitted, offerWithdrawn, offerAccepted, offerRejected, offerExpired, matchProposed, matchAccepted, matchRejected, quoteGenerated | No Auto-Booking |
 | MOD-002 | Booking and contract events | Contract Immutability |
 | MOD-003 | Tracking and trip events | No Dispatch Authority |
 | MOD-004 | Document events | No Legal Execution |

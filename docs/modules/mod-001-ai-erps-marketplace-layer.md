@@ -1,4 +1,4 @@
-MOD-001 — AI ERPS Marketplace Module v1.0
+﻿MOD-001 — AI ERPS Marketplace Module v1.0
 
 
 
@@ -718,7 +718,146 @@ Users may:
 
 
 
-6\.6. AI Role
+
+6\.4.4 Numerical Weighting Specification — Authoritative Defaults
+
+This section establishes the authoritative numerical weighting model for the MOD‑001 matching engine. It translates the qualitative weight descriptors from §6\.4\.2 into implementable numerical values.
+
+Authority hierarchy:
+
+\- Qualitative descriptors in §6\.4\.2 are the business‑priority authority.
+\- Numerical multipliers below are subordinate to §6\.4\.2.
+\- If any discrepancy exists between qualitative and numerical weights, §6\.4\.2 prevails.
+
+---
+
+### 1. Qualitative-to-Numerical Mapping
+
+| Qualitative Descriptor | Numerical Multiplier |
+|---|---|
+| High | 1\.5x |
+| Medium-High | 1\.2x |
+| Medium | 1\.0x |
+| Low-Medium | 0\.8x |
+
+---
+
+### 2. Final Factor Table
+
+Each factor receives a base score of 0–10, normalized from raw data (see Section 4). This base score is multiplied by the weight multiplier to produce the weighted contribution.
+
+| # | Factor | Qualitative Descriptor (§6.4.2) | Numerical Multiplier | Scoring Direction | Maximum Contribution |
+|---|---|---|---|---|---|
+| 1 | Corridor match (Maputo, Beira, Nacala) | High | 1.5x | Direct | 15 |
+| 2 | Route alignment | High | 1.5x | Direct | 15 |
+| 3 | Route overlap percentage | High | 1.5x | Direct | 15 |
+| 4 | Origin distance | Medium-High | 1.2x | Inverse (closer = higher) | 12 |
+| 5 | Transporter availability (capacity) | Medium-High | 1.2x | Direct | 12 |
+| 6 | Cross-border experience | Medium | 1.0x | Direct | 10 |
+| 7 | Hazardous cargo capability | Medium | 1.0x | Direct | 10 |
+| 8 | Refrigeration capability | Medium | 1.0x | Direct | 10 |
+| 9 | Verified documents | Medium | 1.0x | Direct | 10 |
+| 10 | Transporter rating | Medium | 1.0x | Direct | 10 |
+| 11 | Completed trips | Medium | 1.0x | Direct | 10 |
+| 12 | Cancellation rate (lower = better) | Medium | 1.0x | Inverse | 10 |
+| 13 | Acceptance rate (higher = better) | Medium | 1.0x | Direct | 10 |
+| 14 | Response time (faster = better) | Medium | 1.0x | Inverse | 10 |
+| 15 | Price competitiveness | Medium | 1.0x | Direct | 10 |
+| 16 | Relationship score (existing partners) | Low-Medium | 0.8x | Direct | 8 |
+
+Total factors: **16**
+
+Maximum possible weighted score: **177** (calculated as: 3×15 + 2×12 + 10×10 + 1×8 = 45 + 24 + 100 + 8 = 177)
+
+---
+
+### 3. Scoring Formula
+
+Let:
+
+\- B_i = Base factor score for factor i (0–10, normalized from raw data per Section 4)
+\- M_i = Weight multiplier for factor i (from the table above)
+
+Then:
+
+WeightedScore = Σ(B_i × M_i) for i = 1 to 16
+
+CompositeScore = (WeightedScore / MaximumPossibleWeightedScore) × 100
+
+Where MaximumPossibleWeightedScore = 177.
+
+Therefore:
+
+CompositeScore = (WeightedScore / 177) × 100
+
+The CompositeScore range is 0–100.
+
+---
+
+### 4. Individual Factor Normalization Rules
+
+Each factor's raw business data must be transformed into a 0–10 base score before applying the weight multiplier. The following rules define the normalization approach for each factor:
+
+| Factor | Normalization Method | Notes |
+|---|---|---|
+| Corridor match | Categorical capability | 10 if transporter operates on the corridor; 0 otherwise. Intermediate scores may be assigned for partial corridor coverage based on implementation calibration. |
+| Route alignment | Ratio/percentage-based | Percentage of route overlap between listing and transporter's typical routes, scaled to 0–10. |
+| Route overlap percentage | Ratio/percentage-based | Direct percentage of origin-destination overlap, scaled to 0–10. |
+| Origin distance | Threshold-based | Closer transporters receive higher scores. Implementation defines the distance thresholds that map to 0–10 scale. |
+| Transporter availability | Derived from capacity data | Spare capacity relative to current commitments, scaled to 0–10. Requires implementation-defined threshold calibration. |
+| Cross-border experience | Historical/statistical | Number of successful cross-border trips or years of cross-border operation, scaled to 0–10. |
+| Hazardous cargo capability | Categorical capability | 10 if certified for relevant hazardous cargo types; 0 otherwise. |
+| Refrigeration capability | Categorical capability | 10 if equipped with refrigeration; 0 otherwise. |
+| Verified documents | Categorical capability | Score based on number and recency of verified documents (license, insurance, permits). Scaled to 0–10. |
+| Transporter rating | Historical/statistical | Existing platform rating or external reputation score, scaled to 0–10. |
+| Completed trips | Historical/statistical | Total completed trips or trips within relevant corridor, scaled to 0–10. |
+| Cancellation rate (inverse) | Ratio-based (inverted) | Lower cancellation rate = higher score. Score = (1 − cancellation_rate) × 10, capped at 10. |
+| Acceptance rate | Ratio-based (direct) | Higher acceptance rate = higher score. Score = acceptance_rate × 10. |
+| Response time (inverse) | Threshold-based (inverted) | Faster response = higher score. Implementation defines time thresholds mapping to 0–10. |
+| Price competitiveness | Ratio-based | Relative price compared to market average for the same corridor/cargo type. Scaled to 0–10. |
+| Relationship score | Derived from historical data | Based on past transaction history, preferred partner status, and relationship duration. Scaled to 0–10. Implementation-calibrated. |
+
+IMPORTANT: Where exact thresholds cannot be derived from the authoritative specification, they remain an **implementation/calibration detail**. The numerical weighting hierarchy (Section 2) is authoritative; the specific 0–10 normalization thresholds for individual factors are implementation details that do not alter the business priority expressed in §6.4.2.
+
+---
+
+### 5. Missing Data Treatment
+
+When data for one or more factors is unavailable:
+
+\- Each missing factor receives a **neutral default score of 5** (midpoint of 0–10 scale).
+\- The maximum possible weighted score remains **177** (no re-normalization).
+\- This ensures that missing data does not artificially inflate or deflate the composite score.
+\- Missing data reduces informational completeness but does not penalize the transporter beyond the neutral midpoint.
+
+Alternative approaches (exclusion with re-normalization, explicit unavailable-state penalty) may be implemented as configurable options, provided they do not alter the default behavior described above.
+
+---
+
+### 6. Advisory-Only Constraint
+
+The matching engine scoring result:
+
+\- Ranks and proposes suitable transporters by composite score.
+\- Does NOT automatically book any transporter.
+\- Does NOT create a contract.
+\- Does NOT initiate escrow.
+\- Does NOT execute any financial transaction.
+\- Does NOT override user choice.
+
+All matching recommendations remain advisory-only per ESS-003 and MOD-006 constraint "No Execution." The shipper retains full discretion to accept, reject, or ignore any recommendation.
+
+---
+
+### 7. Configurability and Recalibration
+
+The numerical multipliers documented in this section are **INITIAL DEFAULT WEIGHTS**. They SHALL be stored in a configurable data structure (e.g., configuration file, database table, or feature flag system) that allows authorized modification without code changes.
+
+Future recalibration MAY use observed marketplace outcomes and the learning framework defined by MOD-001 §6.9 (match-to-contract conversion data, AI learning from historical matches). However:
+
+\- Future recalibration does NOT invalidate this specification.
+\- The current values are sufficiently authoritative to permit implementation when MOD-001 is authorized.
+\- Any recalibration must preserve the qualitative hierarchy established in §6.4.2 (High > Medium-High > Medium > Low-Medium).6\.6. AI Role
 
 
 
@@ -836,42 +975,26 @@ If no transporter passes hard filters:
 
 
 
-6\.10. Event Model
+6\.10. Matching Engine Processing Events
 
+The matching engine emits the following internal processing events during its computation cycle. These describe implementation-level processing steps, NOT the canonical business-event vocabulary. The canonical system event vocabulary is defined exclusively in §8 (EVENT MODEL) and the NEXCARGO Event Registry.
 
+| Processing Concept | Canonical Business Event | Registry Status |
+|---|---|---|
+| MatchRequested | Command/request — not a registered event | N/A |
+| MatchResultsGenerated | matchProposed | Canonical event |
+| MatchSelected | matchAccepted | Canonical event |
+| MatchExpired | Context-dependent; no separate canonical match event | N/A / informational |
+| NoMatchFound | Informational matching outcome; not a canonical state transition | N/A |
 
-The matching engine emits the following events:
+NOTE: The events listed in this section are internal matching-engine processing concepts. Their canonical business-meaning equivalents are defined in §8. The Event Registry maintains the authoritative vocabulary. Do NOT register MatchRequested, MatchResultsGenerated, MatchSelected, MatchExpired, or NoMatchFound as canonical events. They are implementation details of the matching engine's computation cycle.
 
-
-
-| Event | Trigger |
-
-|-------|---------|
-
-| `MatchRequested` | User initiated matching |
-
-| `MatchResultsGenerated` | Ranking complete |
-
-| `MatchSelected` | Shipper selected a transporter |
-
-| `MatchExpired` | Listing expired without selection |
-
-| `NoMatchFound` | No compatible transporters |
-
-
-
-\*\*Consumed by:\*\*
+*\*Consumed by (canonical events):\*\*
 
 \- MOD-002 (Booking \& Contract Management) — for contract initiation
-
 \- MOD-006 (AI Intelligence Platform) — for learning and improvement
-
 \- MOD-012 (Data Platform Analytics) — for performance tracking
-
 \- MOD-016 (Notifications) — for alerts
-
-
-
 6\.11. Performance Metrics
 
 
@@ -1224,7 +1347,7 @@ If unclear:
 
 
 
-Output: TODO: requires specification from MOD-001
+Initial numerical default weights are proposed and require HAO approval. See §6.4.4 PROPOSED INITIAL DEFAULTS — HAO APPROVAL REQUIRED for the proposed weighting model.
 
 
 
