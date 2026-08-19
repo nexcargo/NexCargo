@@ -1,4 +1,4 @@
-# NexCargo Development State
+﻿# NexCargo Development State
 
 > This is an operational status document, not a specification. It records current project state and progress. Authoritative specifications (BOOT, INDEX, ESS, MOD) always override this document in case of conflict.
 
@@ -435,8 +435,8 @@ No module implementation outside Wave 0 should begin until explicit HAO authoriz
 | Item | Details |
 |------|---------|
 | **Branch** | `main` |
-| **Latest commit** | `d4a5aea` — "WAVE-0-004: Update development state to record fourth increment (97e76d8)" (closure package) |
-| **Uncommitted changes** | docs/architecture/nexcargo-event-registry.md, docs/modules/mod-001-ai-erps-marketplace-layer.md (pre-existing; not part of Wave 0), docs/governance/nxcargo-wave-0-artifact-summary.md, docs/governance/nxcargo-wave-0-exit-report.md (closure artifacts) |
+| **Latest commit** | `d0d03c0` — "NexCargo — Repository naming remediation + Wave 0 closure artifacts" (pushed to origin/main)
+| **Uncommitted changes** | docs/architecture/nexcargo-event-registry.md, docs/modules/mod-001-ai-erps-marketplace-layer.md (pre-existing documentation modifications outside Wave 0 scope; non-blocking) |
 | **Track B frozen state** | All 18 module configs validated at 61 forward = 61 reverse — DO NOT modify (PRESERVED in all Wave 0 commits) |
 | **PROMPT 0 authority** | v1.1 = sole authority; v1.0 = deprecated (reverted to HEAD `bd273aa`) |
 | **Implementation authorization** | WAVE 0 ONLY — CLOSED. MOD-011, MOD-017, MOD-010 implementation complete. All other modules: NOT AUTHORIZED |
@@ -453,9 +453,23 @@ No module implementation outside Wave 0 should begin until explicit HAO authoriz
 | **HAO pre-authorization decisions** | B-9 SCOPE APPROVED (HAO-WAVE0-001), internal sequencing APPROVED (HAO-WAVE0-002), exit criteria refinement APPROVED (HAO-WAVE0-003), documentation cleanup APPROVED (HAO-WAVE0-004) — all 2026-08-19 |
 | **HAO Wave 0 authorization** | HAO-WAVE0-005 — Wave 0 AUTHORIZED 2026-08-19; implementation CLOSED 2026-08-19 |
 | **Wave 0 Increments** | `3550e6f` (WAVE-0-001: foundation types + shared standards), `bf3b2b8` (WAVE-0-002: infrastructure utilities), `86b14b8` (WAVE-0-003: integration infrastructure utilities), `97e76d8` (WAVE-0-004: compliance audit trail, adapter factory, predictive failure indicators) |
-| **Closure Artifacts** | `nxcargo-wave-0-artifact-summary.md` (X-31), `nxcargo-wave-0-exit-report.md` (X-32) |
-| **Session status** | CLOSED — awaiting HAO evaluation of Wave 0 completion and Wave 1 authorization decision |
+| **Closure Artifacts** | `nexcargo-wave-0-artifact-summary.md` (X-31), `nexcargo-wave-0-exit-report.md` (X-32) — renamed from nxcargo-* prefix during naming remediation commit d0d03c0
+| **Non-blocking discrepancies recorded** | Pre-existing documentation modifications to event-registry.md and mod-001 spec identified as outside Wave 0 scope; artifact count discrepancy (summary claims 39 files, filesystem shows 40 including module.config.ts); file rename tracking in git (nxcargo-* -> nexcargo-*) handled via R100 auto-detect
+| **Session status** | CLOSED — 2026-08-19. Awaiting HAO evaluation of Wave 0 completion and Wave 1 readiness assessment.
 
 ---
 
 *End of Development State Record*
+
+
+
+
+
+
+
+
+
+
+
+
+
