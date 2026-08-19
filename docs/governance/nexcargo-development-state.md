@@ -1,4 +1,4 @@
-# NexCargo Development State
+﻿# NexCargo Development State
 
 > This is an operational status document, not a specification. It records current project state and progress. Authoritative specifications (BOOT, INDEX, ESS, MOD) always override this document in case of conflict.
 
@@ -8,9 +8,9 @@
 
 | Field | Value |
 |-------|-------|
-| Last Updated | 2026-08-18 |
-| Last Updated By | Continuity Update — Foundation TS remediation committed + Development State synchronization + GitHub org transfer recorded |
-| Session ID | 2026-08-18-continuity-update |
+| Last Updated | 2026-08-19 |
+| Last Updated By | HAO Decision — WAVE 0 AUTHORIZED; implementation commences with MOD-011, MOD-017, MOD-010 in parallel |
+| Session ID | 2026-08-19-hao-wave-0-authorization |
 
 ---
 
@@ -18,9 +18,9 @@
 
 Foundation / Module Implementation / Validation / Deployment / Mobile Preparation
 
-**Current:** Foundation (Phase 2 per Development Manifest Section 6) — **PARTIALLY COMPLETE**
+**Current:** Foundation / Module Implementation — **WAVE 0 AUTHORIZED AND IN PROGRESS**
 
-**Notes:** Architecture Bootstrap (PROMPT 1) fully scaffolded. Prerequisites WEB-002 (i18n), WEB-008 (Vitest), WEB-009 (Service Role Key placeholder) resolved. PROMPT 0 v1.1 dependency semantics established. Specification readiness audit completed. NOT YET READY for module implementation pending Human Architecture Owner review.
+**Notes:** Architecture Bootstrap (PROMPT 1) fully scaffolded. Prerequisites WEB-002 (i18n), WEB-008 (Vitest), WEB-009 (Service Role Key placeholder) resolved. PROMPT 0 v1.1 dependency semantics established. All HAD decisions (HAD-001 through HAD-007) APPROVED / RESOLVED. Authoritative wave-based implementation sequence ratified by HAO (HAD-007). Specification baseline is complete. **Wave 0 is AUTHORIZED for implementation of MOD-011, MOD-017, MOD-010 in parallel.** Implementation Authorization: WAVE 0 ONLY. Each wave requires explicit HAO authorization before implementation begins.
 
 ---
 
@@ -42,15 +42,23 @@ Foundation / Module Implementation / Validation / Deployment / Mobile Preparatio
 | HAO-TRACKA-002 | Track A Pass 2 — PROMPT 1–8 loader references corrected | 2026-08-17 | HAO | All 8 implementation prompts (PROMPT 1 through PROMPT 8) now reference PROMPT 0 — NEXCARGO MASTER SYSTEM_v1.1.md as the governing master prompt. No substantive content altered. Each prompt retains its own v1.0 version metadata. |
 | HAO-BASELINE-001 | Foundation baseline commit authorized | 2026-08-17 | HAO | Committed at `4451a14`. Includes all foundation scaffold, governance docs, module configs, i18n, test infrastructure, shared kernel, API routes, database migration. |
 | HAO-TRACKB-001 | Track B — Dependency Compliance Audit authorized | 2026-08-17 | HAO | Full audit performed. 18 modules audited against PROMPT 0 v1.1 dependency table. Remediation committed at `f979100` and `0ba2724`. Final state: 61 forward ↔ 61 reverse relationships, zero discrepancies. |
-| HAO-CONTINUITY-001 | Foundation TS remediation committed + Development State synchronized | 2026-08-18 | HAO | TS remediation committed at `3b1c4b1`. Development State updated to reflect completed work. GitHub organization transfer recorded. No remote configured locally yet. |
-
----
+| | HAO-CONTINUITY-001 | Foundation TS remediation committed + Development State synchronized | 2026-08-18 | HAO | TS remediation committed at 3b1c4b1. Development State updated to reflect completed work. GitHub organization transfer recorded. No remote configured locally yet. |
+| HAO-SPECRES-001 | HAD-001/HAD-003 resolved — MOD-001 event model consolidated; Event Registry expanded to 14 canonical events | 2026-08-18 | HAO | §6.10 renamed to Matching Engine Processing Events. Canonical event vocabulary separated from processing events. Event Registry §13 expanded with all 14 MOD-001 canonical events. §16 ownership summary updated. Example clarification added in §4. |
+| HAO-SPECRES-002 | HAD-002 — Numerical matching weights specification AUTHORIZED and implemented | 2026-08-18 | HAO | 16-factor authoritative numerical weighting model established in MOD-001 §6.4.4. Qualitative-to-numerical mapping: High=1.5x, Medium-High=1.2x, Medium=1.0x, Low-Medium=0.8x. Maximum weighted score: 177 (corrected from proposed 150). Normalization: CompositeScore = (WeightedScore / 177) × 100. Missing data: neutral default of 5. Advisory-only constraint preserved. Configurable/recalibratable per §6.9 learning framework. Initial defaults authorized for implementation use. |
+| HAO-SPECRES-003 | HAD-006 — Blocker classifications verified and formally recorded | 2026-08-18 | HAO | BLK-001 RLS=C-blocker; BLK-007 Testing=E-blocker; BLK-004 refined to A-blocker for MOD-001 MATCHING ENGINE ONLY; BLK-008 downgraded to G (Not Currently Blocking). All classifications justified by ESS-006 and ESS-002. |
+| HAO-SPECRES-004 | HAD-007 — Implementation sequence RESOLVED | 2026-08-18 | HAO | Wave-based implementation sequence established as authoritative: Wave 0 (MOD-011, MOD-017, MOD-010 spec) → Wave 1 (MOD-001) → Wave 2 (MOD-002, MOD-003, MOD-004, MOD-005, MOD-013, MOD-006, MOD-012, MOD-014) → Wave 3 (MOD-007, MOD-008, MOD-015, MOD-018) → Wave 4 (MOD-009) → Wave 5 (MOD-011 integrations, MOD-017 full). Sequence determines ORDER ONLY. Does NOT constitute authorization to commence any wave. Each wave requires separate explicit HAO authorization before implementation begins. |
+| HAO-SPECRES-005 | HAD-007 — Implementation sequence APPROVED / RATIFIED by HAO | 2026-08-19 | HAO | Wave-based implementation sequence formally approved and ratified as the authoritative implementation sequence for NexCargo. Establishes sequencing only. Does NOT constitute implementation authorization for any module or wave. Each wave shall require a separate explicit HAO authorization before implementation begins. Wave entry criteria shall be established and verified before commencement of the respective wave. |
+| HAO-WAVE0-001 | Wave 0 Pre-Authorization — B-9 SCOPE BOUNDARY APPROVED | 2026-08-19 | HAO | The Wave 0 scope and prohibited/deferred activities described in `nexcargo-wave-0-readiness-report.md` are accepted as the authoritative Wave 0 scope boundary. All prohibitions (MOD-011: 13 items, MOD-017: 12 items, MOD-010: 8 items, general: 13 items) are confirmed accurate. |
+| HAO-WAVE0-002 | Wave 0 Internal Sequencing APPROVED | 2026-08-19 | HAO | MOD-011, MOD-017, and MOD-010 may commence in parallel. Their contractual/infrastructure relationships (IS/AU, OB) shall be coordinated rather than treated as implementation sequencing blockers. |
+| HAO-WAVE0-003 | Exit Criteria Refinement APPROVED AS PREPARATION TASK | 2026-08-19 | HAO | Before the first Wave 0 implementation commit, refine exit criteria X-01 through X-22 where necessary to make verification objectively measurable. Do not expand Wave 0 scope. |
+| HAO-WAVE0-004 | Documentation Cleanup APPROVED | 2026-08-19 | HAO | Correct residual Git-remote inconsistency in this document (line 269 "No remote configured" vs line 433 origin configured). Preserve actual current repository state. |
+| HAO-WAVE0-005 | **WAVE 0 AUTHORIZED** | 2026-08-19 | HAO | Wave 0 is APPROVED and AUTHORIZED to commence implementation of MOD-011, MOD-017, MOD-010 in parallel. Authorization is subject to approved Wave 0 scope boundaries and prohibitions (`nexcargo-wave-0-readiness-report.md`). Before first Wave 0 implementation commit: apply exit-criteria measurability refinements, conduct shared standards coordination between the three modules, maintain all existing governance/dependency/security/testing/architectural constraints. No Wave 1 or subsequent wave is authorized. No module outside Wave 0 is authorized. |
 
 ## Current Active Module
 
-MOD-XXX (none yet)
+MOD-011, MOD-017, MOD-010 (Wave 0 — authorized in parallel)
 
-**Notes:** Architecture Bootstrap complete. Specification Resolution & Readiness Audit completed. MOD-001 is NOT authorised for full implementation yet due to unresolved HAD decisions. Awaiting HAO approval on sequence and blocker classifications.
+**Notes:** Architecture Bootstrap complete. Specification Resolution & Readiness Audit completed. All HAD decisions (HAD-001 through HAD-007) APPROVED / RESOLVED. Authoritative wave-based implementation sequence ratified by HAO (HAD-007). **Wave 0 is AUTHORIZED for implementation of MOD-011, MOD-017, MOD-010.** MOD-001 and all other modules remain NOT AUTHORIZED — Implementation Authorization: WAVE 0 ONLY. Wave 1 Authorization: NOT GRANTED. Each wave requires separate explicit HAO authorization before implementation begins. Sequence determination ≠ implementation authorization. Authorization ≠ implementation completion.
 
 ---
 
@@ -181,7 +189,7 @@ MOD-XXX (none yet)
 
 ## Current Work in Progress
 
-**NONE — Foundation phase fully committed.** All foundation TypeScript remediation, Track B audit/remediation, and governance housekeeping are committed. Awaiting HAO review of outstanding HAD decisions before any module implementation.
+**WAVE 0 — MOD-011, MOD-017, MOD-010 (authorized in parallel).** All foundation TypeScript remediation, Track B audit/remediation, and governance housekeeping are committed. All HAD decisions (HAD-001 through HAD-007) APPROVED / RESOLVED. Authoritative wave-based implementation sequence ratified by HAO (HAD-007). Wave 0 is AUTHORIZED for implementation. **Before first Wave 0 implementation commit:** apply exit-criteria measurability refinements (HAO-WAVE0-003), conduct shared standards coordination between MOD-011/MOD-017/MOD-010, maintain all existing NexCargo governance, dependency, security, testing and architectural constraints. Implementation Authorization: WAVE 0 ONLY. No Wave 1 or subsequent wave authorized.
 
 ---
 
@@ -263,10 +271,11 @@ MOD-XXX (none yet)
 #### Sub-Task 3: Record GitHub Organization Transfer
 - NexCargo repository transferred from personal GitHub account to GitHub organization: **NexCargo**
 - Organization URL: https://github.com/orgs/nexcargo/repositories
-- Current local Git configuration: **No remote configured** (origin not set)
+- At time of recording: **No remote configured** (origin not set)
 - Verified organization page shows 0 public repositories (repo may be private or transfer still in progress)
 - Attempted URLs verified as unavailable (404): `nexcargo/nexcargo`, `nexcargo/nexcargov2`, `nexcargo/NexCargo`
 - **Action required before push:** Configure correct origin URL once transferred repository is accessible
+- **Subsequent resolution:** Remote was later configured to `https://github.com/nexcargo/NexCargo.git` and push completed at commit `badd878`. See Continuity Notes §GitHub organization for current state.
 
 #### Sub-Task 4: Future-Session Remote Verification Rule
 Future sessions MUST verify the Git remote before any repository operations, particularly before pushing:
@@ -340,23 +349,52 @@ This is an operational safeguard following the repository transfer. Do not assum
 
 ## Next Recommended Action
 
-**Foundation TypeScript remediation committed at `3b1c4b1`. Development State synchronized as of 2026-08-18.**
+**All HAD decisions (HAD-001 through HAD-007) are APPROVED / RESOLVED.**
 
-The next controlled actions remain:
+**HAD-007 is formally ratified by HAO as of 2026-08-19.**
 
-**Await Human Architecture Owner Review of HAD-001 through HAD-007.**
+Specification baseline is complete and coherent. The following wave-based implementation sequence is established as **authoritative**:
 
-Before any module implementation begins, the following must be resolved:
+| Wave | Modules | Purpose | Authorization Status | Wave 0 Scope Boundary | Internal Sequencing |
+|------|---------|---------|---------------------|----------------------|--------------------|
+| Wave 0 — Foundation | MOD-011, MOD-017, MOD-010 (specification/foundation only) | Infrastructure specifications | **AUTHORIZED (HAO-WAVE0-005)** | APPROVED (HAO-WAVE0-001) | Parallel (HAO-WAVE0-002) |
+| Wave 1 — Core Marketplace | MOD-001 | Core marketplace capability | NOT GRANTED | N/A | N/A |
+| Wave 2 — Core Transaction Chain + Intelligence | MOD-002, MOD-003, MOD-004, MOD-005, MOD-013, MOD-006, MOD-012, MOD-014 | Transaction chain + AI/analytics/fleet | NOT GRANTED | N/A | N/A |
+| Wave 3 — Supporting Operational Capabilities | MOD-007, MOD-008, MOD-015, MOD-018 | User-facing operations | NOT GRANTED | N/A | N/A |
+| Wave 4 — Regional | MOD-009 | Cross-border logistics | NOT GRANTED | N/A | N/A |
+| Wave 5 — Integration & Optimization Maturity | MOD-011 (actual external integrations), MOD-017 (full production observability) | External integrations + production observability | NOT GRANTED | N/A | N/A |
 
-1. **Resolve MOD-001 event model** (HAD-001/HAD-003) — reconcile §6.10 vs §8, register events or approve provisional labels.
-2. **Determine TODO-001 weights** (HAD-002) — business-logic decision requiring HAO input.
-3. **Validate advisory implementation sequence** (HAD-007) — 7-phase proposal requires HAO approval.
-4. **Approve revised blocker classifications** (HAD-006) — RLS downgraded to C, Testing downgraded to E.
-5. **Verify ESS-004/ESS-001F contents** (HAD-004/HAD-005) — apply templates to module contracts.
-6. **Verify PostGIS status** — confirm Supabase project configuration.
-7. **Configure CI pipeline** — establish automated build/test gates.
+**GOVERNANCE DISTINCTIONS (authoritative):**
 
-**No implementation work should begin until HAD decisions are resolved and HAO authorises the implementation sequence.**
+- Dependency ≠ Sequence — PROMPT 0 v1.1 defines dependencies; HAD-007 defines sequence. These are separate governance concerns.
+- Sequence ≠ Authorization — HAD-007 approval establishes ORDER ONLY. It does NOT authorize commencement of any wave. Only explicit HAO authorization does.
+- Authorization ≠ Implementation Completion — Each wave requires separate explicit HAO authorization before implementation begins. Authorization of a wave does not imply completion.
+- **Wave 0 Authorization ≠ Wave 1+ Authorization** — Wave 0 is authorized. Waves 1 through 5 remain NOT GRANTED. No module outside Wave 0 may be implemented.
+
+The next controlled action is:
+
+**HAO authorization decision for Wave 1 (after Wave 0 exit criteria are satisfied).**
+
+Before Wave 1 implementation begins:
+1. Wave 0 exit criteria must be verified and confirmed complete
+2. HAO must explicitly authorize Wave 1 commencement
+3. Entry criteria for Wave 1 must be defined and agreed
+4. Resource allocation must be confirmed
+
+No module implementation outside Wave 0 should begin until explicit HAO authorization is granted.
+
+---
+
+## HAD Resolution Status
+
+| HAD | Final Status | Explanation |
+|-----|-------------|-------------|
+| HAD-001/HAD-003 | RESOLVED | MOD-001 event model consolidated; Event Registry expanded to 14 canonical events |
+| HAD-002 | RESOLVED | Numerical matching weights specification established and authorized in MOD-001 §6.4.4 |
+| HAD-004 | RESOLVED | ESS-004 verified present |
+| HAD-005 | RESOLVED | ESS-001F verified present |
+| HAD-006 | RESOLVED/VERIFIED | Blocker classifications formally recorded |
+| HAD-007 | APPROVED / RESOLVED | Wave-based implementation sequence formally ratified by HAO on 2026-08-19 as authoritative sequence; establishes order only, not authorization. Wave 0 subsequently authorized separately via HAO-WAVE0-005. |
 
 ---
 
@@ -364,12 +402,26 @@ Before any module implementation begins, the following must be resolved:
 
 | Item | Status |
 |------|--------|
-| Implementation sequence determined | NOT DONE — PROMPT 0 v1.1 does not establish sequence; no HAO decision made |
-| Any module authorized for implementation | NOT DONE — all modules remain at SCHEDULED status |
+| Implementation sequence determined | APPROVED / RESOLVED — Wave-based sequence ratified (HAD-007, 2026-08-19) |
+| Wave 0 scope boundary confirmed | APPROVED (HAO-WAVE0-001, 2026-08-19) |
+| Wave 0 internal sequencing approved | APPROVED — parallel execution authorized (HAO-WAVE0-002, 2026-08-19) |
+| Exit criteria measurability refinement approved | APPROVED AS PREPARATION TASK (HAO-WAVE0-003, 2026-08-19) |
+| Documentation cleanup approved | APPROVED (HAO-WAVE0-004, 2026-08-19) |
+| **Wave 0 authorization granted** | **GRANTED (HAO-WAVE0-005, 2026-08-19)** |
+| Any module outside Wave 0 authorized for implementation | NOT DONE — MOD-002 through MOD-009, MOD-012 through MOD-018 remain at SCHEDULED status; Implementation Authorization: WAVE 0 ONLY |
+| Wave 1 authorization granted | NOT GRANTED — awaiting separate HAO decision after Wave 0 exit verification |
+| Wave 2 authorization granted | NOT GRANTED — awaiting separate HAO decision |
+| Wave 3 authorization granted | NOT GRANTED — awaiting separate HAO decision |
+| Wave 4 authorization granted | NOT GRANTED — awaiting separate HAO decision |
+| Wave 5 authorization granted | NOT GRANTED — awaiting separate HAO decision |
+| MOD-001 implementation authorized | NOT AUTHORIZED |
 | Any business module implemented | NOT DONE — all 18 modules contain only scaffolding/config |
 | Custom RLS policies implemented | NOT DONE — BLK-001 remains open |
 | CI pipeline configured | NOT DONE — BLK-011 remains open |
 | Track A/B remediation committed | COMMITTED — TS remediation at `3b1c4b1`; Track B audit/remediation at `f979100` + `0ba2724` |
+| HAD-001 through HAD-006 resolved | RESOLVED/VERIFIED |
+| HAD-007 approved/ratified | APPROVED / RESOLVED — wave-based sequence established by HAO on 2026-08-19 |
+| No module or wave may begin as a consequence of HAD-007 approval | CONFIRMED — governance restriction in force (HAD-007 establishes sequence only; authorization is separate) |
 
 ---
 
@@ -378,13 +430,23 @@ Before any module implementation begins, the following must be resolved:
 | Item | Details |
 |------|---------|
 | **Branch** | `main` |
-| **Latest commit** | `3b1c4b1` — "Foundation - Resolve 13 pre-existing TypeScript errors + dependency type schema" |
-| **Uncommitted changes** | Only this file (`docs/governance/nexcargo-development-state.md`) — being committed as continuity update |
+| **Latest commit** | `badd878` — "Preserve GitHub README" (foundation TS remediation at `3b1c4b1`) |
+| **Uncommitted changes** | Only this file (`docs/governance/nexcargo-development-state.md`) — being committed as session closure record |
 | **Track B frozen state** | All 18 module configs validated at 61 forward = 61 reverse — DO NOT modify |
 | **PROMPT 0 authority** | v1.1 = sole authority; v1.0 = deprecated (reverted to HEAD `bd273aa`) |
-| **Implementation authorization** | NONE — no module authorized |
-| **GitHub organization** | Repository transferred to `nexcargo` org (https://github.com/orgs/nexcargo/repositories). No remote currently configured locally. Verify before any push operations. |
+| **Implementation authorization** | WAVE 0 ONLY — MOD-011, MOD-017, MOD-010 authorized; all other modules: NOT AUTHORIZED |
+| **HAD status** | HAD-001 through HAD-007 all APPROVED / RESOLVED |
+| **Authoritative sequence** | Wave-based: Wave 0 → Wave 1 → Wave 2 → Wave 3 → Wave 4 → Wave 5 (HAD-007 ratified) |
+| **HAD-007 approval date** | 2026-08-19 — HAO formally approved and ratified |
+| **Wave 0 Authorization** | **AUTHORIZED (HAO-WAVE0-005)** |
+| **Wave 1 Authorization** | NOT GRANTED — awaiting Wave 0 exit verification then separate HAO decision |
+| **MOD-001 Implementation** | NOT AUTHORIZED |
+| **Next governance action** | HAO authorization decision for Wave 1 (after Wave 0 exit criteria satisfied) |
+| **GitHub organization** | Repository transferred to `nexcargo` org (https://github.com/orgs/nexcargo/repositories). Origin configured to `https://github.com/nexcargo/NexCargo.git`. Pushed at `badd878`. |
 | **Remote verification rule** | Future sessions MUST run `git remote -v` and `git remote get-url origin` before repository operations |
+| **HAO pre-authorization decisions** | B-9 SCOPE APPROVED (HAO-WAVE0-001), internal sequencing APPROVED (HAO-WAVE0-002), exit criteria refinement APPROVED (HAO-WAVE0-003), documentation cleanup APPROVED (HAO-WAVE0-004) — all 2026-08-19 |
+| **HAO Wave 0 authorization** | HAO-WAVE0-005 — Wave 0 AUTHORIZED 2026-08-19 |
+| **Session status** | OPEN — Wave 0 implementation in progress |
 
 ---
 
