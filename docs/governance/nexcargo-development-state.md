@@ -53,6 +53,7 @@ Foundation / Module Implementation / Validation / Deployment / Mobile Preparatio
 | HAO-WAVE0-003 | Exit Criteria Refinement APPROVED AS PREPARATION TASK | 2026-08-19 | HAO | Before the first Wave 0 implementation commit, refine exit criteria X-01 through X-22 where necessary to make verification objectively measurable. Do not expand Wave 0 scope. |
 | HAO-WAVE0-004 | Documentation Cleanup APPROVED | 2026-08-19 | HAO | Correct residual Git-remote inconsistency in this document (line 269 "No remote configured" vs line 433 origin configured). Preserve actual current repository state. |
 | HAO-WAVE0-005 | **WAVE 0 AUTHORIZED** | 2026-08-19 | HAO | Wave 0 is APPROVED and AUTHORIZED to commence implementation of MOD-011, MOD-017, MOD-010 in parallel. Authorization is subject to approved Wave 0 scope boundaries and prohibitions (`nexcargo-wave-0-readiness-report.md`). Before first Wave 0 implementation commit: apply exit-criteria measurability refinements, conduct shared standards coordination between the three modules, maintain all existing governance/dependency/security/testing/architectural constraints. No Wave 1 or subsequent wave is authorized. No module outside Wave 0 is authorized. |
+| HAO-WAVE0-IMP-001 | First Wave 0 implementation increment committed | 2026-08-19 | Implementation | Commit `3550e6f` — "WAVE-0-001: First Wave 0 implementation increment". 26 files changed (1,495 insertions, 31 deletions). Implements X-01 through X-22 and S-01 through S-03. All artifacts are TypeScript type/interface definitions and utility functions only. No business logic introduced. Track B frozen state preserved. |
 
 ## Current Active Module
 
@@ -189,7 +190,7 @@ MOD-011, MOD-017, MOD-010 (Wave 0 — authorized in parallel)
 
 ## Current Work in Progress
 
-**WAVE 0 — MOD-011, MOD-017, MOD-010 (authorized in parallel).** All foundation TypeScript remediation, Track B audit/remediation, and governance housekeeping are committed. All HAD decisions (HAD-001 through HAD-007) APPROVED / RESOLVED. Authoritative wave-based implementation sequence ratified by HAO (HAD-007). Wave 0 is AUTHORIZED for implementation. **Before first Wave 0 implementation commit:** apply exit-criteria measurability refinements (HAO-WAVE0-003), conduct shared standards coordination between MOD-011/MOD-017/MOD-010, maintain all existing NexCargo governance, dependency, security, testing and architectural constraints. Implementation Authorization: WAVE 0 ONLY. No Wave 1 or subsequent wave authorized.
+**WAVE 0 — MOD-011, MOD-017, MOD-010 (authorized in parallel).** First implementation increment committed at `3550e6f` ("WAVE-0-001"). X-01 through X-22 exit criteria passed; S-01 through S-03 shared standards established and committed. Implementation Authorization: WAVE 0 ONLY. No Wave 1 or subsequent wave authorized. **Wave 0 remains IN PROGRESS — not complete.** Next HAO decision required: authorization of further Wave 0 increments or transition to Wave 1 after Wave 0 exit verification.
 
 ---
 
@@ -430,23 +431,25 @@ No module implementation outside Wave 0 should begin until explicit HAO authoriz
 | Item | Details |
 |------|---------|
 | **Branch** | `main` |
-| **Latest commit** | `badd878` — "Preserve GitHub README" (foundation TS remediation at `3b1c4b1`) |
-| **Uncommitted changes** | Only this file (`docs/governance/nexcargo-development-state.md`) — being committed as session closure record |
-| **Track B frozen state** | All 18 module configs validated at 61 forward = 61 reverse — DO NOT modify |
+| **Latest commit** | `3550e6f` — "WAVE-0-001: First Wave 0 implementation increment" (26 files, +1495/-31) |
+| **Uncommitted changes** | docs/architecture/nexcargo-event-registry.md, docs/modules/mod-001-ai-erps-marketplace-layer.md (pre-existing; not part of Wave 0) |
+| **Track B frozen state** | All 18 module configs validated at 61 forward = 61 reverse — DO NOT modify (PRESERVED in commit `3550e6f`) |
 | **PROMPT 0 authority** | v1.1 = sole authority; v1.0 = deprecated (reverted to HEAD `bd273aa`) |
 | **Implementation authorization** | WAVE 0 ONLY — MOD-011, MOD-017, MOD-010 authorized; all other modules: NOT AUTHORIZED |
 | **HAD status** | HAD-001 through HAD-007 all APPROVED / RESOLVED |
 | **Authoritative sequence** | Wave-based: Wave 0 → Wave 1 → Wave 2 → Wave 3 → Wave 4 → Wave 5 (HAD-007 ratified) |
 | **HAD-007 approval date** | 2026-08-19 — HAO formally approved and ratified |
 | **Wave 0 Authorization** | **AUTHORIZED (HAO-WAVE0-005)** |
+| **Wave 0 Status** | IN PROGRESS — first increment committed at `3550e6f`; X-01–X-22 passed, S-01–S-03 established |
 | **Wave 1 Authorization** | NOT GRANTED — awaiting Wave 0 exit verification then separate HAO decision |
 | **MOD-001 Implementation** | NOT AUTHORIZED |
-| **Next governance action** | HAO authorization decision for Wave 1 (after Wave 0 exit criteria satisfied) |
+| **Next governance action** | HAO direction on further Wave 0 increments or Wave 1 transition |
 | **GitHub organization** | Repository transferred to `nexcargo` org (https://github.com/orgs/nexcargo/repositories). Origin configured to `https://github.com/nexcargo/NexCargo.git`. Pushed at `badd878`. |
 | **Remote verification rule** | Future sessions MUST run `git remote -v` and `git remote get-url origin` before repository operations |
 | **HAO pre-authorization decisions** | B-9 SCOPE APPROVED (HAO-WAVE0-001), internal sequencing APPROVED (HAO-WAVE0-002), exit criteria refinement APPROVED (HAO-WAVE0-003), documentation cleanup APPROVED (HAO-WAVE0-004) — all 2026-08-19 |
 | **HAO Wave 0 authorization** | HAO-WAVE0-005 — Wave 0 AUTHORIZED 2026-08-19 |
-| **Session status** | OPEN — Wave 0 implementation in progress |
+| **First Wave 0 commit** | `3550e6f` — WAVE-0-001: foundation types, shared standards S-01/S-02/S-03 (2026-08-19) |
+| **Session status** | OPEN — Wave 0 implementation in progress, awaiting HAO direction |
 
 ---
 
