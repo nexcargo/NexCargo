@@ -68,8 +68,8 @@ describe('MOD-001 Listings API — Wave 1 Increment 4', () => {
       const data = await response.json();
 
       expect(response.status).toBe(201);
-      expect(data.status).toBe('DRAFT');
-      expect(data.shipperId).toBe('shipper-001');
+      expect(data.data.status).toBe('DRAFT');
+      expect(data.data.shipperId).toBe('shipper-001');
     });
 
     it('returns 400 when required fields are missing', async () => {

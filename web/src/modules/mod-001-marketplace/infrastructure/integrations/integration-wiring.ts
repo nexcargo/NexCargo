@@ -170,6 +170,7 @@ export function evaluateRBAC(role: string, resource: string, action: string): RB
     read: ['SHIPPER', 'TRANSPORTER', 'ADMIN', 'MODERATOR'],
     update: ['SHIPPER', 'TRANSPORTER', 'ADMIN'],
     delete: ['ADMIN'],
+    execute: ['SHIPPER', 'ADMIN'],
   };
   
   const resourceRoles = allowedRoles[resource] || [];
@@ -177,7 +178,7 @@ export function evaluateRBAC(role: string, resource: string, action: string): RB
   
   // Role must be in both lists for the resource and action
   const hasResourceAccess = resourceRoles.includes(role);
-  const hasActionAccess = actionRoles.includes(action);
+  const hasActionAccess = actionRoles.includes(role);
   
   if (!hasResourceAccess) {
     return {
