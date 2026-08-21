@@ -21,7 +21,6 @@ CREATE SCHEMA IF NOT EXISTS marketplace_schema;
 
 CREATE TABLE marketplace_schema.listings (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  listing_id UUID NOT NULL DEFAULT uuid_generate_v4(),
   shipper_id UUID REFERENCES auth.users(id) NOT NULL,
   title VARCHAR(255),
   description TEXT,
@@ -57,7 +56,6 @@ CREATE INDEX idx_listings_published ON marketplace_schema.listings(published_at)
 -- ============================================================
 CREATE TABLE marketplace_schema.offers (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  offer_id UUID NOT NULL DEFAULT uuid_generate_v4(),
   transporter_id UUID REFERENCES auth.users(id) NOT NULL,
   listing_id UUID NOT NULL REFERENCES marketplace_schema.listings(id),
   price_proposal DECIMAL(12,2) NOT NULL,
@@ -86,7 +84,6 @@ CREATE INDEX idx_offers_listing_status ON marketplace_schema.offers(listing_id, 
 -- ============================================================
 CREATE TABLE marketplace_schema.matches (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  match_id UUID NOT NULL DEFAULT uuid_generate_v4(),
   listing_id UUID NOT NULL REFERENCES marketplace_schema.listings(id),
   offer_id UUID NOT NULL REFERENCES marketplace_schema.offers(id),
   match_score DECIMAL(5,2) NOT NULL,
@@ -113,7 +110,6 @@ CREATE INDEX idx_matches_ranking ON marketplace_schema.matches(listing_id, ranki
 -- ============================================================
 CREATE TABLE marketplace_schema.quotes (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  quote_id UUID NOT NULL DEFAULT uuid_generate_v4(),
   listing_id UUID NOT NULL REFERENCES marketplace_schema.listings(id),
   suggested_price_min DECIMAL(12,2) NOT NULL,
   suggested_price_max DECIMAL(12,2) NOT NULL,
