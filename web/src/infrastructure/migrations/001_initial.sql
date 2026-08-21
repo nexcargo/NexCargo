@@ -21,16 +21,23 @@ CREATE SCHEMA IF NOT EXISTS marketplace_schema;
 
 CREATE TABLE marketplace_schema.listings (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  title VARCHAR(255) NOT NULL,
+  listing_id UUID NOT NULL DEFAULT uuid_generate_v4(),
+  shipper_id UUID REFERENCES auth.users(id) NOT NULL,
+  title VARCHAR(255),
   description TEXT,
-  origin_location VARCHAR(255) NOT NULL,
-  destination_location VARCHAR(255) NOT NULL,
-  cargo_type VARCHAR(100),
-  weight_kg DECIMAL(10,2),
+  origin_geo JSONB NOT NULL,
+  destination_geo JSONB NOT NULL,
+  origin_address TEXT NOT NULL,
+  destination_address TEXT NOT NULL,
+  cargo_type VARCHAR(50) NOT NULL,
+  weight_kg DECIMAL(10,2) NOT NULL,
   volume_m3 DECIMAL(10,2),
-  status VARCHAR(50) DEFAULT 'CREATED'::VARCHAR,
-  price DECIMAL(12,2),
-  currency VARCHAR(3) DEFAULT 'MZN'::VARCHAR,
+  time_window JSONB NOT NULL,
+  pricing_model VARCHAR(20) NOT NULL DEFAULT 'FIXED'::VARCHAR,
+  status VARCHAR(20) NOT NULL DEFAULT 'DRAFT'::VARCHAR,
+  published_at TIMESTAMPTZ,
+  associated_quote_id UUID,
+  accepted_vehicle_types TEXT[] DEFAULT '{}',
   created_by UUID REFERENCES auth.users(id),
   updated_by UUID REFERENCES auth.users(id),
   correlation_id UUID,
@@ -39,6 +46,91 @@ CREATE TABLE marketplace_schema.listings (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Indexes for marketplace listings per MOD-001 query patterns
+CREATE INDEX idx_listings_status ON marketplace_schema.listings(status);
+CREATE INDEX idx_listings_shipper ON marketplace_schema.listings(shipper_id);
+CREATE INDEX idx_listings_published ON marketplace_schema.listings(published_at) WHERE status = 'PUBLISHED';
+
+-- ============================================================
+-- Offers table — TransportOffer per MOD-001 §5.2
+-- ============================================================
+CREATE TABLE marketplace_schema.offers (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  offer_id UUID NOT NULL DEFAULT uuid_generate_v4(),
+  transporter_id UUID REFERENCES auth.users(id) NOT NULL,
+  listing_id UUID NOT NULL REFERENCES marketplace_schema.listings(id),
+  price_proposal DECIMAL(12,2) NOT NULL,
+  availability_window JSONB NOT NULL,
+  vehicle_type VARCHAR(30) NOT NULL,
+  declared_capacity JSONB NOT NULL,
+  notes TEXT,
+  status VARCHAR(20) NOT NULL DEFAULT 'SUBMITTED'::VARCHAR,
+  created_by UUID REFERENCES auth.users(id),
+  updated_by UUID REFERENCES auth.users(id),
+  correlation_id UUID,
+  is_deleted BOOLEAN DEFAULT FALSE,
+  version INTEGER DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for offers per MOD-001 query patterns
+CREATE INDEX idx_offers_listing ON marketplace_schema.offers(listing_id);
+CREATE INDEX idx_offers_transporter ON marketplace_schema.offers(transporter_id);
+CREATE INDEX idx_offers_status ON marketplace_schema.offers(status);
+CREATE INDEX idx_offers_listing_status ON marketplace_schema.offers(listing_id, status);
+
+-- ============================================================
+-- Matches table — MatchProposal per MOD-001 §5.3
+-- ============================================================
+CREATE TABLE marketplace_schema.matches (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  match_id UUID NOT NULL DEFAULT uuid_generate_v4(),
+  listing_id UUID NOT NULL REFERENCES marketplace_schema.listings(id),
+  offer_id UUID NOT NULL REFERENCES marketplace_schema.offers(id),
+  match_score DECIMAL(5,2) NOT NULL,
+  ranking_position INTEGER NOT NULL,
+  reasoning_trace TEXT,
+  status VARCHAR(20) NOT NULL DEFAULT 'PROPOSED'::VARCHAR,
+  created_by UUID REFERENCES auth.users(id),
+  updated_by UUID REFERENCES auth.users(id),
+  correlation_id UUID,
+  is_deleted BOOLEAN DEFAULT FALSE,
+  version INTEGER DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for matches per MOD-001 query patterns
+CREATE INDEX idx_matches_listing ON marketplace_schema.matches(listing_id);
+CREATE INDEX idx_matches_offer ON marketplace_schema.matches(offer_id);
+CREATE INDEX idx_matches_status ON marketplace_schema.matches(status);
+CREATE INDEX idx_matches_ranking ON marketplace_schema.matches(listing_id, ranking_position);
+
+-- ============================================================
+-- Quotes table — AdvisoryQuote per MOD-001 §5.4
+-- ============================================================
+CREATE TABLE marketplace_schema.quotes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  quote_id UUID NOT NULL DEFAULT uuid_generate_v4(),
+  listing_id UUID NOT NULL REFERENCES marketplace_schema.listings(id),
+  suggested_price_min DECIMAL(12,2) NOT NULL,
+  suggested_price_max DECIMAL(12,2) NOT NULL,
+  confidence_score DECIMAL(5,2) NOT NULL,
+  basis TEXT NOT NULL,
+  created_by UUID REFERENCES auth.users(id),
+  updated_by UUID REFERENCES auth.users(id),
+  correlation_id UUID,
+  is_deleted BOOLEAN DEFAULT FALSE,
+  version INTEGER DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for quotes per MOD-001 query patterns
+CREATE INDEX idx_quotes_listing ON marketplace_schema.quotes(listing_id);
+CREATE INDEX idx_quotes_confidence ON marketplace_schema.quotes(confidence_score);
 
 -- ============================================================
 -- logistics_schema (MOD-002, MOD-003, MOD-009, MOD-014)
