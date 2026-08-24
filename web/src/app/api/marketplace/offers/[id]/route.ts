@@ -1,9 +1,9 @@
 // NexCargo MOD-001 — Offers API Route (Item)
-// Authorized by HAO-WAVE1-004 — Wave 1 Increment 4: API Endpoints & Integration Wiring
+// Authorized by HAO-WAVE1-004/005 — Wave 1 Increment 4 + 5
 // Per MOD-001 §5.2 (TransportOffer) + §3.2 (state machine)
 // 
 // GET    /api/marketplace/offers/[id]     — Get offer by ID
-// PATCH  /api/marketplace/offers/[id]     — Withdraw offer (SUBMITTED ↔ WITHDRAWN)
+// PATCH  /api/marketplace/offers/[id]     — Update state / Accept / Reject
 
 import { NextRequest, NextResponse } from 'next/server';
 import { OfferStatus } from '@/modules/mod-001-marketplace/domain/enums';
@@ -65,8 +65,10 @@ export async function GET(
 
 /**
  * PATCH /api/marketplace/offers/[id]
- * Withdraws an offer (SUBMITTED ↔ WITHDRAWN transition).
- * Advisory-only: does NOT auto-accept or trigger financial actions.
+ * Updates offer state via validated state transition.
+ * Supports explicit transitions (currentStatus + targetStatus) and
+ * convenience actions: "accept", "reject" (Increment 5).
+ * Advisory-only: does NOT auto-book or execute financial actions.
  */
 export async function PATCH(
   request: NextRequest,
@@ -89,7 +91,67 @@ export async function PATCH(
       );
     }
 
-    // Validate state transition
+    // Support for "accept" convenience action (Increment 5)
+    if (body.action === 'accept') {
+      const currentStatus = body.currentStatus as OfferStatus;
+      
+      if (!currentStatus) {
+        throw new ValidationError('currentStatus is required when accepting an offer');
+      }
+
+      const result = validateAndApplyOfferTransition(currentStatus, OfferStatus.ACCEPTED);
+
+      recordMarketplaceMetric('offers.accepted', 1, 'count', { offerId: id });
+
+      return NextResponse.json(
+        wrapInContractFramework({
+          offerId: id,
+          previousStatus: currentStatus,
+          newStatus: result.newStatus,
+          isTerminal: result.isTerminal,
+          action: 'accept',
+        }, correlationId),
+        {
+          status: 200,
+          headers: {
+            'x-correlation-id': correlationId,
+            'x-trace-id': context.traceId ?? '',
+          },
+        },
+      );
+    }
+
+    // Support for "reject" convenience action (Increment 5)
+    if (body.action === 'reject') {
+      const currentStatus = body.currentStatus as OfferStatus;
+      
+      if (!currentStatus) {
+        throw new ValidationError('currentStatus is required when rejecting an offer');
+      }
+
+      const result = validateAndApplyOfferTransition(currentStatus, OfferStatus.REJECTED);
+
+      recordMarketplaceMetric('offers.rejected', 1, 'count', { offerId: id });
+
+      return NextResponse.json(
+        wrapInContractFramework({
+          offerId: id,
+          previousStatus: currentStatus,
+          newStatus: result.newStatus,
+          isTerminal: result.isTerminal,
+          action: 'reject',
+        }, correlationId),
+        {
+          status: 200,
+          headers: {
+            'x-correlation-id': correlationId,
+            'x-trace-id': context.traceId ?? '',
+          },
+        },
+      );
+    }
+
+    // Explicit state transition path (existing Increment 4 behavior)
     const currentStatus = body.currentStatus as OfferStatus;
     const targetStatus = body.targetStatus as OfferStatus;
 

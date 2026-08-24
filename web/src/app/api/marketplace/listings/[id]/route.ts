@@ -1,14 +1,15 @@
 // NexCargo MOD-001 — Listings API Route (Item)
-// Authorized by HAO-WAVE1-004 — Wave 1 Increment 4: API Endpoints & Integration Wiring
+// Authorized by HAO-WAVE1-004/005 — Wave 1 Increment 4 + 5
 // Per MOD-001 §5.1 (ShipmentListing) + §3.2 (state machine)
 // 
 // GET    /api/marketplace/listings/[id]     — Get listing by ID
-// PATCH  /api/marketplace/listings/[id]     — Update listing state (e.g., publish, cancel)
+// PATCH  /api/marketplace/listings/[id]     — Update listing state / Publish / Cancel
 // DELETE /api/marketplace/listings/[id]     — Cancel listing
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ListingStatus } from '@/modules/mod-001-marketplace/domain/enums';
 import { applyListingTransition, isListingTerminal } from '@/modules/mod-001-marketplace/domain/services/listing-state-machine';
+import { publishListing, isListingPublishable } from '@/modules/mod-001-marketplace/domain/services/listing-publish-service';
 import { ValidationError } from '@/shared/errors/app-errors';
 import { createCorrelationContext, resolveCorrelationId } from '@/shared/standards/correlation-id-propagation';
 import { wrapInContractFramework, recordMarketplaceMetric } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
@@ -67,7 +68,9 @@ export async function GET(
 /**
  * PATCH /api/marketplace/listings/[id]
  * Updates listing state via validated state transition.
- * Advisory-only: validates transition but does NOT auto-publish or auto-book.
+ * Supports explicit transitions (currentStatus + targetStatus) and
+ * the convenience publish action (DRAFT → PUBLISHED).
+ * Advisory-only: validates transition but does NOT auto-book or execute.
  */
 export async function PATCH(
   request: NextRequest,
@@ -90,7 +93,45 @@ export async function PATCH(
       );
     }
 
-    // Validate state transition
+    // Support for "publish" convenience action (Increment 5)
+    // If action=publish is specified, transition DRAFT → PUBLISHED using dedicated service
+    if (body.action === 'publish') {
+      const currentStatus = body.currentStatus as ListingStatus;
+      
+      if (!currentStatus) {
+        throw new ValidationError('currentStatus is required when publishing');
+      }
+
+      if (!isListingPublishable(currentStatus)) {
+        throw new ValidationError(
+          `Listing in "${currentStatus}" state cannot be published. Only DRAFT listings are publishable.`,
+        );
+      }
+
+      const newStatus = publishListing(currentStatus);
+      const terminal = isListingTerminal(newStatus);
+
+      recordMarketplaceMetric('listings.published', 1, 'count', { listingId: id });
+
+      return NextResponse.json(
+        wrapInContractFramework({
+          listingId: id,
+          previousStatus: currentStatus,
+          newStatus,
+          isTerminal: terminal,
+          action: 'publish',
+        }, correlationId),
+        {
+          status: 200,
+          headers: {
+            'x-correlation-id': correlationId,
+            'x-trace-id': context.traceId ?? '',
+          },
+        },
+      );
+    }
+
+    // Explicit state transition path (existing Increment 4 behavior)
     const currentStatus = body.currentStatus as ListingStatus;
     const targetStatus = body.targetStatus as ListingStatus;
 

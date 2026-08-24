@@ -1,23 +1,23 @@
-// NexCargo MOD-001 — Advisory Quotes API Route
-// Authorized by HAO-WAVE1-004/005 — Wave 1 Increment 4 + 5
-// Per MOD-001 §5.4 (AdvisoryQuote)
+// NexCargo MOD-001 — Match Proposals API Route (Collection)
+// Authorized by HAO-WAVE1-005 — Wave 1 Increment 5: Match Proposals & Quote Generation
+// Per MOD-001 §5.3 (Match Proposal) + §6 (Matching Engine)
 // 
-// GET    /api/marketplace/quotes     — List advisory quotes for a listing
-// POST   /api/marketplace/quotes     — Generate advisory quote
+// GET    /api/marketplace/matches          — List match proposals for a listing
+// POST   /api/marketplace/matches          — Create match proposal(s) from matching engine
 
 import { NextRequest, NextResponse } from 'next/server';
-import { CargoType } from '@/modules/mod-001-marketplace/domain/enums';
 import { ValidationError } from '@/shared/errors/app-errors';
 import { createCorrelationContext, resolveCorrelationId } from '@/shared/standards/correlation-id-propagation';
 import { wrapInContractFramework, recordMarketplaceMetric } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
 import { validateRBAC } from '../rbac-middleware';
 import {
-  createAdvisoryQuote,
+  createMatchProposal,
+  buildListingForQuote,
 } from '@/modules/mod-001-marketplace/application/use-cases/marketplace-use-cases';
 
 /**
- * GET /api/marketplace/quotes
- * Returns advisory quotes for a specific listing.
+ * GET /api/marketplace/matches
+ * Returns all match proposals for a specific listing.
  */
 export async function GET(request: NextRequest) {
   const correlationId = resolveCorrelationId(Object.fromEntries(request.headers.entries()));
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const role = request.headers.get('x-user-role') || 'SHIPPER';
     
     // Validate RBAC permission
-    const rbacResult = await validateRBAC(role, 'quotes', 'read');
+    const rbacResult = await validateRBAC(role, 'matching', 'read');
     if (!rbacResult.permitted) {
       return NextResponse.json(
         wrapInContractFramework(null, correlationId),
@@ -42,13 +42,19 @@ export async function GET(request: NextRequest) {
       throw new ValidationError('listingId query parameter is required');
     }
 
-    // Return stub quotes data (actual DB query in later increment)
-    const quotes: unknown[] = [];
+    // Return stub match proposals data (actual DB query in later increment)
+    const matches: Array<{
+      matchId: string;
+      offerId: string;
+      matchScore: number;
+      rankingPosition: number;
+      isRecommended: boolean;
+    }> = [];
 
-    recordMarketplaceMetric('quotes.listed', quotes.length, 'count');
+    recordMarketplaceMetric('matches.listed', matches.length, 'count', { listingId });
 
     return NextResponse.json(
-      wrapInContractFramework({ listingId, quotes }, correlationId),
+      wrapInContractFramework({ listingId, matches }, correlationId),
       {
         status: 200,
         headers: {
@@ -72,10 +78,9 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/marketplace/quotes
- * Generates an advisory price quote for a listing using corridor-based pricing.
- * Advisory-only: does NOT auto-confirm or trigger financial actions.
- * Per MOD-001 §5.4 — non-binding price range suggestion.
+ * POST /api/marketplace/matches
+ * Creates a match proposal from matching engine results.
+ * Advisory-only: does NOT auto-select or auto-book.
  */
 export async function POST(request: NextRequest) {
   const correlationId = resolveCorrelationId(Object.fromEntries(request.headers.entries()));
@@ -86,7 +91,7 @@ export async function POST(request: NextRequest) {
     const role = request.headers.get('x-user-role') || 'SHIPPER';
     
     // Validate RBAC permission
-    const rbacResult = await validateRBAC(role, 'quotes', 'create');
+    const rbacResult = await validateRBAC(role, 'matching', 'execute');
     if (!rbacResult.permitted) {
       return NextResponse.json(
         wrapInContractFramework(null, correlationId),
@@ -94,38 +99,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Required fields per MOD-001 §5.4
+    // Required fields per MOD-001 §5.3
     if (!body.listingId) {
       throw new ValidationError('listingId is required');
     }
-    if (!body.cargoType) {
-      throw new ValidationError('cargoType is required');
+    if (!body.offerId) {
+      throw new ValidationError('offerId is required');
     }
-    if (!body.weightKg || body.weightKg <= 0) {
-      throw new ValidationError('Valid weightKg (>0) is required');
+    if (typeof body.matchScore !== 'number' || body.matchScore < 0 || body.matchScore > 100) {
+      throw new ValidationError('matchScore must be a number between 0 and 100');
     }
-    if (!body.timeWindow?.earliestPickup || !body.timeWindow?.latestDelivery) {
-      throw new ValidationError('Time window (earliestPickup + latestDelivery) is required');
+    if (!body.rankingPosition || body.rankingPosition < 1) {
+      throw new ValidationError('rankingPosition must be >= 1');
     }
 
-    // Generate advisory quote using domain service via application use case
-    const quote = createAdvisoryQuote({
+    // Use application-layer use case for validation and orchestration
+    const matchData = createMatchProposal({
       listingId: body.listingId,
-      cargoType: body.cargoType as CargoType,
-      weightKg: body.weightKg,
-      volumeM3: body.volumeM3,
-      timeWindow: body.timeWindow,
-      pricingModel: body.pricingModel,
-      comparablePrices: body.comparableOffers?.map((o: { priceProposal: number }) => o.priceProposal),
+      offerId: body.offerId,
+      matchScore: body.matchScore,
+      rankingPosition: body.rankingPosition,
+      reasoningTrace: body.reasoningTrace,
     });
 
-    recordMarketplaceMetric('quotes.generated', 1, 'count', { 
-      cargoType: String(body.cargoType),
-      listingId: body.listingId,
-    });
+    recordMarketplaceMetric('matches.created', 1, 'count', { listingId: body.listingId });
 
     return NextResponse.json(
-      wrapInContractFramework(quote, correlationId),
+      wrapInContractFramework(matchData, correlationId),
       {
         status: 201,
         headers: {
