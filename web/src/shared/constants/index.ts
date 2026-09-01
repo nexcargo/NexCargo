@@ -51,3 +51,10 @@ export const LOCALIZATION = {
   CURRENCY_FORMAT_PT: 'pt-PT',
   CURRENCY_FORMAT_EN: 'en-US',
 } as const;
+
+/** Sensitive field patterns for log masking per ESS-006 §6.2 (Wave 5 Increment 1) */
+export const MASKED_FIELD_PATTERNS = [
+  'apikey', 'api_secret', 'passkey', 'token', 'secret',
+  'authorization', 'bearer', 'password', 'creditcard',
+  'cvv', 'ssn', 'nationalid', 'bankaccount', 'key',
+] as const;
