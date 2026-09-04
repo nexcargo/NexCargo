@@ -1,7 +1,8 @@
 // NexCargo MOD-001 — Match Proposals API Route (Collection)
+// C2-Increment 002 Auth Migration: Pattern B (header-based) → Pattern A (session-based)
 // Authorized by HAO-WAVE1-005 — Wave 1 Increment 5: Match Proposals & Quote Generation
 // Per MOD-001 §5.3 (Match Proposal) + §6 (Matching Engine)
-// 
+//
 // GET    /api/marketplace/matches          — List match proposals for a listing
 // POST   /api/marketplace/matches          — Create match proposal(s) from matching engine
 
@@ -9,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ValidationError } from '@/shared/errors/app-errors';
 import { createCorrelationContext, resolveCorrelationId } from '@/shared/standards/correlation-id-propagation';
 import { wrapInContractFramework, recordMarketplaceMetric } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
-import { validateRBAC } from '../rbac-middleware';
+import { assertApiAuthorization } from '@/lib/supabase/api-auth';
 import {
   createMatchProposal,
   buildListingForQuote,
@@ -24,16 +25,8 @@ export async function GET(request: NextRequest) {
   const context = createCorrelationContext({ correlationId });
 
   try {
-    const role = request.headers.get('x-user-role') || 'SHIPPER';
-    
-    // Validate RBAC permission
-    const rbacResult = await validateRBAC(role, 'matching', 'read');
-    if (!rbacResult.permitted) {
-      return NextResponse.json(
-        wrapInContractFramework(null, correlationId),
-        { status: 403, headers: { 'x-correlation-id': correlationId } },
-      );
-    }
+    // Pattern A auth: session-based RBAC, no x-user-role header fallback
+    await assertApiAuthorization(request, 'matching', 'read');
 
     // Extract listingId from query params
     const url = new URL(request.url);
@@ -70,6 +63,18 @@ export async function GET(request: NextRequest) {
         { status: 400, headers: { 'x-correlation-id': correlationId } },
       );
     }
+    if (error instanceof Error && error.message === 'UNAUTHORIZED') {
+      return NextResponse.json(
+        wrapInContractFramework({ error: 'Unauthorized' }, correlationId),
+        { status: 401, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+    if (error instanceof Error && error.message.startsWith('FORBIDDEN')) {
+      return NextResponse.json(
+        wrapInContractFramework({ error: error.message }, correlationId),
+        { status: 403, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
     return NextResponse.json(
       wrapInContractFramework(null, correlationId),
       { status: 500, headers: { 'x-correlation-id': correlationId } },
@@ -88,16 +93,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const role = request.headers.get('x-user-role') || 'SHIPPER';
-    
-    // Validate RBAC permission
-    const rbacResult = await validateRBAC(role, 'matching', 'execute');
-    if (!rbacResult.permitted) {
-      return NextResponse.json(
-        wrapInContractFramework(null, correlationId),
-        { status: 403, headers: { 'x-correlation-id': correlationId } },
-      );
-    }
+
+    // Pattern A auth: session-based RBAC, no x-user-role header fallback
+    await assertApiAuthorization(request, 'matching', 'execute');
 
     // Required fields per MOD-001 §5.3
     if (!body.listingId) {
@@ -139,6 +137,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         wrapInContractFramework({ error: error.message }, correlationId),
         { status: 400, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+    if (error instanceof Error && error.message === 'UNAUTHORIZED') {
+      return NextResponse.json(
+        wrapInContractFramework({ error: 'Unauthorized' }, correlationId),
+        { status: 401, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+    if (error instanceof Error && error.message.startsWith('FORBIDDEN')) {
+      return NextResponse.json(
+        wrapInContractFramework({ error: error.message }, correlationId),
+        { status: 403, headers: { 'x-correlation-id': correlationId } },
       );
     }
     return NextResponse.json(
