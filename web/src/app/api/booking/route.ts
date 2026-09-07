@@ -1,5 +1,6 @@
 // NexCargo MOD-002 — POST /api/bookings — Booking Creation Endpoint
 // C2-Increment 002 Implementation
+// C2-Increment 003 DEC-001: Added FK existence verification + alignment validation
 // Authorized directive: HAO-WAVE2-AUTH-001 (2026-08-25) — Wave 2 authorized
 // Reference: MOD-002 §4.7, §3.1 (Booking Formation), §7.4 (Alignment Rule)
 // Booking lifecycle: REQUESTED → ALIGNMENT_CHECKED → CONFIRMED | FAILED | CANCELLED
