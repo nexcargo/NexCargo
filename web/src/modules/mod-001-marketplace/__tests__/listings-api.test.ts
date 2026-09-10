@@ -1,7 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
-
-// Import route handlers AFTER setting up mocks
 import * as serverModule from '@/lib/supabase/server';
 
 const mockUser = {
@@ -10,16 +8,13 @@ const mockUser = {
   user_metadata: { role: 'SHIPPER' },
 };
 
-// Mock createClient to return a Supabase client with an authenticated user
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(() => ({
-    auth: {
-      getUser: vi.fn(async () => ({ data: { user: mockUser }, error: null })),
-    },
-  })),
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: mockUser }, error: null }) },
+    rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable') })),
+  }) as any),
 }));
 
-// Mock ListingsRepository to always return success (no real DB needed)
 const mockCreateListing = vi.fn().mockResolvedValue({
   listingId: 'mock-listing-id',
   shipperId: 'test-user-001',
@@ -52,13 +47,18 @@ vi.doMock('@/infrastructure/repositories/listings-repository', () => ({
   },
 }));
 
-// Dynamically import after mocking
 let listingsGET: typeof import('@/app/api/marketplace/listings/route').GET;
 let listingsPOST: typeof import('@/app/api/marketplace/listings/route').POST;
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  // Re-import route handlers after each mock reset
+  const baseClient = {
+    auth: {
+      getUser: vi.fn().mockResolvedValue({ data: { user: mockUser }, error: null }),
+    },
+    rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable') })),
+  };
+  vi.mocked(serverModule.createClient).mockReturnValue(baseClient as any);
   const mod = await import('@/app/api/marketplace/listings/route');
   listingsGET = mod.GET;
   listingsPOST = mod.POST;
@@ -67,11 +67,9 @@ beforeEach(async () => {
 describe('MOD-001 Listings API — C1 Hardened Authentication', () => {
   describe('GET /api/marketplace/listings', () => {
     it('returns 401 when no Supabase session exists (unauthenticated)', async () => {
-      // Override mock for this test only
-      vi.mocked(serverModule.createClient).mockReturnValueOnce({
-        auth: {
-          getUser: vi.fn(async () => ({ data: { user: null }, error: null })),
-        },
+      vi.mocked(serverModule.createClient).mockReturnValue({
+        auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }) },
+        rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable') })),
       } as any);
 
       const request = new NextRequest('http://localhost:3000/api/marketplace/listings');
@@ -99,14 +97,14 @@ describe('MOD-001 Listings API — C1 Hardened Authentication', () => {
     });
 
     it('returns 403 when authenticated user lacks RBAC permission', async () => {
-      // Authenticated as TRANSPORTER (which cannot READ listings per RBAC matrix)
-      vi.mocked(serverModule.createClient).mockReturnValueOnce({
+      vi.mocked(serverModule.createClient).mockReturnValue({
         auth: {
-          getUser: vi.fn(async () => ({
+          getUser: vi.fn().mockResolvedValue({
             data: { user: { ...mockUser, user_metadata: { role: 'TRANSPORTER' } } },
             error: null,
-          })),
+          }),
         },
+        rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable') })),
       } as any);
 
       const request = new NextRequest('http://localhost:3000/api/marketplace/listings');
@@ -126,8 +124,9 @@ describe('MOD-001 Listings API — C1 Hardened Authentication', () => {
     };
 
     it('returns 401 when no Supabase session (identity from x-user-role rejected)', async () => {
-      vi.mocked(serverModule.createClient).mockReturnValueOnce({
-        auth: { getUser: vi.fn(async () => ({ data: { user: null }, error: null })) },
+      vi.mocked(serverModule.createClient).mockReturnValue({
+        auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }) },
+        rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable') })),
       } as any);
 
       const request = new NextRequest('http://localhost:3000/api/marketplace/listings', {
@@ -138,18 +137,17 @@ describe('MOD-001 Listings API — C1 Hardened Authentication', () => {
 
       const response = await listingsPOST(request);
       expect(response.status).toBe(401);
-      // Header role must NOT grant access without a session
     });
 
     it('returns 401 when header role differs from session identity', async () => {
-      // Session says SHIPPER, header tries to claim TRANSPORTER — should be ignored
-      vi.mocked(serverModule.createClient).mockReturnValueOnce({
+      vi.mocked(serverModule.createClient).mockReturnValue({
         auth: {
-          getUser: vi.fn(async () => ({
+          getUser: vi.fn().mockResolvedValue({
             data: { user: { ...mockUser, user_metadata: { role: 'SHIPPER' } } },
             error: null,
-          })),
+          }),
         },
+        rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable') })),
       } as any);
 
       const request = new NextRequest('http://localhost:3000/api/marketplace/listings', {
@@ -159,13 +157,10 @@ describe('MOD-001 Listings API — C1 Hardened Authentication', () => {
       });
 
       const response = await listingsPOST(request);
-      // SHIPPER CAN create listings via RBAC matrix — gets past auth+RBAC
       expect(response.status).not.toBe(401);
-      // But since repository mock succeeds, it should return 201
       expect(response.status).toBe(201);
-      // ShipperId must come from SESSION, not from request body or header
       const data = await response.json();
-      expect(data.data.shipperId).toBe('test-user-001'); // From session
+      expect(data.data.shipperId).toBe('test-user-001');
     });
 
     it('returns 201 with DRAFT status for valid authenticated creation', async () => {
@@ -185,41 +180,35 @@ describe('MOD-001 Listings API — C1 Hardened Authentication', () => {
 
     it('returns 400 when required fields are missing', async () => {
       const incompleteBody = { shipperId: 'shipper-001' };
-
       const request = new NextRequest('http://localhost:3000/api/marketplace/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(incompleteBody),
       });
-
       const response = await listingsPOST(request);
       expect(response.status).toBe(400);
     });
 
     it('returns 400 when origin is incomplete', async () => {
-      const badOriginBody = {
-        ...validBody,
-        origin: { latitude: -25.9692 },
-      };
-
+      const badOriginBody = { ...validBody, origin: { latitude: -25.9692 } };
       const request = new NextRequest('http://localhost:3000/api/marketplace/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(badOriginBody),
       });
-
       const response = await listingsPOST(request);
       expect(response.status).toBe(400);
     });
 
     it('returns 403 when authenticated TRANSPORTER tries to create listing', async () => {
-      vi.mocked(serverModule.createClient).mockReturnValueOnce({
+      vi.mocked(serverModule.createClient).mockReturnValue({
         auth: {
-          getUser: vi.fn(async () => ({
+          getUser: vi.fn().mockResolvedValue({
             data: { user: { ...mockUser, user_metadata: { role: 'TRANSPORTER' } } },
             error: null,
-          })),
+          }),
         },
+        rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable') })),
       } as any);
 
       const request = new NextRequest('http://localhost:3000/api/marketplace/listings', {
