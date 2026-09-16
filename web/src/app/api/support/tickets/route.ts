@@ -4,6 +4,7 @@ import { createCorrelationContext, resolveCorrelationId } from '@/shared/standar
 import { wrapInContractFramework } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
 import { assertApiAuthorization } from '@/lib/supabase/api-auth';
 import { Channel, Category, Priority } from '@/modules/mod-015-customer-support/domain/enums';
+import { generateCaseId, isValidCaseId } from '@/modules/mod-015-customer-support/domain/services/case-id-generator';
 
 /** Valid channel enum values */
 const VALID_CHANNELS = Object.values(Channel);
@@ -57,9 +58,6 @@ export async function POST(request: NextRequest) {
     if (!body.channel || typeof body.channel !== 'string') {
       throw new ValidationError('Missing required field: channel');
     }
-    if (!body.caseId || typeof body.caseId !== 'string') {
-      throw new ValidationError('Missing required field: caseId');
-    }
     if (!body.description || typeof body.description !== 'string') {
       throw new ValidationError('Missing required field: description');
     }
@@ -97,6 +95,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Generate or validate caseId — optional field; auto-generate if omitted
+    let caseId: string;
+    if (isValidCaseId(body.caseId)) {
+      caseId = body.caseId.trim();
+    } else {
+      caseId = generateCaseId();
+    }
+
     // Generate ticket_id = "TICKET-" + first 8 chars of UUID prefix
     const ticketUuid = crypto.randomUUID();
     const ticketId = `TICKET-${ticketUuid.slice(0, 8)}`;
@@ -112,7 +118,7 @@ export async function POST(request: NextRequest) {
         category: category,
         priority_level: priorityLevel,
         channel: channel,
-        case_id: body.caseId,
+        case_id: caseId,
         description: body.description.trim(),
         status: 'OPEN',
         sla_breach: false,
