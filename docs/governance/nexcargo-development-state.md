@@ -648,3 +648,35 @@ This document was updated to record HAO-WAVE5-AUTH-001 (Wave 5 Implementation Au
 ---
 
 **2026-09-16 Post-Reconciliation Closure:** This reconciliation brought the repository into full parity with the already-applied live Supabase state. All 18 migration-equivalent files are now committed. The `confirm_booking_with_contract()` function was missing from the repository and has been added to its canonical location. The `schema_migrations` tracking gap is documented rather than fabricated. Bootstrap/test state is classified and recorded. The `(transporter)/layout.tsx` build blocker is resolved. No unauthorized scope entered. All verifications passed.
+
+---
+
+## C7-Increment-001 Implementation Closure — 2026-09-16
+
+| Decision ID | Description | Date | Authority | Effect |
+|-------------|-------------|------|-----------|--------|
+| **HAO-C7-INC001-AUTH** | **C7 Increment 001 AUTHORIZED — Existing C7 Implementation Closure** | 2026-09-16 | HAO Authorization | Close all four C7 domains that exist as working-tree implementations through the normal completion cycle (Implement → Verify → Commit → Push). Explicitly NOT authorized: automatic tracking initialization from booking confirmation, C3 modifications, C4 financial execution, new C7 features, architectural redesign. |
+| **HAO-C7-INC001-CLOSE** | **C7 Increment 001 COMMITTED AND PUSHED** | 2026-09-16 | HAO Acceptance | 38 files committed (+7,491 lines). C7-001 Tracking: API routes `/tracking/all`, `/tracking/transporter-trips`; shared UI components (timeline, status-badge, pod-upload-modal, gps-toggle-switch); shared public tracking detail page. C7-002 Documents: document-repository.ts (1153 lines, 7 linked tables), nexca-storage.ts (Supabase Storage), document upload/detail APIs, shared UI components (document-upload-panel, shipment-document-viewer). C7-003 Fleet: fleet-repository.ts (888 lines), API routes for fleet/vehicles/drivers/assignments, (transporter)/fleet pages. C7-004 Support/Disputes: dispute CRUD with escalate/hold/resolution subroutes, support tickets API, dispute hold service integration, dispute view/new pages. Role-specific route groups: (dispatcher) dashboard with live-ops/fleet-assignments/exceptions/tracking, (shipper) dashboard with tracking, driver app with tracking detail. Verification: TS clean (0 errors), tests pass (1509/1509 across 82 files), build compiles successfully. Commit: `08e3fbc`. Remote HEAD: `08e3fbc` at origin/main. |
+
+### Summary: C7 Increment 001 Status
+
+| Area | Status | What it enables today |
+|------|--------|----------------------|
+| C7-001 Tracking | IMPLEMENTED / VERIFIED | Manual tracking init via API; detail query with events/GPS; role-specific views for dispatcher, shipper, driver |
+| C7-002 Documents | IMPLEMENTED / VERIFIED | Document upload to Supabase Storage with hash/validation; multi-table persistence (7 tables); listing/filtering; detail retrieval |
+| C7-003 Fleet | IMPLEMENTED / VERIFIED | Fleet registration; vehicle/driver CRUD with compliance tracking; asset assignments; backhaul opportunities; transporter ownership enforcement |
+| C7-004 Support/Disputes | IMPLEMENTED / VERIFIED | Support ticket creation/listing; dispute case management with escalation/hold/resolution; dispute-hold signal integration with escrow domain |
+| Integration with Booking/C3 | BLOCKED | Tracking records can be created manually via `/api/tracking/init` but no automatic trigger from booking confirm flow. This requires separate authorization. |
+| Integration with Financials | PARTIAL | Dispute-hold service provides validation signals but actual escrow release/refund execution requires C4 authorization. |
+
+### Remaining C7 Gaps (not in scope of this increment)
+
+1. **Booking → Tracking auto-initialization**: `POST /api/tracking/init` exists but is never called from the booking confirmation path. This is a C3 execution path modification requiring separate authorization.
+2. **True E2E coverage**: Domain tests exist for state machines but no infrastructure/repository/API integration tests verify RLS-enforced cross-role access flows.
+3. **Support ticket → Booking linkage**: Tickets require manual `caseId` input; no auto-generation tied to confirmed bookings.
+4. **Document → Contract auto-association**: Upload supports `linkedEntityType='contract'` but no automation links documents to newly-created contracts.
+5. **Driver portal deployment**: Driver app route group exists but has no real device or mobile delivery mechanism beyond web.
+
+---
+
+**2026-09-16 C7 Increment 001 Closure:** All four C7 domains (Tracking, Documents, Fleet, Support/Disputes) have been brought through the normal completion cycle. The existing working-tree implementations are now committed, verified (TS clean, 1509/1509 tests passing, build compiles), and pushed to origin/main. Automatic booking-confirmation → tracking initialization remains explicitly UNAUTHORIZED and deferred to a future separately-authorized increment that modifies the C3 execution path. No C3/C4/C8 work was performed.
