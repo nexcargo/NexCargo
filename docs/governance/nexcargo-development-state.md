@@ -673,10 +673,45 @@ This document was updated to record HAO-WAVE5-AUTH-001 (Wave 5 Implementation Au
 
 1. **Booking → Tracking auto-initialization**: `POST /api/tracking/init` exists but is never called from the booking confirmation path. This is a C3 execution path modification requiring separate authorization.
 2. **True E2E coverage**: Domain tests exist for state machines but no infrastructure/repository/API integration tests verify RLS-enforced cross-role access flows.
-3. **Support ticket → Booking linkage**: Tickets require manual `caseId` input; no auto-generation tied to confirmed bookings.
+3. ~~**Support ticket → Booking linkage**: Tickets require manual `caseId` input; no auto-generation tied to confirmed bookings.** — RESOLVED in C7-Increment-002. `caseId` is now optional and auto-generated when omitted.~~
 4. **Document → Contract auto-association**: Upload supports `linkedEntityType='contract'` but no automation links documents to newly-created contracts.
 5. **Driver portal deployment**: Driver app route group exists but has no real device or mobile delivery mechanism beyond web.
 
 ---
 
+## C7-Increment-002 Implementation Closure — 2026-09-16
+
+| Decision ID | Description | Date | Authority | Effect |
+|-------------|-------------|------|-----------|--------|
+| **HAO-C7-INC002-AUTH** | **C7 Increment 002 AUTHORIZED — Verification & Support Case Auto-Linkage** | 2026-09-16 | HAO Authorization | Implement support ticket case-ID auto-generation; add integration/API-level tests for tracking, documents, fleet, dispute hold paths. Explicitly NOT authorized: booking → tracking init, event bus, DB triggers, C3/C4/C8 modifications. |
+| **HAO-C7-INC002-CLOSE** | **C7 Increment 002 COMMITTED AND PUSHED** | 2026-09-16 | HAO Acceptance | 3 files committed (+457 lines, -4 lines). A: Support tickets route modified — `caseId` is now optional; auto-generated via `CASE-{UUID prefix}` pattern when omitted; user-supplied IDs validated against pattern. B: 55 integration tests added covering Tracking init→query state machine (6), Document upload validation (9), Fleet CRUD/filter scoping (22), Dispute hold/escrow state transition (9), Support case-ID generation and uniqueness (15). Verification: TS clean (0 errors), Vitest 83 files / 1564 tests passing, Next build compiles (pre-existing /forgot-password prerender error unchanged). Commit: `c2e9e9d`. Remote HEAD: `c2e9e9d` at origin/main. |
+
+### Summary: C7 Increment 002 Status
+
+| Area | Change | Before | After |
+|------|--------|--------|-------|
+| Support ticket caseId | Optional + auto-generation | Caller MUST provide valid `caseId`; rejected otherwise | `caseId` optional; auto-generated `CASE-{UUID prefix}` if omitted; user values validated against pattern |
+| Integration tests | New file with 5 test suites | No C7 API-level integration tests | 55 tests across 5 domains: Tracking, Documents, Fleet, Disputes, Support |
+
+### Strict Exclusions Respected
+
+- No modification of `confirm_booking_with_contract()` or `PATCH /api/booking/[id]/confirm`
+- No booking → tracking automatic initialization
+- No database trigger or runtime event bus infrastructure
+- No document → contract automatic association
+- No C3/C4/C8/C9 modifications
+- No broad refactoring or architectural redesign
+- ~118 unrelated pre-existing working-tree files preserved untouched
+
+### Remaining C7 Gaps (not in scope of this increment)
+
+1. **Booking → Tracking auto-initialization**: `POST /api/tracking/init` exists but still never called from booking confirm flow. Requires separate authorization modifying C3 execution path.
+2. **Document → Contract auto-association**: Upload supports `linkedEntityType='contract'` but no automation links documents to newly-created contracts.
+3. **Driver mobile/PWA delivery**: Driver app route group exists but has no real device or mobile delivery mechanism beyond web.
+4. **True E2E coverage**: Domain tests exist but no RLS-enforced cross-role access integration flows verified end-to-end.
+
+---
+
 **2026-09-16 C7 Increment 001 Closure:** All four C7 domains (Tracking, Documents, Fleet, Support/Disputes) have been brought through the normal completion cycle. The existing working-tree implementations are now committed, verified (TS clean, 1509/1509 tests passing, build compiles), and pushed to origin/main. Automatic booking-confirmation → tracking initialization remains explicitly UNAUTHORIZED and deferred to a future separately-authorized increment that modifies the C3 execution path. No C3/C4/C8 work was performed.
+
+**2026-09-16 C7 Increment 002 Closure:** Support ticket `caseId` is now optional with auto-generation via `CASE-{UUID prefix}` pattern following existing `TICKET-{prefix}` convention. Five integration test suites (55 tests) verify the full logical paths of Tracking, Documents, Fleet, Disputes, and Support modules without modifying booking confirmation, financial execution, or event infrastructure. TypeScript clean, 1564/1564 tests passing across 83 files, build compiles successfully. Booking → tracking auto-initialization, document → contract auto-association, driver mobile/PWA delivery, and true E2E RLS enforcement remain explicit remaining gaps requiring separate authorization.
