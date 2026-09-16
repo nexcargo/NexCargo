@@ -1,26 +1,73 @@
 @import "tailwindcss";
 
+/* ==========================================
+   NexCargo — Brand V2 Design Tokens
+   C6-09 Brand Identity Integration
+   ========================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Background / Text — Light mode */
+  --background: #F8F6F3;
+  --foreground: #2D2A27;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  /* ---- Fonts ---- */
+  --font-sans: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: var(--font-space-grotesk), var(--font-inter), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
+
+  /* ---- Brand Colours ---- */
+  --color-brand-navy:    #0A1628;
+  --color-brand-blue:    #1A5C9E;
+  --color-brand-orange:  #E85D2A;
+  --color-brand-teal:    #0F8B7A;
+  --color-brand-red:     #C62828;
+  --color-brand-warm:    #F8F6F3;
+  --color-brand-cool:    #FFFFFF;
+  --color-brand-light:   #E8E6E3;
+  --color-brand-mid:     #8A8782;
+  --color-brand-dark:    #2D2A27;
+
+  /* ---- Semantic Colour Aliases ---- */
+  /* These map component semantics to brand colours.
+     Component variants reference these so a single token change
+     propagates everywhere. */
+  --color-brand-primary:      var(--color-brand-blue);
+  --color-brand-success:      var(--color-brand-teal);
+  --color-brand-warning:      var(--color-brand-orange);
+  --color-brand-destructive:  var(--color-brand-red);
+  --color-brand-info:         var(--color-brand-blue);
+
+  /* ---- Border Radius (Brand V2 §4.2) ---- */
+  --radius-none:   0px;
+  --radius-sm:     4px;
+  --radius-md:     8px;
+  --radius-lg:     12px;
+  --radius-xl:     16px;
+  --radius-full:   9999px;
+
+  /* ---- Shadows (Brand V2 §4.3) ---- */
+  --shadow-xs: 0 1px 2px rgba(10, 22, 40, 0.05);
+  --shadow-sm: 0 1px 3px rgba(10, 22, 40, 0.08);
+  --shadow-md: 0 4px 6px rgba(10, 22, 40, 0.10);
+  --shadow-lg: 0 10px 25px rgba(10, 22, 40, 0.12);
+  --shadow-xl: 0 20px 50px rgba(10, 22, 40, 0.15);
+
+  /* ---- Focus Indicator ---- */
+  --color-focus-ring: var(--color-brand-blue);
 }
 
+/* ---- Dark Mode (Brand V2-aware) ---- */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0A1628;
+    --foreground: #F8F6F3;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
 }
