@@ -149,7 +149,7 @@ export interface RBACEvaluationResult {
  * enforce access control at the request level. Enforcement happens via
  * middleware configured in other modules.
  * 
- * @param role - User role (e.g., 'SHIPPER', 'TRANSPORTER')
+ * @param role - User role per approved taxonomy: SHIPPER/TRANSPORTER/DRIVER/DISPATCHER/MODERATOR/ADMIN/SUPER_ADMIN
  * @param resource - Resource being accessed (e.g., 'listings', 'offers')
  * @param action - Action being performed (e.g., 'create', 'read', 'update', 'delete')
  * @returns RBAC evaluation result
@@ -157,20 +157,32 @@ export interface RBACEvaluationResult {
 export function evaluateRBAC(role: string, resource: string, action: string): RBACEvaluationResult {
   // Simplified RBAC rules for Wave 1
   // Full implementation uses MOD-010 RoleDefinition/PermissionBoundary
+  //
+  // SUPER ADMIN PRIVILEGE HIERARCHY (HAO-R-003 RESOLVED):
+  // - SUPER_ADMIN has full MODERATOR capability + full ADMIN capability + SUPER_ADMIN-only capability
+  // - Effective permission set = moderator roles ∪ admin roles ∪ super_admin roles
+  // - Regular roles (Shipper, Transporter, Driver, Dispatcher) operate below Admin/Moderator tier
+  //
+  // PER-HIERARCHY RESOURCE ASSIGNMENTS:
+  // - listings: read=SHIPPER(own)+TRANSPORTER(published)+ADMIN+MODERATOR(governance)+SUPER_ADMIN; create=SHIPPER+ADMIN+SUPER_ADMIN
+  // - offers: read=TRANSPORTER(own)+SHIPPER(listing-owner)+ADMIN+MODERATOR(governance)+SUPER_ADMIN; create=TRANSPORTER+ADMIN+SUPER_ADMIN
+  // - matching: execute=SHIPPER+ADMIN+MODERATOR(governance)+SUPER_ADMIN, read+execute=DISPATCHER(operational)
+  // - quotes: read=SHIPPER(listing-owner)+ADMIN+MODERATOR(governance)+SUPER_ADMIN
   
   const allowedRoles: Record<string, string[]> = {
-    listings: ['SHIPPER', 'ADMIN', 'MODERATOR'],
-    offers: ['TRANSPORTER', 'SHIPPER', 'ADMIN', 'MODERATOR'],
-    matching: ['SHIPPER', 'ADMIN'],
-    quotes: ['SHIPPER', 'ADMIN'],
+    listings: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR'],
+    offers: ['TRANSPORTER', 'SHIPPER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR'],
+    matching: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR', 'DISPATCHER'],
+    quotes: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR'],
+    tracking: ['ADMIN', 'SUPER_ADMIN'],
   };
   
   const allowedActions: Record<string, string[]> = {
-    create: ['SHIPPER', 'TRANSPORTER', 'ADMIN'],
-    read: ['SHIPPER', 'TRANSPORTER', 'ADMIN', 'MODERATOR'],
-    update: ['SHIPPER', 'TRANSPORTER', 'ADMIN'],
-    delete: ['ADMIN'],
-    execute: ['SHIPPER', 'ADMIN'],
+    create: ['SHIPPER', 'TRANSPORTER', 'ADMIN', 'SUPER_ADMIN'],
+    read: ['SHIPPER', 'TRANSPORTER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR', 'DISPATCHER'],
+    update: ['SHIPPER', 'TRANSPORTER', 'ADMIN', 'SUPER_ADMIN'],
+    delete: ['ADMIN', 'SUPER_ADMIN'],
+    execute: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR', 'DISPATCHER'],
   };
   
   const resourceRoles = allowedRoles[resource] || [];

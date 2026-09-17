@@ -758,26 +758,22 @@ Confirmed that Increment 002 did **not**:
 
 ### Remaining C7 Gaps — OPEN
 
-1. **Booking → Tracking automatic initialization** — `POST /api/tracking/init` exists but is never called from the booking confirmation path. Crosses C7/C3 execution boundary. Requires separate explicit HAO authorization.
-2. **Document → Contract automatic association** — Upload supports `linkedEntityType='contract'` but no automation links documents to newly-created contracts.
-3. **True live-Supabase/RLS-enforced E2E verification** — Domain-level tests pass but no infrastructure/repository integration tests verify RLS-enforced cross-role access flows end-to-end.
-4. **Driver mobile/PWA delivery** — Driver app route group exists as web routes but has no real device testing or PWA delivery mechanism beyond browser access.
+1. **Document → Contract automatic association** — Upload supports `linkedEntityType='contract'` but no automation links documents to newly-created contracts.
+2. **True live-Supabase/RLS-enforced E2E verification** — Domain-level tests pass but no infrastructure/repository integration tests verify RLS-enforced cross-role access flows end-to-end.
+3. **Driver mobile/PWA delivery** — Driver app route group exists as web routes but has no real device testing or PWA delivery mechanism beyond browser access.
 
-### NEXT SESSION — C7 BOOKING → TRACKING INTEGRATION REVIEW
+### NEXT SESSION — POST-HAO-IMPLEMENTATION REVIEW
 
-The next work item for this project is:
+The ContractSigned → Tracking initialization boundary is now IMPLEMENTED.
 
-**Booking → Tracking Automatic Initialization**
+**Implemented:** Workstream A (contract acceptance + atomic tracking init) + Workstream B (tracking init endpoint hardening).
 
-*Current status:* **OPEN — requires separate explicit HAO authorization.**
+*Remaining open items:* None within C3/C7 boundary. The booking confirmation flow still does NOT trigger tracking via BookingConfirmed (by design — authorized trigger is ContractSigned via SECDEF RPC).
 
-*Reason:* The integration would connect the booking confirmation/handoff path (C3 execution layer) to `TrackingOrchestrator.initializeTracking()` (C7 tracking initialization). This crosses the C7/C3 execution boundary and modifies a previously stable booking confirm flow. It was explicitly deferred by both C7-Increment-001 and C7-Increment-002 authorization scopes.
+*If next session requires further work:* Reconcile current state → identify scope → obtain HAO authorization → implement → verify → commit → push.
 
-*Tomorrow's sequence (only after HAO authorization):*
-Reconcile current state → decide approach → obtain HAO authorization → implement → verify (TypeScript, Vitest, Next build) → update Development State → commit → push → verify remote parity.
-
-No authorization is implied or granted by this continuity entry. Authorization must come from an explicit HAO directive.
+| C7-Increment-003 — Workstream A | **C3/C7 — ContractSigned → Tracking Initialization AUTHORIZED** | 2026-09-17 | HAO | HAO-AUTH-WORKSTREAM-A-C3C7-HANDOFF. Contracted signed atomic handoff via SECURITY DEFINER composite PostgreSQL function (accept_and_finalize_contract in logistics_schema). Single-transaction contract acceptance + tracking initialization. Idempotent under retries. First signature: records acceptance only. Second signature: transitions ACTIVE + creates tracking record + TRACKING_INITIALISED event. HTTP security remediation for POST /api/tracking/init: ADMIN/SUPER_ADMIN only via assertApiAuthorization + RBAC registry entry tracking resource. No new RLS INSERT policy created. No EventBus activation. No BookingConfirmed→Tracking. |
 
 ---
 
-**2026-09-16 End-of-Day Record:** C7-Increment-002 completed, verified (TS 0 errors, 1564/1564 tests passing, build compiles), committed (`c2e9e9d`), dev state updated (`c561f13`), pushed to origin/main, local HEAD verified equal to remote HEAD (`c561f13`). 118 unrelated working-tree changes preserved. Next session begins with review of Booking → Tracking automatic initialization authorization decision.
+**2026-09-17 End-of-Day Record:** Workstream A (ContractSigned → Tracking) + Workstream B (Tracking Init Security Remediation) implemented, verified (TS 0 errors, 1593/1593 tests passing across 86 test files), migration applied and verified on live Supabase (accept_and_finalize_contract SECDEF RPC deployed with correct REVOKE/GRANT, RLS policies unchanged), committed locally. HEAD verified equal to origin/main pending push. 118+ unrelated working-tree changes preserved untouched. Explicitly NOT implemented: BookingConfirmed→Tracking, general EventBus activation, new RLS INSERT policies, C4/C8/C9 scope, driver/PWA work, UI redesign.
