@@ -778,3 +778,10 @@ The ContractSigned → Tracking initialization boundary is now IMPLEMENTED.
 ---
 
 **2026-09-17 End-of-Day Record:** Workstream A (ContractSigned → Tracking) + Workstream B (Tracking Init Security Remediation) implemented, verified (TS 0 errors, 1593/1593 tests passing across 86 test files), migrations applied and verified on live Supabase (018 initial deploy, 019 schema correction, accept_and_finalize_contract SECDEF RPC in public schema with correct REVOKE/GRANT, RLS policies unchanged), committed locally. HEAD verified equal to origin/main pending push. 117+ unrelated working-tree changes preserved untouched. Explicitly NOT implemented: BookingConfirmed→Tracking, general EventBus activation, new RLS INSERT policies, C4/C8/C9 scope, driver/PWA work, UI redesign.
+
+---
+
+### C7 — Tracking Status Endpoint Security Remediation
+
+| C7-Increment-004 | **C7 — Tracking Status Endpoint Security Fixed** | 2026-09-17 | Fix | POST /api/tracking/[trackingId]/status had zero authentication or authorization checks — any caller could mutate tracking state on arbitrary records. Route comment stated "DRIVER or DISPATCHER roles" but no enforcement existed. Fix: added assertApiAuthorization(request, 'tracking_status', 'status_update'). RBAC entry: tracking_status resource + status_update action allowed for TRANSPORTER, DISPATCHER, MODERATOR, ADMIN, SUPER_ADMIN. Excluded: SHIPPER, DRIVER. No RLS changes. No migration created. TS: 0 errors. Tests: 1605/1605 passing across 87 test files. |
+
