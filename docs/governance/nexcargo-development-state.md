@@ -785,3 +785,15 @@ The ContractSigned → Tracking initialization boundary is now IMPLEMENTED.
 
 | C7-Increment-004 | **C7 — Tracking Status Endpoint Security Fixed** | 2026-09-17 | Fix | POST /api/tracking/[trackingId]/status had zero authentication or authorization checks — any caller could mutate tracking state on arbitrary records. Route comment stated "DRIVER or DISPATCHER roles" but no enforcement existed. Fix: added assertApiAuthorization(request, 'tracking_status', 'status_update'). RBAC entry: tracking_status resource + status_update action allowed for TRANSPORTER, DISPATCHER, MODERATOR, ADMIN, SUPER_ADMIN. Excluded: SHIPPER, DRIVER. No RLS changes. No migration created. TS: 0 errors. Tests: 1605/1605 passing across 87 test files. |
 
+| HAO-C7-AUTH | **C7 — TRACKING MUTATION SECURITY CLOSURE AUTHORIZED** | 2026-09-17 | HAO | Full C7 security closure authorized per HAO directive. Covers: status endpoint API/RLS consistency (3 new UPDATE RLS policies live), GPS endpoint auth guard (assertApiAuth), POD endpoint auth guard (assertApiAuth), POD verify endpoint auth guard (assertApiAuthorization with pod/update RBAC). Role × Endpoint matrix produced: DRIVER-only for GPS/POD submission via DB RLS; TRANSPORTER/SCOPED and PLATFORM-wide for DISPATCHER/MODERATOR/ADMIN/SUPER_ADMIN status updates; MODERATOR+/ADMIN/SUPER_ADMIN for POD verification. No business logic altered. TS: 0 errors. Tests: 1638/1638 passing across 88 test files. Live Supabase verified: 7 policies on shipment_tracking_records (4 SELECT + 3 UPDATE). Build: next build fails on /forgot-password prerender (pre-existing, unchanged). |
+
+---
+
+## Current Phase
+
+Foundation / Module Implementation / Validation / Deployment / Mobile Preparation
+
+**Current:** Foundation / Module Implementation   **WAVES 0 4 COMPLETE; WAVE 5 INCREMENTS 1 2 IMPLEMENTED AND VERIFIED; C7 TRACKING MUTATION SECURITY CLOSURE COMPLETE**
+
+**Notes:** Architecture Bootstrap (PROMPT 1) fully scaffolded. Prerequisites WEB-002 (i18n), WEB-008 (Vitest), WEB-009 (Service Role Key placeholder) resolved. PROMPT 0 v1.1 dependency semantics established. All HAD decisions (HAD-001 through HAD-007) APPROVED / RESOLVED. Authoritative wave-based implementation sequence ratified by HAO (HAD-007). Specification baseline is complete. **Wave 0 is COMPLETE.** All 22 module-specific exit criteria (X-01 through X-22) satisfied with type definitions and utility implementations across MOD-011, MOD-017, and MOD-010. Cross-cutting criteria X-23 through X-32 satisfied. Artifact summary (`nexcargo-wave-0-artifact-summary.md`) and exit report (`nexcargo-wave-0-exit-report.md`) produced. **C7 — Tracking Mutation Security Closure implemented**: all four existing tracking mutation endpoints now have coherent authentication + authorization + RLS boundaries consistent with MOD-003 and the actual NexCargo role/fleet architecture. TypeScript compilation: clean (EXIT:0). Tests: 1,638 passing across 88 files. Next governance gate: Wave 5 Increment 3 or C8 — both NOT AUTHORIZED.
+

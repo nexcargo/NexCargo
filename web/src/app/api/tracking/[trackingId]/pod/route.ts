@@ -6,12 +6,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PodSubmissionService } from '@/modules/mod-003-tracking/application/services/pod-submission-service';
 import type { CreatePodParams } from '@/modules/mod-003-tracking/infrastructure/repositories/pod-repository';
 import { ValidationError } from '@/shared/errors/app-errors';
+import { assertApiAuth } from '@/lib/supabase/api-auth';
 
 /**
  * POST /api/tracking/[trackingId]/pod
  * 
  * Submits POD evidence after validation.
- * Requires authorization via RBAC (DRIVER role).
+ * Requires authentication via Supabase session.
+ * Role enforcement is handled by RLS at database layer (DRIVER role).
+ * API gate ensures only authenticated users can submit POD data;
+ * database row-level security restricts inserts to DRIVER role per app.platform_roles.
  * 
  * Body:
  * - trackingId: UUID of tracking record
@@ -30,6 +34,8 @@ export async function POST(
   { params }: { params: Promise<{ trackingId: string }> }
 ) {
   try {
+    // Auth guard: requires valid Supabase session
+    await assertApiAuth(request);
     const { trackingId } = await params;
     if (!trackingId || typeof trackingId !== 'string') {
       return NextResponse.json(
@@ -92,6 +98,20 @@ export async function POST(
       return NextResponse.json(
         { error: 'validation_error', message: error.message, details: error.details },
         { status: 400 }
+      );
+    }
+
+    if (error instanceof Error && error.message === 'UNAUTHORIZED') {
+      return NextResponse.json(
+        { error: 'unauthorized', message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    if (error instanceof Error && error.message.startsWith('FORBIDDEN')) {
+      return NextResponse.json(
+        { error: 'forbidden', message: error.message },
+        { status: 403 }
       );
     }
 

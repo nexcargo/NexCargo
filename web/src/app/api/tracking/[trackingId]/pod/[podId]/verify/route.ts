@@ -5,12 +5,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PodSubmissionService } from '@/modules/mod-003-tracking/application/services/pod-submission-service';
 import { ValidationError } from '@/shared/errors/app-errors';
+import { assertApiAuthorization } from '@/lib/supabase/api-auth';
 
 /**
  * PATCH /api/tracking/[trackingId]/pod/[podId]/verify
  * 
  * Verifies or rejects a submitted POD.
  * Requires authorization via RBAC (MODERATOR, ADMIN, or SUPER_ADMIN roles).
+ * Database RLS also enforces this boundary on proof_of_delivery UPDATE.
  * 
  * Body:
  * - verify: boolean (true = approve/VERIFIED, false = reject/REJECTED)
@@ -24,6 +26,8 @@ export async function PATCH(
   { params }: { params: Promise<{ trackingId: string; podId: string }> }
 ) {
   try {
+    // Auth guard: only governance roles may verify PODs
+    await assertApiAuthorization(request, 'pod', 'update');
     const { trackingId, podId } = await params;
     
     if (!trackingId || typeof trackingId !== 'string') {
@@ -71,6 +75,20 @@ export async function PATCH(
       return NextResponse.json(
         { error: 'validation_error', message: error.message, details: error.details },
         { status: 409 } // Conflict for already verified/rejected PODs
+      );
+    }
+
+    if (error instanceof Error && error.message.startsWith('FORBIDDEN')) {
+      return NextResponse.json(
+        { error: 'forbidden', message: error.message },
+        { status: 403 }
+      );
+    }
+
+    if (error instanceof Error && error.message === 'UNAUTHORIZED') {
+      return NextResponse.json(
+        { error: 'unauthorized', message: 'Authentication required' },
+        { status: 401 }
       );
     }
 

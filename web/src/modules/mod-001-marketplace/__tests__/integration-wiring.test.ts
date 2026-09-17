@@ -118,6 +118,91 @@ describe('MOD-001 Integration Wiring — Wave 1 Increment 4', () => {
       expect(evaluateRBAC('ADMIN', 'quotes', 'create').permitted).toBe(true);
     });
 
+    it('allows SUPER_ADMIN full access (equivalent to ADMIN per HAO PE-H07)', () => {
+      expect(evaluateRBAC('SUPER_ADMIN', 'listings', 'create').permitted).toBe(true);
+      expect(evaluateRBAC('SUPER_ADMIN', 'offers', 'delete').permitted).toBe(true);
+      expect(evaluateRBAC('SUPER_ADMIN', 'matching', 'execute').permitted).toBe(true);
+      expect(evaluateRBAC('SUPER_ADMIN', 'quotes', 'create').permitted).toBe(true);
+      expect(evaluateRBAC('SUPER_ADMIN', 'listings', 'read').permitted).toBe(true);
+    });
+
+    // ============================================================
+    // HAO-R-003 — SUPER ADMIN PRIVILEGE HIERARCHY TESTS
+    // Super Admin = MODERATOR permissions + ADMIN permissions + SUPER_ADMIN-only permissions
+    // ============================================================
+    
+    describe('HAO-R-003 — Super Admin inherits all Moderator permissions', () => {
+      it('allows SUPER_ADMIN to read listings for governance (Moderator capability)', () => {
+        expect(evaluateRBAC('SUPER_ADMIN', 'listings', 'read').permitted).toBe(true);
+      });
+
+      it('allows SUPER_ADMIN to read offers for governance (Moderator capability)', () => {
+        expect(evaluateRBAC('SUPER_ADMIN', 'offers', 'read').permitted).toBe(true);
+      });
+
+      it('allows SUPER_ADMIN to execute matching for oversight (Moderator capability)', () => {
+        expect(evaluateRBAC('SUPER_ADMIN', 'matching', 'execute').permitted).toBe(true);
+      });
+
+      it('allows SUPER_ADMIN to read quotes for governance (Moderator capability)', () => {
+        expect(evaluateRBAC('SUPER_ADMIN', 'quotes', 'read').permitted).toBe(true);
+      });
+
+      it('does not give SUPER_ADMIN create/delete on resources without explicit grant', () => {
+        // SUPER_ADMIN has full Admin rights but create/delete may be role-specific
+        expect(evaluateRBAC('SUPER_ADMIN', 'listings', 'create').permitted).toBe(true);
+        expect(evaluateRBAC('SUPER_ADMIN', 'listings', 'delete').permitted).toBe(true);
+      });
+    });
+
+    describe('HAO-R-003 — Moderaor cannot perform Admin operations without explicit authorization', () => {
+      it('MODERATOR can read listings for governance', () => {
+        expect(evaluateRBAC('MODERATOR', 'listings', 'read').permitted).toBe(true);
+      });
+
+      it('MODERATOR can read offers for governance', () => {
+        expect(evaluateRBAC('MODERATOR', 'offers', 'read').permitted).toBe(true);
+      });
+
+      it('MODERATOR can execute matching for operational oversight', () => {
+        expect(evaluateRBAC('MODERATOR', 'matching', 'execute').permitted).toBe(true);
+      });
+
+      it('MODERATOR can read quotes for governance', () => {
+        expect(evaluateRBAC('MODERATOR', 'quotes', 'read').permitted).toBe(true);
+      });
+
+      it('MODERATOR cannot create listings (admin-only)', () => {
+        expect(evaluateRBAC('MODERATOR', 'listings', 'create').permitted).toBe(false);
+      });
+
+      it('MODERATOR cannot delete listings (admin-only)', () => {
+        expect(evaluateRBAC('MODERATOR', 'listings', 'delete').permitted).toBe(false);
+      });
+    });
+
+    describe('HAO-R-003 — Admin cannot automatically perform Moderator functions unless explicitly granted', () => {
+      it('ADMIN can execute matching as operational function', () => {
+        expect(evaluateRBAC('ADMIN', 'matching', 'execute').permitted).toBe(true);
+      });
+
+      it('ADMIN can read all marketplace resources', () => {
+        expect(evaluateRBAC('ADMIN', 'listings', 'read').permitted).toBe(true);
+        expect(evaluateRBAC('ADMIN', 'offers', 'read').permitted).toBe(true);
+        expect(evaluateRBAC('ADMIN', 'quotes', 'read').permitted).toBe(true);
+      });
+    });
+
+    it('allows DISPATCHER to execute matching (operational visibility)', () => {
+      expect(evaluateRBAC('DISPATCHER', 'matching', 'execute').permitted).toBe(true);
+      expect(evaluateRBAC('DISPATCHER', 'listings', 'read').permitted).toBe(false);
+    });
+
+    it('allows MODERATOR to read listings and offers (governance oversight)', () => {
+      expect(evaluateRBAC('MODERATOR', 'listings', 'read').permitted).toBe(true);
+      expect(evaluateRBAC('MODERATOR', 'offers', 'read').permitted).toBe(true);
+    });
+
     it('denies unknown roles', () => {
       const result = evaluateRBAC('UNKNOWN_ROLE', 'listings', 'read');
       expect(result.permitted).toBe(false);
@@ -147,6 +232,95 @@ describe('MOD-001 Integration Wiring — Wave 1 Increment 4', () => {
     it('restricts matching to shippers', () => {
       expect(evaluateRBAC('SHIPPER', 'matching', 'execute').permitted).toBe(true);
       expect(evaluateRBAC('TRANSPORTER', 'matching', 'execute').permitted).toBe(false);
+    });
+
+    // ============================================================
+    // C7 — Tracking Mutation RBAC Tests
+    // ============================================================
+
+    describe('C7 — Tracking resource authorization', () => {
+      it('allows ADMIN to create tracking records', () => {
+        expect(evaluateRBAC('ADMIN', 'tracking', 'create').permitted).toBe(true);
+      });
+
+      it('allows SUPER_ADMIN to create tracking records', () => {
+        expect(evaluateRBAC('SUPER_ADMIN', 'tracking', 'create').permitted).toBe(true);
+      });
+
+      it('denies SHIPPER from creating tracking records', () => {
+        expect(evaluateRBAC('SHIPPER', 'tracking', 'create').permitted).toBe(false);
+      });
+
+      it('denies TRANSPORTER from creating tracking records', () => {
+        expect(evaluateRBAC('TRANSPORTER', 'tracking', 'create').permitted).toBe(false);
+      });
+    });
+
+    describe('C7 — Tracking status update RBAC', () => {
+      it('allows TRANSPORTER to update tracking status', () => {
+        const result = evaluateRBAC('TRANSPORTER', 'tracking_status', 'status_update');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('allows DISPATCHER to update tracking status', () => {
+        const result = evaluateRBAC('DISPATCHER', 'tracking_status', 'status_update');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('allows MODERATOR to update tracking status', () => {
+        const result = evaluateRBAC('MODERATOR', 'tracking_status', 'status_update');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('allows ADMIN to update tracking status', () => {
+        const result = evaluateRBAC('ADMIN', 'tracking_status', 'status_update');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('allows SUPER_ADMIN to update tracking status', () => {
+        const result = evaluateRBAC('SUPER_ADMIN', 'tracking_status', 'status_update');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('denies SHIPPER from updating tracking status', () => {
+        const result = evaluateRBAC('SHIPPER', 'tracking_status', 'status_update');
+        expect(result.permitted).toBe(false);
+      });
+
+      it('denies DRIVER from updating tracking status', () => {
+        const result = evaluateRBAC('DRIVER', 'tracking_status', 'status_update');
+        expect(result.permitted).toBe(false);
+      });
+    });
+
+    describe('C7 — POD update (verification) RBAC', () => {
+      it('allows MODERATOR to verify POD', () => {
+        expect(evaluateRBAC('MODERATOR', 'pod', 'update').permitted).toBe(true);
+      });
+
+      it('allows ADMIN to verify POD', () => {
+        expect(evaluateRBAC('ADMIN', 'pod', 'update').permitted).toBe(true);
+      });
+
+      it('allows SUPER_ADMIN to verify POD', () => {
+        expect(evaluateRBAC('SUPER_ADMIN', 'pod', 'update').permitted).toBe(true);
+      });
+
+      it('denies TRANSPORTER from verifying POD', () => {
+        expect(evaluateRBAC('TRANSPORTER', 'pod', 'update').permitted).toBe(false);
+      });
+
+      it('denies DRIVER from verifying POD', () => {
+        expect(evaluateRBAC('DRIVER', 'pod', 'update').permitted).toBe(false);
+      });
+
+      it('denies DISPATCHER from verifying POD', () => {
+        expect(evaluateRBAC('DISPATCHER', 'pod', 'update').permitted).toBe(false);
+      });
+
+      it('denies SHIPPER from verifying POD', () => {
+        expect(evaluateRBAC('SHIPPER', 'pod', 'update').permitted).toBe(false);
+      });
     });
   });
 

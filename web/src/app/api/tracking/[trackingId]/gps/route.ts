@@ -5,12 +5,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GpsIngestionService } from '@/modules/mod-003-tracking/application/services/gps-ingestion-service';
 import { ValidationError } from '@/shared/errors/app-errors';
+import { assertApiAuth } from '@/lib/supabase/api-auth';
 
 /**
  * POST /api/tracking/[trackingId]/gps
  * 
  * Submits a GPS coordinate update after validation.
- * Requires authorization via RBAC (DRIVER role).
+ * Requires authentication via Supabase session.
+ * Role enforcement is handled by RLS at database layer (DRIVER role).
+ * API gate ensures only authenticated users can submit GPS data;
+ * database row-level security restricts inserts to DRIVER role per app.platform_roles.
  * 
  * Body:
  * - latitude: decimal (-90 to 90)
@@ -27,6 +31,8 @@ export async function POST(
   { params }: { params: Promise<{ trackingId: string }> }
 ) {
   try {
+    // Auth guard: requires valid Supabase session
+    await assertApiAuth(request);
     const { trackingId } = await params;
     if (!trackingId || typeof trackingId !== 'string') {
       return NextResponse.json(
@@ -65,6 +71,13 @@ export async function POST(
       return NextResponse.json(
         { error: 'validation_error', message: error.message, details: error.details },
         { status: 400 }
+      );
+    }
+
+    if (error instanceof Error && error.message === 'UNAUTHORIZED') {
+      return NextResponse.json(
+        { error: 'unauthorized', message: 'Authentication required' },
+        { status: 401 }
       );
     }
 

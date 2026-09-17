@@ -176,12 +176,13 @@ export function evaluateRBAC(role: string, resource: string, action: string): RB
     quotes: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR'],
     tracking: ['ADMIN', 'SUPER_ADMIN'],
     tracking_status: ['TRANSPORTER', 'DISPATCHER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
+    pod: ['ADMIN', 'SUPER_ADMIN', 'MODERATOR'],
   };
   
   const allowedActions: Record<string, string[]> = {
     create: ['SHIPPER', 'TRANSPORTER', 'ADMIN', 'SUPER_ADMIN'],
     read: ['SHIPPER', 'TRANSPORTER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR', 'DISPATCHER'],
-    update: ['SHIPPER', 'TRANSPORTER', 'ADMIN', 'SUPER_ADMIN'],
+    update: ['SHIPPER', 'TRANSPORTER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR'],
     delete: ['ADMIN', 'SUPER_ADMIN'],
     execute: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR', 'DISPATCHER'],
     status_update: ['TRANSPORTER', 'DISPATCHER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
