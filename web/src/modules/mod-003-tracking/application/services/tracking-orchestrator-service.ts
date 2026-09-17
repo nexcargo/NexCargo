@@ -1,6 +1,7 @@
 // NexCargo MOD-003 — Tracking Orchestrator Service (C7-001 Phase 1)
 // Owner: MOD-003 Tracking & Visibility Module
 // Wires state machine validation + repository persistence for tracking initialization
+// C7-002: Atomic status updates via public.atomic_tracking_status_update() RPC
 
 import { TrackingRecordRepository } from '../../infrastructure/repositories/tracking-record-repository';
 import { TrackingEventRepository } from '../../infrastructure/repositories/tracking-event-repository';
@@ -9,6 +10,7 @@ import type { CreateTrackingEventParams } from '../../infrastructure/repositorie
 import { applyTrackingTransition, isTrackingTerminal } from '@/modules/mod-003-tracking/domain/services/tracking-state-machine';
 import { ValidationError } from '@/shared/errors/app-errors';
 import { ShipmentStatus } from '@/shared/types/enums';
+import { createClient } from '@/lib/supabase/server';
 
 /**
  * Service that orchestrates tracking record initialization from a confirmed booking.
@@ -59,6 +61,8 @@ export class TrackingOrchestratorService {
 
   /**
    * Update tracking status after validating transition against state machine.
+   * Uses atomic_tracking_status_update() RPC for transaction integrity:
+   * both status UPDATE and event INSERT execute as one DB unit of work.
    */
   async updateTrackingStatus(trackingId: string, targetStatus: string, sourceModule: string): Promise<void> {
     // Get current state
@@ -79,22 +83,21 @@ export class TrackingOrchestratorService {
       throw new ValidationError(`Invalid state transition: ${currentState} → ${targetStatus}`);
     }
 
-    // Check if transitioning to terminal state
-    const isTerminal = targetStatus === 'COMPLETED' || targetStatus === 'CANCELLED';
-
-    // Update record status
-    await this.trackingRecordRepo.updateStatus(trackingId, targetStatus);
-
-    // Create event
-    await this.createInternalEvent({
-      trackingId,
-      eventType: `SHIPMENT_${targetStatus.toUpperCase()}`,
-      source: sourceModule,
-      stateFrom: currentState,
-      stateTo: targetStatus,
+    // Execute atomic status + event persistence via Supabase client
+    const supabase = await createClient();
+    
+    const { error } = await supabase.rpc('atomic_tracking_status_update', {
+      p_tracking_id: trackingId,
+      p_target_status: targetStatus,
+      p_source_module: sourceModule || 'MOD-003',
     });
 
-    // If completing, mark record as completed at timestamp
+    if (error) {
+      throw new Error(`Failed to update tracking status: ${error.message}`);
+    }
+
+    // If completing, mark record as completed at timestamp (separate RPC)
+    const isTerminal = targetStatus === 'COMPLETED' || targetStatus === 'CANCELLED';
     if (isTerminal && targetStatus === 'COMPLETED') {
       await this.trackingRecordRepo.markCompleted(trackingId);
     }
