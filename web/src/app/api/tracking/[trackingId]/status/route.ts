@@ -6,17 +6,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TrackingOrchestratorService } from '@/modules/mod-003-tracking/application/services/tracking-orchestrator-service';
 import { ValidationError } from '@/shared/errors/app-errors';
 import { ShipmentStatus } from '@/shared/types/enums';
+import { assertApiAuthorization } from '@/lib/supabase/api-auth';
 
 /**
  * POST /api/tracking/[trackingId]/status
  * 
  * Submits a tracking event for manual state transition.
  * Validates against the state machine before applying.
- * Requires authorization via RBAC (DRIVER or DISPATCHER roles).
+ * Requires authorization via RBAC (TRANSPORTER, DISPATCHER, MODERATOR, ADMIN, or SUPER_ADMIN).
  * 
  * Body:
  * - targetStatus: desired state (must be valid transition)
- * - source: module initiating transition (e.g., "MOD-003" for internal)
+ * - sourceModule: module initiating transition (e.g., "MOD-003" for internal)
  * 
  * Idempotency key supported via tracking record's version field.
  */
@@ -25,6 +26,9 @@ export async function POST(
   { params }: { params: Promise<{ trackingId: string }> }
 ) {
   try {
+    // Auth guard: only authorized roles may mutate tracking status
+    await assertApiAuthorization(request, 'tracking_status', 'status_update');
+
     const { trackingId } = await params;
     if (!trackingId || typeof trackingId !== 'string') {
       return NextResponse.json(
@@ -66,6 +70,20 @@ export async function POST(
       return NextResponse.json(
         { error: 'validation_error', message: error.message, details: error.details },
         { status: 409 }
+      );
+    }
+
+    if (error instanceof Error && error.message.startsWith('FORBIDDEN')) {
+      return NextResponse.json(
+        { error: 'forbidden', message: error.message },
+        { status: 403 }
+      );
+    }
+
+    if (error instanceof Error && error.message === 'UNAUTHORIZED') {
+      return NextResponse.json(
+        { error: 'unauthorized', message: 'Authentication required' },
+        { status: 401 }
       );
     }
 
