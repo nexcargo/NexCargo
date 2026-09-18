@@ -258,7 +258,7 @@ MOD-002, MOD-005, MOD-013 (Phase 2A   ALL increments committed at cfc7822); MOD-
 
 ## Current Work in Progress
 
-**NONE   All Waves 0-4 complete. Custom-Schema Data API Remediation (HAO-CUSTOM-SCHEMA-REMED-CLOSE) completed, verified, and closed (2026-09-18). All three sub-items resolved: DB-SRC-001 source refactor, DB-CONFIG-001 Data API configuration, DB-GRANTS-002 least-privilege grants. Zero deprecated custom-schema `.from()` patterns remain. Migrations 025/026/027 applied live. monitoring_schema intentionally excluded per HAO security directive. Tests: 1,716 passing across 90 files. TypeScript: 0 errors.**
+**NONE   All Waves 0-4 complete. Custom-Schema Data API Remediation (HAO-CUSTOM-SCHEMA-REMED-CLOSE) completed, verified, and closed (2026-09-18). All three sub-items resolved: DB-SRC-001 source refactor, DB-CONFIG-001 Data API configuration, DB-GRANTS-002 least-privilege grants. Zero deprecated custom-schema `.from()` patterns remain. Migrations 025/026/027 applied live. monitoring_schema intentionally excluded per HAO security directive. C7 tracking/security work closed through d9d2c52; governance normalized (see Normalized C7 Governance Structure above). Tests: 1,716 passing across 90 files. TypeScript: 0 errors.**
 
 ---
 
@@ -542,7 +542,7 @@ Before Wave 5 implementation begins:
 | **Wave 1 Corrections** | `5118ad2` (WAVE-1-CORR-001: removed duplicate ID columns from all four marketplace tables; canonical id UUID PRIMARY KEY aligned with BaseEntity convention), `3d0630d` (WAVE-1-CORR-RBAC: fixed evaluateRBAC() logic error   actionRoles.includes(action) ? actionRoles.includes(role); added 'execute' to allowedActions; fixed test assertion data.status ? data.data.status) |
 | **Closure Artifacts** | `nexcargo-wave-0-artifact-summary.md` (X-31), `nexcargo-wave-0-exit-report.md` (X-32)   renamed from nxcargo-* prefix during naming remediation commit d0d03c0
 | **Non-blocking discrepancies recorded** | Pre-existing documentation modifications to event-registry.md and mod-001 spec identified as outside Wave 0 scope; artifact count discrepancy (summary claims 39 files, filesystem shows 40 including module.config.ts); file rename tracking in git (nxcargo-* -> nexcargo-*) handled via R100 auto-detect
-| **Session status   ACTIVE. All Waves 0 4 complete. WAVE 5 AUTHORIZED (conditional on entry criteria)   INCREMENT 1 AND 2 IMPLEMENTED; INCREMENT 3 NOT AUTHORIZED. C1 CLOSED. C2 CLOSED (all three increments). C3 through C10 NOT AUTHORIZED. Full test suite: 1,268 passing across 57 files. Track B frozen preserved. All future increments beyond those explicitly authorized remain NOT AUTHORIZED until explicit HAO authorization. |
+| **Session status   ACTIVE. All Waves 0 4 complete. WAVE 5 AUTHORIZED (conditional on entry criteria)   INCREMENT 1 AND 2 IMPLEMENTED; INCREMENT 3 NOT AUTHORIZED. C1 CLOSED. C2 CLOSED (all three increments). C3 through C10 NOT AUTHORIZED. Full test suite: 1,268 passing across 57 files. Track B frozen preserved. All future increments beyond those explicitly authorized remain NOT AUTHORIZED until explicit HAO authorization.** | **Reconciled — 2026-09-18:** C7 governance normalized. C7-001/002/003 CLOSED. C7-004/C7-005 OPEN / NOT AUTHORIZED. ContractSigned → Tracking Initialization confirmed as operational trigger. BookingConfirmed → Tracking explicitly excluded. |
 
 ---
 
@@ -668,16 +668,16 @@ This document was updated to record HAO-WAVE5-AUTH-001 (Wave 5 Implementation Au
 | C7-002 Documents | IMPLEMENTED / VERIFIED | Document upload to Supabase Storage with hash/validation; multi-table persistence (7 tables); listing/filtering; detail retrieval |
 | C7-003 Fleet | IMPLEMENTED / VERIFIED | Fleet registration; vehicle/driver CRUD with compliance tracking; asset assignments; backhaul opportunities; transporter ownership enforcement |
 | C7-004 Support/Disputes | IMPLEMENTED / VERIFIED | Support ticket creation/listing; dispute case management with escalation/hold/resolution; dispute-hold signal integration with escrow domain |
-| Integration with Booking/C3 | BLOCKED | Tracking records can be created manually via `/api/tracking/init` but no automatic trigger from booking confirm flow. This requires separate authorization. |
+| Integration with Booking/C3 | RESOLVED (C7-003) | ContractSigned → Tracking Initialization (C7-003) implemented via `accept_and_finalize_contract()` SECDEF RPC. Manual init via `/api/tracking/init` retained as ADMIN/SUPER_ADMIN recovery path. See Normalized C7 Governance Structure above. |
 | Integration with Financials | PARTIAL | Dispute-hold service provides validation signals but actual escrow release/refund execution requires C4 authorization. |
 
 ### Remaining C7 Gaps (not in scope of this increment)
 
-1. **Booking → Tracking auto-initialization**: `POST /api/tracking/init` exists but is never called from the booking confirmation path. This is a C3 execution path modification requiring separate authorization.
-2. **True E2E coverage**: Domain tests exist for state machines but no infrastructure/repository/API integration tests verify RLS-enforced cross-role access flows.
+1. **Booking → Tracking auto-initialization**: `POST /api/tracking/init` exists but is never called from the booking confirmation path. *This gap was RESOLVED by HAO-AUTH-WORKWORK-A-C3C7-HANDOFF (2026-09-17): ContractSigned → Tracking Initialization (C7-003) was implemented as the operational path. BookingConfirmed → Tracking is now EXPLICITLY EXCLUDED per multiple HAO decisions.* This is NOT an active gap requiring separate authorization. See Normalized C7 Governance Structure above for current status.
+2. **True E2E coverage**: Domain tests exist for state machines but no infrastructure/repository/API integration tests verify RLS-enforced cross-role access flows. *(Now formalized as C7-005 — OPEN / NOT AUTHORIZED.)*
 3. ~~**Support ticket → Booking linkage**: Tickets require manual `caseId` input; no auto-generation tied to confirmed bookings.** — RESOLVED in C7-Increment-002. `caseId` is now optional and auto-generated when omitted.~~
-4. **Document → Contract auto-association**: Upload supports `linkedEntityType='contract'` but no automation links documents to newly-created contracts.
-5. **Driver portal deployment**: Driver app route group exists but has no real device or mobile delivery mechanism beyond web.
+4. **Document → Contract auto-association**: Upload supports `linkedEntityType='contract'` but no automation links documents to newly-created contracts. *(Now formalized as C7-004 — OPEN / NOT AUTHORIZED.)*
+5. **Driver portal deployment**: Driver app route group exists but has no real device or mobile delivery mechanism beyond web. *(Deferred toward C9.)*
 
 ---
 
@@ -707,16 +707,16 @@ This document was updated to record HAO-WAVE5-AUTH-001 (Wave 5 Implementation Au
 
 ### Remaining C7 Gaps (not in scope of this increment)
 
-1. **Booking → Tracking auto-initialization**: `POST /api/tracking/init` exists but still never called from booking confirm flow. Requires separate authorization modifying C3 execution path.
-2. **Document → Contract auto-association**: Upload supports `linkedEntityType='contract'` but no automation links documents to newly-created contracts.
-3. **Driver mobile/PWA delivery**: Driver app route group exists but has no real device or mobile delivery mechanism beyond web.
-4. **True E2E coverage**: Domain tests exist but no RLS-enforced cross-role access integration flows verified end-to-end.
+1. **Booking → Tracking auto-initialization**: `POST /api/tracking/init` exists but still never called from booking confirm flow. *This gap was RESOLVED by HAO-AUTH-WORKSTREAM-A-C3C7-HANDOFF: ContractSigned → Tracking Initialization (C7-003) is the operational path. BookingConfirmed → Tracking is EXPLICITLY EXCLUDED.* See Normalized C7 Governance Structure above.
+2. **Document → Contract auto-association**: Upload supports `linkedEntityType='contract'` but no automation links documents to newly-created contracts. *(Now formalized as C7-004 — OPEN / NOT AUTHORIZED.)*
+3. **Driver mobile/PWA delivery**: Driver app route group exists but has no real device or mobile delivery mechanism beyond web. *(Deferred toward C9.)*
+4. **True E2E coverage**: Domain tests exist but no RLS-enforced cross-role access integration flows verified end-to-end. *(Now formalized as C7-005 — OPEN / NOT AUTHORIZED.)*
 
 ---
 
-**2026-09-16 C7 Increment 001 Closure:** All four C7 domains (Tracking, Documents, Fleet, Support/Disputes) have been brought through the normal completion cycle. The existing working-tree implementations are now committed, verified (TS clean, 1509/1509 tests passing, build compiles), and pushed to origin/main. Automatic booking-confirmation → tracking initialization remains explicitly UNAUTHORIZED and deferred to a future separately-authorized increment that modifies the C3 execution path. No C3/C4/C8 work was performed.
+**2026-09-16 C7 Increment 001 Closure:** All four C7 domains (Tracking, Documents, Fleet, Support/Disputes) have been brought through the normal completion cycle. The existing working-tree implementations are now committed, verified (TS clean, 1509/1509 tests passing, build compiles), and pushed to origin/main. Automatic booking-confirmation → tracking initialization was explicitly UNAUTHORIZED at this stage; it was subsequently RESOLVED by HAO-AUTH-WORKWORK-A-C3C7-HANDOFF (2026-09-17) which established ContractSigned → Tracking Initialization as the operational path. No C3/C4/C8 work was performed.
 
-**2026-09-16 C7 Increment 002 Closure:** Support ticket `caseId` is now optional with auto-generation via `CASE-{UUID prefix}` pattern following existing `TICKET-{prefix}` convention. Five integration test suites (55 tests) verify the full logical paths of Tracking, Documents, Fleet, Disputes, and Support modules without modifying booking confirmation, financial execution, or event infrastructure. TypeScript clean, 1564/1564 tests passing across 83 files, build compiles successfully. Booking → tracking auto-initialization, document → contract auto-association, driver mobile/PWA delivery, and true E2E RLS enforcement remain explicit remaining gaps requiring separate authorization.
+**2026-09-16 C7 Increment 002 Closure:** Support ticket `caseId` is now optional with auto-generation via `CASE-{UUID prefix}` pattern following existing `TICKET-{prefix}` convention. Five integration test suites (55 tests) verify the full logical paths of Tracking, Documents, Fleet, Disputes, and Support modules without modifying booking confirmation, financial execution, or event infrastructure. TypeScript clean, 1564/1564 tests passing across 83 files, build compiles successfully. Document → contract auto-association, driver mobile/PWA delivery, and true E2E RLS enforcement remain explicit remaining gaps requiring separate authorization. BookingConfirmation → tracking initialization was superseded by the HAO's subsequent authorization of ContractSigned → Tracking Initialization (C7-003, 2026-09-17).
 
 ---
 
@@ -760,17 +760,23 @@ Confirmed that Increment 002 did **not**:
 
 ### Remaining C7 Gaps — OPEN
 
-1. **Document → Contract automatic association** — Upload supports `linkedEntityType='contract'` but no automation links documents to newly-created contracts.
-2. **True live-Supabase/RLS-enforced E2E verification** — Domain-level tests pass but no infrastructure/repository integration tests verify RLS-enforced cross-role access flows end-to-end.
-3. **Driver mobile/PWA delivery** — Driver app route group exists as web routes but has no real device testing or PWA delivery mechanism beyond browser access.
+1. **Document → Contract automatic association** — Upload supports `linkedEntityType='contract'` but no automation links documents to newly-created contracts. *(Now formalized as C7-004 — OPEN / NOT AUTHORIZED.)*
+2. **True live-Supabase/RLS-enforced E2E verification** — Domain-level tests pass but no infrastructure/repository integration tests verify RLS-enforced cross-role access flows end-to-end. *(Now formalized as C7-005 — OPEN / NOT AUTHORIZED.)*
+3. **Driver mobile/PWA delivery** — Driver app route group exists as web routes but has no real device testing or PWA delivery mechanism beyond browser access. *(Deferred toward C9.)*
+
+**BookingConfirmed → Tracking note**: The BookingConfirmation → Tracking gap described in pre-authorization records is RESOLVED by the HAO's C7-003 authorization. ContractSigned → Tracking Initialization is the operational path. BookingConfirmed → Tracking is explicitly excluded.
 
 ### NEXT SESSION — POST-HAO-IMPLEMENTATION REVIEW
 
-The ContractSigned → Tracking initialization boundary is now IMPLEMENTED.
+The ContractSigned → Tracking initialization boundary is now IMPLEMENTED and CLOSED.
 
-**Implemented:** Workstream A (contract acceptance + atomic tracking init) + Workstream B (tracking init endpoint hardening).
+**Implemented:** Workstream A (contract acceptance + atomic tracking init via `accept_and_finalize_contract()` SECDEF RPC) + Workstream B (tracking init endpoint hardening). Security hardened through DEFECT-001/002/003/004 fixes (migrations 019–024).
 
-*Remaining open items:* None within C3/C7 boundary. The booking confirmation flow still does NOT trigger tracking via BookingConfirmed (by design — authorized trigger is ContractSigned via SECDEF RPC).
+*Within C3/C7 boundary:* All C7 tracking infrastructure and security work is COMPLETE through d9d2c52. The authorized trigger is ContractSigned via SECDEF RPC.
+
+*Remaining open items:* See Normalized C7 Governance Structure above (C7-004 document→contract auto-association; C7-005 live-RLS E2E verification). Both require separate HAO authorization.
+
+*BookingConfirmed → Tracking:* Explicitly excluded by multiple HAO decisions. Not an active requirement. See Historical Gap Clarification for context on legacy references.
 
 *If next session requires further work:* Reconcile current state → identify scope → obtain HAO authorization → implement → verify → commit → push.
 
@@ -797,11 +803,58 @@ The ContractSigned → Tracking initialization boundary is now IMPLEMENTED.
 
 ---
 
+## END OF C7 TRACKING/SECURITY WORK — All C7 tracking, RPC, and security hardening items CLOSED up to d9d2c52
+
+---
+
+### Normalized C7 Governance Structure (Post-Reconciliation — 2026-09-18)
+
+The following formal C7 increment entries normalize the historical increment IDs, workstream labels, and security remediation records into a single authoritative C7 progression. This structure reflects the HAO's established decision that ContractSigned → Tracking Initialization is the operational tracking initialization path.
+
+| C7 Increment | Title | Status | Notes |
+|-------------|-------|--------|-------|
+| **C7-001** | Initial Tracking / Documents / Fleet / Support Implementation | **CLOSED** | Commit `08e3fbc`. API routes, shared UI components, repositories, route groups for dispatcher/shipper/driver. 38 files (+7,491 lines). |
+| **C7-002** | Support Ticket Case-ID Automation | **CLOSED** | Commit `c2e9e9d`. Optional caseId with auto-generation via `CASE-{UUID prefix}` pattern. 55 integration tests across 5 domains. |
+| **C7-003** | **CONTRACTSIGNED → TRACKING INITIALIZATION** | **CLOSED** | HAO-AUTH-WORKWORK-A-C3C7-HANDOFF (2026-09-17). `accept_and_finalize_contract()` SECDEF RPC deployed at migrations 018+019. Security hardened through migrations 020–024 (status endpoint auth, mutation closure, infra deployment, DEFECT-002/003/004 fixes). Atomic, idempotent tracking init on second contract signature. *This IS the operational tracking initialization path.* BookingConfirmed → Tracking explicitly excluded (see individual HAO exclusions below). |
+| **C7-004** | DOCUMENT → CONTRACT AUTO-ASSOCIATION | **OPEN / NOT AUTHORIZED** | Upload supports `linkedEntityType='contract'` but no automation links documents to newly-created contracts. Requires separate HAO authorization. |
+| **C7-005** | TRUE LIVE-RLS E2E VERIFICATION | **OPEN / NOT AUTHORIZED** | Domain unit tests pass (state machines, services, RPCs). No authenticated HTTP tests against live Supabase verifying RLS-enforced cross-role access flows. Requires separate HAO authorization. |
+| **Driver Mobile/PWA** | Driver portal deployment | **DEFERRED TOWARD C9** | Route group `(driver)` exists as web routes. No real device testing or PWA delivery mechanism beyond browser access. |
+
+### Authoritative Trigger — ContractSigned → Tracking
+
+The HAO selected **ContractSigned → Tracking Initialization** as the operational tracking initialization path. Evidence:
+
+* **HAO-AUTH-WORKSTREAM-A-C3C7-HANDOFF** (2026-09-17): "ContractSigned → Tracking Initialization AUTHORIZED... No BookingConfirmed→Tracking."
+* **HAO-C7-INC001-AUTH** (2026-09-16): "Explicitly NOT authorized: automatic tracking initialization from booking confirmation"
+* **HAO-C7-INC002-AUTH** (2026-09-16): "Explicitly NOT authorized: booking → tracking init"
+* **End-of-Day 2026-09-17**: "Explicitly NOT implemented: BookingConfirmed→Tracking"
+
+**BookingConfirmed → Tracking is EXPLICITLY EXCLUDED** pending separate HAO authorization. It must NOT be treated as an active development gap. When referenced in legacy documentation, it should be classified as superseded by the ContractSigned → Tracking decision.
+
+### Historical Gap Clarification
+
+The term **"Booking → Tracking auto-initialization"** appears in several historical C7-Increment-001 and C7-Increment-002 records. Those references described the state of affairs **at the time those increments were authorized** (2026-09-16), BEFORE the HAO's Workstream A/B authorization (2026-09-17) established ContractSigned → Tracking as the chosen path.
+
+Those historical references are now **SUPERSEDED**, not **ACTIVE REQUIREMENTS**. They reflect the pre-authorization knowledge state, not a continuing obligation to implement BookingConfirmed → Tracking. The chosen path (ContractSigned → Tracking) was implemented and closed within the same C7 session window.
+
+### Remaining OPEN Items (requiring authorization)
+
+1. **Document → Contract auto-association** (C7-004) — Never authorized.
+2. **True live-RLS E2E verification** (C7-005) — Never authorized.
+
+These are the only two remaining C7 items requiring future HAO authorization.
+
+---
+
 ## Current Phase
 
 Foundation / Module Implementation / Validation / Deployment / Mobile Preparation
 
-**Current:** Foundation / Module Implementation   **WAVES 0 4 COMPLETE; WAVE 5 INCREMENTS 1 2 IMPLEMENTED AND VERIFIED; C7 FULLY DEPLOYED WITH STATE-MACHINE + DISPATCHER SCOPE CORRECTIONS**
+**Current:** Foundation / Module Implementation   **WAVES 0 4 COMPLETE; WAVE 5 INCREMENTS 1 2 IMPLEMENTED AND VERIFIED; C7 TRACKING INFRASTRUCTURE/SECURITY DEPLOYED WITH STATE-MACHINE + DISPATCHER SCOPE CORRECTIONS**
 
-**Notes:** Architecture Bootstrap (PROMPT 1) fully scaffolded. Prerequisites WEB-002 (i18n), WEB-008 (Vitest), WEB-009 (Service Role Key placeholder) resolved. PROMPT 0 v1.1 dependency semantics established. All HAD decisions (HAD-001 through HAD-007) APPROVED / RESOLVED. Authoritative wave-based implementation sequence ratified by HAO (HAD-007). Specification baseline is complete. **Wave 0 is COMPLETE.** All 22 module-specific exit criteria (X-01 through X-22) satisfied with type definitions and utility implementations across MOD-011, MOD-017, and MOD-010. Cross-cutting criteria X-23 through X-32 satisfied. Artifact summary (`nexcargo-wave-0-artifact-summary.md`) and exit report (`nexcargo-wave-0-exit-report.md`) produced. **C7 Final Closure**: (1) Tracking mutation API/RBAC hardening for all 4 endpoints, (2) XXX_c7_001 infrastructure deployed to live Supabase (tracking_events, proof_of_delivery, gps_location_updates, driver_identity_verifications), (3) Transaction integrity fixed via atomic_tracking_status_update() SECDEF RPC, (4) SECURITY DEFINER RPC hardened against direct abuse (auth.uid() derivation, role validation, scope enforcement), (5) State-machine transitions independently enforced inside SECDEF (25 transition pairs verified at DB layer), (6) Dispatcher UPDATE authority restricted to delegated-Transporter scope via transporterscope(). TypeScript compilation: clean (EXIT:0). Tests: 1,683 passing across 90 files. Next governance gate: Wave 5 Increment 3 or C8 — both NOT AUTHORIZED.
+**Notes:** Architecture Bootstrap (PROMPT 1) fully scaffolded. Prerequisites WEB-002 (i18n), WEB-008 (Vitest), WEB-009 (Service Role Key placeholder) resolved. PROMPT 0 v1.1 dependency semantics established. All HAD decisions (HAD-001 through HAD-007) APPROVED / RESOLVED. Authoritative wave-based implementation sequence ratified by HAO (HAD-007). Specification baseline is complete. **Wave 0 is COMPLETE.** All 22 module-specific exit criteria (X-01 through X-22) satisfied with type definitions and utility implementations across MOD-011, MOD-017, and MOD-010. Cross-cutting criteria X-23 through X-32 satisfied. Artifact summary (`nexcargo-wave-0-artifact-summary.md`) and exit report (`nexcargo-wave-0-exit-report.md`) produced. **C7 Tracking Infrastructure/Security — CLOSED**: (1) Tracking mutation API/RBAC hardening for all 4 endpoints, (2) XXX_c7_001 infrastructure deployed to live Supabase (tracking_events, proof_of_delivery, gps_location_updates, driver_identity_verifications), (3) Transaction integrity fixed via atomic_tracking_status_update() SECDEF RPC, (4) SECURITY DEFINER RPC hardened against direct abuse (auth.uid() derivation, role validation, scope enforcement), (5) State-machine transitions independently enforced inside SECDEF (25 transition pairs verified at DB layer), (6) Dispatcher UPDATE authority restricted to delegated-Transporter scope via transporterscope(), (7) ContractSigned → Tracking Initialization (C7-003) implemented via `accept_and_finalize_contract()` SECDEF RPC. *Open C7 items*: C7-004 (Document → Contract auto-association) and C7-005 (True live-RLS E2E verification) remain OPEN / NOT AUTHORIZED. TypeScript compilation: clean (EXIT:0). Tests: 1,683 passing across 90 files. Next governance gate: Wave 5 Increment 3 or C8 — both NOT AUTHORIZED.
+
+---
+
+**2026-09-18 Governance Normalization — C7 Development State After Custom-Schema Remediation:** This document was reconciled against repository state, HAO decision evidence, and read-only audit findings. Changes made: (1) New section "Normalized C7 Governance Structure" inserted before Current Phase — formalizes C7-001 through C7-005 status table; (2) "Authoritative Trigger — ContractSigned → Tracking" subsection added with HAO decision evidence citations; (3) "Historical Gap Clarification" subsection added explaining BookingConfirmed → Tracking references as superseded; (4) "Remaining OPEN Items" subsection clarifying C7-004 and C7-005 as the only two remaining items requiring authorization; (5) Current Phase line updated from "C7 FULLY DEPLOYED" to "C7 TRACKING INFRASTRUCTURE/SECURITY DEPLOYED" to distinguish infrastructure closure from remaining business work; (6) Current Phase Notes updated: "C7 Final Closure" → "C7 Tracking Infrastructure/Security — CLOSED", added item (7) ContractSigned → Tracking, added *Open C7 items* note for C7-004/C7-005; (7) Three "Remaining C7 Gaps" sections updated (C7-Inc-001 lines 674-680, C7-Inc-002 lines 708-713, END-OF-DAY lines 761-765) — each gap referencing Booking → Tracking now includes clarification that it was resolved by C7-003 and BookingConfirmed → Tracking is explicitly excluded; (8) C7-Increment-001 closure note updated (line 717) — changed "remains explicitly UNAUTHORIZED" to "was subsequently RESOLVED by HAO-AUTH-WORKSTREAM-A-C3C7-HANDOFF"; (9) C7-Increment-002 closure note updated (line 719) — added supersession clause; (10) NEXT SESSION block updated — expanded to reference normalized structure, clarify open items as C7-004/C7-005, explicit BookingConfirmed exclusion; (11) Continuity Notes session status row updated (line 545) — added reconciliation note. No source code modified. No module.config.ts changed. No database modifications performed. No implementation performed. No commits made. Governance documentation only.
 
