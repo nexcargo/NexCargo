@@ -403,7 +403,7 @@ export class DocumentRepository {
     try {
       // 1. Insert main document
       const docResult = await client
-        .from(`${this.schema}.documents`)
+        .schema(this.schema).from('documents')
         .insert({
           document_id: data.documentId,
           document_type: data.documentType,
@@ -434,7 +434,7 @@ export class DocumentRepository {
 
       // 2. Create initial linkage
       const linkageResult = await client
-        .from(`${this.schema}.document_linkages`)
+        .schema(this.schema).from('document_linkages')
         .insert({
           document_id: data.documentId,
           module_reference: 'MOD-004',
@@ -453,7 +453,7 @@ export class DocumentRepository {
       // 3. Create expiry record if document has an expiry date
       if (data.expiryDate) {
         const expiryResult = await client
-          .from(`${this.schema}.document_expiry_records`)
+          .schema(this.schema).from('document_expiry_records')
           .insert({
             document_id: data.documentId,
             document_type: data.documentType,
@@ -485,7 +485,7 @@ export class DocumentRepository {
       });
 
       const versionResult = await client
-        .from(`${this.schema}.document_versions`)
+        .schema(this.schema).from('document_versions')
         .insert({
           document_id: data.documentId,
           version_number: 1,
@@ -519,7 +519,7 @@ export class DocumentRepository {
 
     // Main document
     const docResult = await client
-      .from(`${this.schema}.documents`)
+      .schema(this.schema).from('documents')
       .select('*')
       .eq('document_id', documentId)
       .eq('is_deleted', false)
@@ -536,7 +536,7 @@ export class DocumentRepository {
 
     // Versions
     const versionsResult = await client
-      .from(`${this.schema}.document_versions`)
+      .schema(this.schema).from('document_versions')
       .select('*')
       .eq('document_id', documentId)
       .order('version_number', { ascending: true });
@@ -545,7 +545,7 @@ export class DocumentRepository {
 
     // Linkages
     const linkagesResult = await client
-      .from(`${this.schema}.document_linkages`)
+      .schema(this.schema).from('document_linkages')
       .select('*')
       .eq('document_id', documentId);
 
@@ -553,7 +553,7 @@ export class DocumentRepository {
 
     // Approvals
     const approvalsResult = await client
-      .from(`${this.schema}.document_approvals`)
+      .schema(this.schema).from('document_approvals')
       .select('*')
       .eq('document_id', documentId);
 
@@ -561,7 +561,7 @@ export class DocumentRepository {
 
     // OCR results
     const ocrResult = await client
-      .from(`${this.schema}.ocr_results`)
+      .schema(this.schema).from('ocr_results')
       .select('*')
       .eq('document_id', documentId);
 
@@ -569,7 +569,7 @@ export class DocumentRepository {
 
     // Signatures
     const sigResult = await client
-      .from(`${this.schema}.digital_signatures`)
+      .schema(this.schema).from('digital_signatures')
       .select('*')
       .eq('document_id', documentId);
 
@@ -577,7 +577,7 @@ export class DocumentRepository {
 
     // Expiry record
     const expiryResult = await client
-      .from(`${this.schema}.document_expiry_records`)
+      .schema(this.schema).from('document_expiry_records')
       .select('*')
       .eq('document_id', documentId)
       .single();
@@ -611,7 +611,7 @@ export class DocumentRepository {
     const client = createAdminClient();
 
     let query = client
-      .from(`${this.schema}.documents`)
+      .schema(this.schema).from('documents')
       .select(
         'id, document_id, document_type, status, file_reference, file_hash, expiry_date, issue_date, created_at, updated_at, created_by',
       )
@@ -643,7 +643,7 @@ export class DocumentRepository {
     const client = createAdminClient();
 
     const result = await client
-      .from(`${this.schema}.documents`)
+      .schema(this.schema).from('documents')
       .select(
         'id, document_id, document_type, status, file_reference, file_hash, expiry_date, issue_date, created_at, updated_at, created_by',
       )
@@ -674,7 +674,7 @@ export class DocumentRepository {
     const now = new Date().toISOString();
 
     const result = await client
-      .from(`${this.schema}.documents`)
+      .schema(this.schema).from('documents')
       .update({ status: newStatus as DocumentStatus, updated_at: now, updated_by: updatedBy })
       .eq('document_id', documentId)
       .eq('is_deleted', false)
@@ -697,7 +697,7 @@ export class DocumentRepository {
     const now = new Date().toISOString();
 
     const result = await client
-      .from(`${this.schema}.documents`)
+      .schema(this.schema).from('documents')
       .update({
         is_deleted: true,
         status: DocumentStatus.ARCHIVED,
@@ -727,7 +727,7 @@ export class DocumentRepository {
 
     // Verify the document exists and is not deleted
     const docCheck = await client
-      .from(`${this.schema}.documents`)
+      .schema(this.schema).from('documents')
       .select('id, status, is_deleted')
       .eq('document_id', data.documentId)
       .single();
@@ -746,7 +746,7 @@ export class DocumentRepository {
 
     // Get the next version number
     const maxVersionResult = await client
-      .from(`${this.schema}.document_versions`)
+      .schema(this.schema).from('document_versions')
       .select('version_number')
       .eq('document_id', data.documentId)
       .order('version_number', { ascending: false })
@@ -758,7 +758,7 @@ export class DocumentRepository {
     const contentData = JSON.stringify(data.data);
 
     const result = await client
-      .from(`${this.schema}.document_versions`)
+      .schema(this.schema).from('document_versions')
       .insert({
         document_id: data.documentId,
         version_number: nextVersion,
@@ -787,7 +787,7 @@ export class DocumentRepository {
     const client = createAdminClient();
 
     const result = await client
-      .from(`${this.schema}.document_versions`)
+      .schema(this.schema).from('document_versions')
       .select('*')
       .eq('document_id', documentId)
       .order('version_number', { ascending: true });
@@ -813,7 +813,7 @@ export class DocumentRepository {
     const now = new Date().toISOString();
 
     const result = await client
-      .from(`${this.schema}.document_approvals`)
+      .schema(this.schema).from('document_approvals')
       .insert({
         document_id: record.documentId,
         approval_id: crypto.randomUUID(),
@@ -844,7 +844,7 @@ export class DocumentRepository {
     const now = new Date().toISOString();
 
     const result = await client
-      .from(`${this.schema}.document_approvals`)
+      .schema(this.schema).from('document_approvals')
       .update({
         approval_status: status,
         timestamp: now,
@@ -876,7 +876,7 @@ export class DocumentRepository {
     const client = createAdminClient();
 
     const result = await client
-      .from(`${this.schema}.document_linkages`)
+      .schema(this.schema).from('document_linkages')
       .insert({
         document_id: linkage.documentId,
         module_reference: linkage.moduleReference,
@@ -900,7 +900,7 @@ export class DocumentRepository {
     const client = createAdminClient();
 
     const result = await client
-      .from(`${this.schema}.document_linkages`)
+      .schema(this.schema).from('document_linkages')
       .select('*')
       .eq('document_id', documentId);
 
@@ -925,7 +925,7 @@ export class DocumentRepository {
     const now = new Date().toISOString();
 
     const result = await client
-      .from(`${this.schema}.ocr_results`)
+      .schema(this.schema).from('ocr_results')
       .insert({
         document_id: data.documentId,
         extraction_id: crypto.randomUUID(),
@@ -958,7 +958,7 @@ export class DocumentRepository {
 
     // Get existing OCR row
     const existing = await client
-      .from(`${this.schema}.ocr_results`)
+      .schema(this.schema).from('ocr_results')
       .select('user_corrections, user_reviewed')
       .eq('extraction_id', extractionId)
       .single();
@@ -979,7 +979,7 @@ export class DocumentRepository {
     const mergedCorrections = { ...currentCorrections, ...corrections };
 
     const updateResult = await client
-      .from(`${this.schema}.ocr_results`)
+      .schema(this.schema).from('ocr_results')
       .update({
         user_corrections: JSON.stringify(mergedCorrections),
         user_reviewed: true,
@@ -1014,7 +1014,7 @@ export class DocumentRepository {
     }
 
     const result = await client
-      .from(`${this.schema}.digital_signatures`)
+      .schema(this.schema).from('digital_signatures')
       .insert({
         document_id: data.documentId,
         signature_id: crypto.randomUUID(),
@@ -1047,7 +1047,7 @@ export class DocumentRepository {
     const client = createAdminClient();
 
     const result = await client
-      .from(`${this.schema}.digital_signatures`)
+      .schema(this.schema).from('digital_signatures')
       .select('signature_id')
       .eq('document_id', documentId)
       .eq('signer_id', signerId)
@@ -1073,7 +1073,7 @@ export class DocumentRepository {
     const client = createAdminClient();
 
     const result = await client
-      .from(`${this.schema}.document_expiry_records`)
+      .schema(this.schema).from('document_expiry_records')
       .insert({
         document_id: data.documentId,
         document_type: data.documentType,
@@ -1104,7 +1104,7 @@ export class DocumentRepository {
     const client = createAdminClient();
 
     const result = await client
-      .from(`${this.schema}.document_expiry_records`)
+      .schema(this.schema).from('document_expiry_records')
       .update({
         renewal_status: newStatus,
         operational_impact: operationalImpact,
@@ -1134,7 +1134,7 @@ export class DocumentRepository {
     thresholdDate.setDate(thresholdDate.getDate() + daysThreshold);
 
     const result = await client
-      .from(`${this.schema}.document_expiry_records`)
+      .schema(this.schema).from('document_expiry_records')
       .select('*')
       .in('renewal_status', [RenewalStatus.ACTIVE, RenewalStatus.EXPIRING])
       .lte('expiry_date', thresholdDate.toISOString())
@@ -1150,4 +1150,181 @@ export class DocumentRepository {
 
     return ((result.data as ExpiryRow[]) ?? []).map(r => this.mapExpiryRow(r));
   }
+
+  // ── C7-004: Contract auto-association helpers ──────────────────────────
+
+  /**
+   * Find an existing active document sharing the same file hash + linked entity combo.
+   * Used by the upload route for deduplication before DB insert.
+   */
+  async findExistingByHashAndEntity(
+    hash: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<Document | null> {
+    const client = createAdminClient();
+
+    const result = await client
+      .schema(this.schema)
+      .from('documents')
+      .select('*')
+      .eq('file_hash', hash)
+      .eq('linked_entity_type', entityType)
+      .eq('linked_entity_id', entityId)
+      .eq('is_deleted', false)
+      .limit(1)
+      .single();
+
+    if (result.error) {
+      if (result.error.code === 'PGRST116') return null;
+      throw new AppError(
+        ErrorCode.INTERNAL_ERROR,
+        `Duplicate check failed: ${result.error.message}`,
+        { hash, entityType, entityId },
+      );
+    }
+
+    if (!result.data) return null;
+
+    return this.mapDocumentRow(result.data as DocumentRow);
+  }
+
+  /**
+   * Attempt to create a document and handle duplicate key violations gracefully.
+   * If a UNIQUE constraint violation occurs on (file_hash, linked_entity_type, linked_entity_id),
+   * return the existing document instead of throwing.
+   * 
+   * This handles concurrent upload attempts where two requests pass the dedup check simultaneously.
+   * The first INSERT succeeds; the second hits the unique constraint and returns the existing record.
+   */
+  async createWithDuplicateHandling(data: DocumentCreateInput): Promise<Document> {
+    const client = createAdminClient();
+
+    try {
+      const docResult = await client
+        .schema(this.schema).from('documents')
+        .insert({
+          document_id: data.documentId,
+          document_type: data.documentType,
+          linked_entity_type: data.linkedEntityType,
+          linked_entity_id: data.linkedEntityId,
+          status: data.status ?? DocumentStatus.UPLOADED,
+          created_by: data.createdBy,
+          updated_by: data.updatedBy,
+          file_reference: data.fileReference,
+          file_hash: data.fileHash,
+          expiry_date: data.expiryDate ?? null,
+          issue_date: data.issueDate ?? null,
+          correlation_id: data.correlationId ?? null,
+        })
+        .select()
+        .single();
+
+      if (docResult.error) {
+        // Check for unique constraint violation - another concurrent request already inserted
+        if (docResult.error.code === '23505' || docResult.error.message?.includes('unique')) {
+          // Try to find the existing document by hash + entity (the dedup key)
+          const fallback = await client
+            .schema(this.schema).from('documents')
+            .select('*')
+            .eq('file_hash', data.fileHash)
+            .eq('linked_entity_type', data.linkedEntityType)
+            .eq('linked_entity_id', data.linkedEntityId)
+            .eq('is_deleted', false)
+            .limit(1)
+            .single();
+
+          if (!fallback.error && fallback.data) {
+            return this.mapDocumentRow(fallback.data as DocumentRow);
+          }
+        }
+        throw new AppError(
+          ErrorCode.INTERNAL_ERROR,
+          `Failed to create document: ${docResult.error.message}`,
+          { documentId: data.documentId },
+        );
+      }
+
+      const docRow = docResult.data as DocumentRow;
+      const insertedDoc = this.mapDocumentRow(docRow);
+
+      // Create initial linkage
+      const linkageResult = await client
+        .schema(this.schema).from('document_linkages')
+        .insert({
+          document_id: data.documentId,
+          module_reference: 'MOD-004',
+          entity_reference: data.linkedEntityId,
+          relationship_type: RelationshipType.SUPPORTS,
+        });
+
+      if (linkageResult.error) {
+        throw new AppError(
+          ErrorCode.INTERNAL_ERROR,
+          `Failed to create document linkage: ${linkageResult.error.message}`,
+          { documentId: data.documentId },
+        );
+      }
+
+      // Create expiry record if document has an expiry date
+      if (data.expiryDate) {
+        const expiryResult = await client
+          .schema(this.schema).from('document_expiry_records')
+          .insert({
+            document_id: data.documentId,
+            document_type: data.documentType,
+            linked_entity_id: data.linkedEntityId,
+            issue_date: data.issueDate ?? new Date().toISOString(),
+            expiry_date: data.expiryDate,
+            renewal_status: RenewalStatus.ACTIVE,
+            operational_impact: OperationalImpact.NONE,
+          });
+
+        if (expiryResult.error) {
+          throw new AppError(
+            ErrorCode.INTERNAL_ERROR,
+            `Failed to create expiry record: ${expiryResult.error.message}`,
+            { documentId: data.documentId },
+          );
+        }
+      }
+
+      // Create v1 version snapshot
+      const versionData = JSON.stringify({
+        documentId: data.documentId,
+        documentType: data.documentType,
+        linkedEntityType: data.linkedEntityType,
+        linkedEntityId: data.linkedEntityId,
+        fileReference: data.fileReference,
+        fileHash: data.fileHash,
+        status: data.status ?? DocumentStatus.UPLOADED,
+      });
+
+      const versionResult = await client
+        .schema(this.schema).from('document_versions')
+        .insert({
+          document_id: data.documentId,
+          version_number: 1,
+          content_data: versionData,
+          content_change_summary: 'Initial document version',
+          created_by: data.createdBy,
+        });
+
+      if (versionResult.error) {
+        throw new AppError(
+          ErrorCode.INTERNAL_ERROR,
+          `Failed to create initial version: ${versionResult.error.message}`,
+          { documentId: data.documentId },
+        );
+      }
+
+      return insertedDoc;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(ErrorCode.INTERNAL_ERROR, 'Failed to create document', {
+        documentId: data.documentId,
+      });
+    }
+  }
+
 }

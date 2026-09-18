@@ -258,7 +258,7 @@ export function ShipmentDocumentViewer({
       try {
         setIsLoading(true);
         setError(null);
-        const res = await fetch(`/api/documents?entityType=${encodeURIComponent(entityType)}&entityId=${encodeURIComponent(entityId)}`);
+        const res = await fetch(`/api/documents?linkedEntityType=${encodeURIComponent(entityType)}&linkedEntityId=${encodeURIComponent(entityId)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json: Document[] = await res.json();
         if (!cancelled) setDocuments(json);
