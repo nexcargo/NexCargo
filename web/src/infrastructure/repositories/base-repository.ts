@@ -17,7 +17,7 @@ export abstract class SupabaseBaseRepository<T extends BaseEntity> {
   /** Execute a query against the table */
   protected async query(query: unknown) {
     const client = createServerSupabaseClient();
-    return (client.from(`${this.schema}.${this.tableName}`) as unknown as PostgrestFilterBuilder<any, any, any, any, any, any, any>)
+    return (client.schema(this.schema).from(this.tableName) as unknown as PostgrestFilterBuilder<any, any, any, any, any, any, any>)
       .match(query as Record<string, unknown>);
   }
 }
