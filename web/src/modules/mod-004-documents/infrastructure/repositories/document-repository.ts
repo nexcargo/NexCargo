@@ -1197,7 +1197,7 @@ export class DocumentRepository {
    * This handles concurrent upload attempts where two requests pass the dedup check simultaneously.
    * The first INSERT succeeds; the second hits the unique constraint and returns the existing record.
    */
-  async createWithDuplicateHandling(data: DocumentCreateInput): Promise<Document> {
+  async createWithDuplicateHandling(data: DocumentCreateInput): Promise<DocumentCreateResult> {
     const client = createAdminClient();
 
     try {
@@ -1235,7 +1235,7 @@ export class DocumentRepository {
             .single();
 
           if (!fallback.error && fallback.data) {
-            return this.mapDocumentRow(fallback.data as DocumentRow);
+            return { document: this.mapDocumentRow(fallback.data as DocumentRow), isNew: false };
           }
         }
         throw new AppError(
@@ -1318,7 +1318,7 @@ export class DocumentRepository {
         );
       }
 
-      return insertedDoc;
+      return { document: insertedDoc, isNew: true };
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError(ErrorCode.INTERNAL_ERROR, 'Failed to create document', {
@@ -1328,3 +1328,17 @@ export class DocumentRepository {
   }
 
 }
+
+// ============================================================
+// Result type for createWithDuplicateHandling
+// ============================================================
+
+/**
+ * Result of createWithDuplicateHandling indicating whether a new document was created
+ * or an existing one was returned from concurrent-duplicate recovery.
+ */
+export interface DocumentCreateResult {
+  document: Document;
+  isNew: boolean;
+}
+

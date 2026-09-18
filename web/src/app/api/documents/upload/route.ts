@@ -1,15 +1,17 @@
 // NexCargo MOD-004 — Document Upload Route (C7-004: Document → Contract Auto-Association)
 // POST /api/documents/upload
 // Accepts multipart form data with file + metadata fields.
-// Flow: auth → validate → hash → contract authorization → storage upload → dedupe → insert document + linkage
+// Flow: auth → validate → hash → contract authorization → dedup → storage upload → insert document + linkage
+//
+// Dedup happens BEFORE storage upload to avoid orphaned storage objects when a duplicate is detected.
 //
 // Contract authorization: when linkedEntityType === 'contract', verifies the authenticated caller
 // is authorized to access that contract through the contracts→bookings chain.
 //
 // Storage/DB consistency: if DB persistence fails after storage succeeds, orphaned files are cleaned up.
 //
-// Concurrency protection: uses service-role client with a unique constraint approach; duplicate key
-// violations during create() return the existing document.
+// Concurrency protection: partial unique index on (file_hash, linked_entity_type, linked_entity_id)
+// WHERE is_deleted = false ensures atomic dedup at the database level.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { assertApiAuthorization } from '@/lib/supabase/api-auth';
@@ -270,20 +272,34 @@ export async function POST(request: NextRequest) {
     // ── Compute SHA-256 hash ─────────────────────────────────────────────
     const fileHash = await computeHash(file);
 
-    // ── Ensure storage bucket exists ─────────────────────────────────────
-    await ensureBucketExists();
-
-    // ── Contract authorization (before storage upload for fail-fast) ─────
-    let bookingId: string | null = null;
-    
+    // ── Contract authorization (before anything else) ────────────────────
     if (linkedEntityType.toLowerCase() === 'contract') {
-      const contractAuth = await verifyContractAuthorization(
+      await verifyContractAuthorization(
         linkedEntityId.trim(),
         userId,
         authCtx.role,
       );
-      bookingId = contractAuth.bookingId;
     }
+
+    // ── Deduplication: check for existing document with same hash + entity ──
+    // BEFORE storage upload to avoid orphaned files in dedup cases.
+    const repo = new DocumentRepository();
+    const existing = await repo.findExistingByHashAndEntity(
+      fileHash,
+      linkedEntityType.trim(),
+      linkedEntityId.trim(),
+    );
+
+    if (existing) {
+      // Return existing document instead of creating duplicate — no storage used
+      return NextResponse.json(
+        wrapInContractFramework(existing, correlationId),
+        { status: 200, headers: { 'x-correlation-id': correlationId, 'x-trace-id': context.traceId ?? '' } },
+      );
+    }
+
+    // ── Ensure storage bucket exists ─────────────────────────────────────
+    await ensureBucketExists();
 
     // ── Upload file to Supabase Storage ──────────────────────────────────
     const genDocId = crypto.randomUUID();
@@ -304,25 +320,9 @@ export async function POST(request: NextRequest) {
     }
     storagePath = uploadResult.path;
 
-    // ── Deduplication: check for existing document with same hash + entity ──
-    const repo = new DocumentRepository();
-    const existing = await repo.findExistingByHashAndEntity(
-      uploadResult.hash,
-      linkedEntityType.trim(),
-      linkedEntityId.trim(),
-    );
-
-    if (existing) {
-      // Return existing document instead of creating duplicate
-      return NextResponse.json(
-        wrapInContractFramework(existing, correlationId),
-        { status: 200, headers: { 'x-correlation-id': correlationId, 'x-trace-id': context.traceId ?? '' } },
-      );
-    }
-
-    // ── Create document record in DB ─────────────────────────────────────
+    // ── Create document record in DB (with concurrent-duplicate handling) ──
     const cleanLinkedEntityId = linkedEntityId.trim();
-    const createdDoc = await repo.create({
+    const createResult = await repo.createWithDuplicateHandling({
       documentId: genDocId,
       documentType: documentType.trim(),
       linkedEntityType: linkedEntityType.trim(),
@@ -336,14 +336,22 @@ export async function POST(request: NextRequest) {
       correlationId: correlationId,
     });
 
+    // ── Handle race condition: if we lost the race, clean up our storage object ──
+    if (!createResult.isNew && storagePath) {
+      try {
+        await deleteFile(storagePath);
+      } catch {
+        // Best-effort cleanup of orphaned storage object from lost race
+      }
+    }
+
     return NextResponse.json(
-      wrapInContractFramework(createdDoc, correlationId),
+      wrapInContractFramework(createResult.document, correlationId),
       { status: 201, headers: { 'x-correlation-id': correlationId, 'x-trace-id': context.traceId ?? '' } },
     );
   } catch (error) {
     // ── Storage cleanup on DB failure ────────────────────────────────────
     // If storage succeeded but DB insert/linkage failed, clean up the orphaned file.
-    // We only clean up if we're in a known partial-failure state.
     if (storagePath) {
       try {
         await deleteFile(storagePath);
