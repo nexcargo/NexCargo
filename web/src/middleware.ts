@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 import createMiddleware from 'next-intl/middleware';
 
@@ -12,6 +13,14 @@ const intlMiddleware = createMiddleware({
 });
 
 export async function middleware(request: NextRequest) {
+  // Redirect bare root '/' to default locale ('pt' per ESS-008) only on first visit
+  // Once user has locale preference set, let as-needed handle routing naturally
+  if (request.nextUrl.pathname === '/') {
+    const existingLocale = request.cookies.get('NEXT_LOCALE')?.value;
+    if (!existingLocale || !['pt', 'en'].includes(existingLocale)) {
+      return NextResponse.redirect(new URL('/pt', request.url));
+    }
+  }
   await updateSession(request);
   return intlMiddleware(request);
 }
