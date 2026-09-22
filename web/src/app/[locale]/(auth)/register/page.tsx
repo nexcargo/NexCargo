@@ -18,9 +18,7 @@ export default async function RegisterPage() {
         <div className="w-full max-w-md space-y-8">
           {/* Header */}
           <div className="text-center">
-            <Link href="/" className="inline-block">
-              <h1 className="text-3xl font-display font-bold text-[#0A1628] dark:text-white">NexCargo</h1>
-            </Link>
+            <h1 className="mb-8 text-3xl font-display font-bold text-[#0A1628] dark:text-white">NexCargo</h1>
             <h2 className="mt-6 text-2xl font-semibold text-[#0A1628] dark:text-white">{t('title')}</h2>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{t('subtitle')}</p>
           </div>

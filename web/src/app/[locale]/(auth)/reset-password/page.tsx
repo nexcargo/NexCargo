@@ -20,9 +20,6 @@ export default async function ResetPasswordPage() {
 async function ResetPasswordForm() {
   const t = await getTranslations('ResetPassword');
 
-  // Parse URL params to check if we're in an error state
-  // This component can receive ?error=expired or ?token=xxx query params
-  
   return (
     <div className="flex flex-col min-h-screen bg-[#F8F6F3] dark:bg-[#0A1628]">
       <SkipNav />
@@ -30,9 +27,7 @@ async function ResetPasswordForm() {
         <div className="w-full max-w-md space-y-8">
           {/* Header */}
           <div className="text-center">
-            <Link href="/" className="inline-block">
-              <h1 className="text-3xl font-display font-bold text-[#0A1628] dark:text-white">NexCargo</h1>
-            </Link>
+            <h1 className="mb-8 text-3xl font-display font-bold text-[#0A1628] dark:text-white">NexCargo</h1>
             <h2 className="mt-6 text-2xl font-semibold text-[#0A1628] dark:text-white">{t('title')}</h2>
           </div>
 
