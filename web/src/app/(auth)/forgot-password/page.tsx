@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { SkipNav } from '@/shared/ui';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ForgotPasswordPage() {
   const t = await getTranslations('ForgotPassword');
 

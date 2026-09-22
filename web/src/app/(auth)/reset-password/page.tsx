@@ -7,6 +7,8 @@ import { getTranslations } from 'next-intl/server';
 import { SkipNav } from '@/shared/ui';
 import { Suspense } from 'react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ResetPasswordPage() {
   return (
     <Suspense fallback={<ResetPasswordForm />} key="reset">
