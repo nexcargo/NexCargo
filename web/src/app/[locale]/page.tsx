@@ -288,20 +288,6 @@ function MozambiqueSection() {
           <p className="text-base text-zinc-600 dark:text-zinc-400 leading-relaxed mb-8">
             {t('moz_desc')}
           </p>
-          <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
-            <div className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-              <svg className="h-4 w-4 text-[#0F8B7A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              {t('moz_countries')}
-            </div>
-            <div className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-              <svg className="h-4 w-4 text-[#0F8B7A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              {t('moz_sadc')}
-            </div>
-          </div>
         </div>
       </div>
     </section>
