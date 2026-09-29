@@ -82,12 +82,14 @@ describe('MOD-006 RiskCategory enum', () => {
 });
 
 describe('MOD-006 UserRole enum', () => {
-  it('contains all user roles', () => {
+  it('contains all user roles per approved HAO taxonomy', () => {
     expect(UserRole.SHIPPER).toBe('SHIPPER');
     expect(UserRole.TRANSPORTER).toBe('TRANSPORTER');
     expect(UserRole.DRIVER).toBe('DRIVER');
+    expect(UserRole.DISPATCHER).toBe('DISPATCHER');
     expect(UserRole.MODERATOR).toBe('MODERATOR');
     expect(UserRole.ADMIN).toBe('ADMIN');
+    expect(UserRole.SUPER_ADMIN).toBe('SUPER_ADMIN');
   });
 });
 

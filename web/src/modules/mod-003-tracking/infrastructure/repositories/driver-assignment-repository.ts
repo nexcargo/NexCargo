@@ -46,7 +46,7 @@ export class DriverAssignmentRepository {
   async getByBookingId(bookingId: string): Promise<DriverAssignmentApiShape[]> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('booking_id', bookingId);
 
@@ -60,7 +60,7 @@ export class DriverAssignmentRepository {
   async getAssignmentsByDriver(driverId: string): Promise<DriverAssignmentApiShape[]> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('driver_id', driverId);
 
@@ -74,7 +74,7 @@ export class DriverAssignmentRepository {
   async getAssignmentsByTrackingId(trackingId: string): Promise<DriverAssignmentApiShape[]> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('tracking_id', trackingId);
 

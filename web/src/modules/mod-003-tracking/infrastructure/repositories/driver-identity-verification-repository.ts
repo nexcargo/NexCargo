@@ -57,7 +57,7 @@ export class DriverIdentityVerificationRepository {
   async create(params: CreateDriverIdentityVerificationParams): Promise<DriverIdentityVerificationApiShape> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .insert({
         tracking_id: params.trackingId,
         booking_id: params.bookingId,
@@ -79,7 +79,7 @@ export class DriverIdentityVerificationRepository {
   async getById(id: string): Promise<DriverIdentityVerificationApiShape | null> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('id', id)
       .single();
@@ -95,7 +95,7 @@ export class DriverIdentityVerificationRepository {
   async getByTrackingId(trackingId: string): Promise<DriverIdentityVerificationApiShape[]> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('tracking_id', trackingId)
       .order('created_at', { ascending: false });
@@ -123,7 +123,7 @@ export class DriverIdentityVerificationRepository {
     }
 
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .update(updateData)
       .eq('id', params.id);
 

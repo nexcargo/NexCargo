@@ -60,6 +60,23 @@ export interface CorridorOperationalRules {
   weatherSensitiveClosures: boolean;
   /** Border post identifiers along corridor */
   borderPostIds: string[];
+  /** Extensional keys for advisory checks (e.g. auto_reject, customs_execution) — per §7.1 */
+  [key: string]: unknown;
+}
+
+/** Regulatory rules structure for country compliance profiles per MOD-009 §4.5 */
+export interface RegulatoryRules {
+  [key: string]: unknown;
+}
+
+/** Cross-border permit availability rules for regions per MOD-009 §3.6 */
+export interface CrossBorderPermitRules {
+  atBorderAvailable?: boolean;
+}
+
+/** Regional insurance requirements including COMESA Yellow Card via B2B per MOD-009 §4.1 */
+export interface RegionInsuranceRequirements {
+  yellowCardAvailable?: boolean;
 }
 
 /** Document reference for customs documents per MOD-009 §4.2 */
@@ -163,9 +180,9 @@ export interface RegionObject extends BaseEntity {
   /** Primary currency code (MZN, ZAR, USD) */
   currencyCode: string;
   /** Temporary cross-border permit rules at borders */
-  crossBorderPermitRules: JSON;
+  crossBorderPermitRules: CrossBorderPermitRules;
   /** Insurance requirements including COMESA Yellow Card via B2B */
-  insuranceRequirements: JSON;
+  insuranceRequirements: RegionInsuranceRequirements;
 }
 
 /**
@@ -277,7 +294,7 @@ export interface CountryComplianceProfileObject extends BaseEntity {
   /** ISO country code */
   countryCode: string;
   /** Structured compliance rules */
-  regulatoryRules: JSON;
+  regulatoryRules: RegulatoryRules;
   /** Required document types */
   requiredDocuments: string[];
   /** Vehicle licensing rules */

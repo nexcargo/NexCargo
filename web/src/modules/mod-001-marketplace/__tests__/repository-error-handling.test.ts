@@ -7,7 +7,7 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
 }));
 
-/** Build a mock INSERT chain: from().insert().select().single() → error or success */
+/** Build a mock INSERT chain: schema().from().insert().select().single() → error or success */
 function insertChain(error?: Record<string, string>, data?: Record<string, unknown>) {
   const result = error ? { error, data: null } : { data: data ?? {}, error: null };
   return {
@@ -18,7 +18,7 @@ function insertChain(error?: Record<string, string>, data?: Record<string, unkno
   };
 }
 
-/** Build a SELECT chain for getById: from().select().eq().eq().single() */
+/** Build a SELECT chain for getById: schema().from().select().eq().eq().single() */
 function getChain(error?: Record<string, string>, data?: unknown) {
   const innerResult = error ? { error, data: null } : { data: data ?? null, error: null };
   return {
@@ -31,7 +31,7 @@ function getChain(error?: Record<string, string>, data?: unknown) {
   };
 }
 
-/** Build a SELECT chain for listPublished/listByListing: from().select().eq().eq() */
+/** Build a SELECT chain for listPublished/listByListing: schema().from().select().eq().eq() */
 function listChain(error?: Record<string, string>, data: unknown[] = []) {
   return {
     select: vi.fn().mockReturnThis(),
@@ -41,7 +41,7 @@ function listChain(error?: Record<string, string>, data: unknown[] = []) {
   };
 }
 
-/** Build a chain for update/delete: from().update().eq().eq() or from().delete().eq().eq() */
+/** Build a chain for update/delete: schema().from().update().eq().eq() or schema().from().delete().eq().eq() */
 function updateChain(error?: Record<string, string>) {
   const innerResult = error ? { error, data: null } : { data: [], error: null };
   return {
@@ -59,7 +59,9 @@ describe('C1 Repository Error Handling — No Fake Success', () => {
   describe('ListingsRepository', () => {
     it('create() throws on DB failure, never returns fake success', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => insertChain({ message: 'duplicate key', code: '23505' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => insertChain({ message: 'duplicate key', code: '23505' })),
+        })),
       } as any);
       const repo = new ListingsRepository();
       await expect(
@@ -71,26 +73,34 @@ describe('C1 Repository Error Handling — No Fake Success', () => {
 
     it('listPublished() throws on DB failure, never returns empty array silently', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => listChain({ message: 'permission denied', code: '42501' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => listChain({ message: 'permission denied', code: '42501' })),
+        })),
       } as any);
       await expect(new ListingsRepository().listPublished()).rejects.toThrow('Failed to list listings');
     });
 
     it('getById() returns null only for PGRST116, throws for other errors', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => getChain({ message: 'timeout', code: '500' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => getChain({ message: 'timeout', code: '500' })),
+        })),
       } as any);
       await expect(new ListingsRepository().getById('x')).rejects.toThrow('Failed to get listing');
 
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => getChain({ code: 'PGRST116' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => getChain({ code: 'PGRST116' })),
+        })),
       } as any);
       expect(await new ListingsRepository().getById('x')).toBeNull();
     });
 
     it('updateStatus() throws on DB failure', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => updateChain({ message: 'constraint violation' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => updateChain({ message: 'constraint violation' })),
+        })),
       } as any);
       await expect(new ListingsRepository().updateStatus('id','PUBLISHED')).rejects.toThrow('Failed to update listing status');
     });
@@ -99,7 +109,9 @@ describe('C1 Repository Error Handling — No Fake Success', () => {
   describe('OffersRepository', () => {
     it('create() throws on DB failure', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => insertChain({ message: 'FK violation', code: '23503' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => insertChain({ message: 'FK violation', code: '23503' })),
+        })),
       } as any);
       await expect(
         new OffersRepository().create({ transporterId:'t1', listingId:'l1', priceProposal:5000,
@@ -109,26 +121,34 @@ describe('C1 Repository Error Handling — No Fake Success', () => {
 
     it('listByListing() throws on DB failure', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => listChain({ message: 'relation missing' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => listChain({ message: 'relation missing' })),
+        })),
       } as any);
       await expect(new OffersRepository().listByListing('x')).rejects.toThrow('Failed to list offers');
     });
 
     it('updateStatus() throws on DB failure', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => updateChain({ message: 'row locked' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => updateChain({ message: 'row locked' })),
+        })),
       } as any);
       await expect(new OffersRepository().updateStatus('id','ACCEPTED')).rejects.toThrow('Failed to update offer status');
     });
 
     it('getById() null-for-PGRST116-only', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => getChain({ code: 'PGRST116' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => getChain({ code: 'PGRST116' })),
+        })),
       } as any);
       expect(await new OffersRepository().getById('x')).toBeNull();
 
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => getChain({ message: 'timeout' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => getChain({ message: 'timeout' })),
+        })),
       } as any);
       await expect(new OffersRepository().getById('x')).rejects.toThrow('Failed to get offer');
     });

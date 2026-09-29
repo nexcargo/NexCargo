@@ -10,7 +10,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
-import { Button, Badge, LanguageSwitcher, SkipNav } from '@/shared/ui';
+import { Button, Badge, LanguageSwitcher, SkipNav, NexCargoLogo, NexCargoSymbol } from '@/shared/ui';
 import type { ReactNode } from 'react';
 import { getUserRoleFromSession } from './user-session';
 import { AuthNav } from './auth-nav';
@@ -41,8 +41,13 @@ export default async function DashboardShell({ children }: { children: ReactNode
       {/* Top Bar */}
       <header className="sticky top-0 z-40 w-full border-b border-[#E8E6E3] bg-white dark:border-zinc-800 dark:bg-[#0A1628]">
         <div className="flex h-16 items-center gap-2 px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2 font-display font-bold text-lg shrink-0 text-[#0A1628] dark:text-white">
-            NexCargo
+          {/* Desktop: full wordmark */}
+          <Link href="/" className="hidden md:block shrink-0">
+            <NexCargoLogo variant="default" />
+          </Link>
+          {/* Mobile: symbol icon */}
+          <Link href="/" className="md:hidden shrink-0">
+            <NexCargoSymbol />
           </Link>
           <span className="ml-auto flex items-center gap-2">
             {role && (

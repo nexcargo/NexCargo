@@ -57,7 +57,7 @@ export class GpsUpdateRepository {
   async create(params: CreateGpsUpdateParams): Promise<GpsUpdateApiShape> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .insert({
         tracking_id: params.trackingId,
         latitude: params.latitude,
@@ -83,7 +83,7 @@ export class GpsUpdateRepository {
   async getHistory(trackingId: string, limit = 200): Promise<GpsUpdateApiShape[]> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('tracking_id', trackingId)
       .order('timestamp', { ascending: true })
@@ -99,7 +99,7 @@ export class GpsUpdateRepository {
   async getLastForTrackingId(trackingId: string): Promise<GpsUpdateApiShape | null> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('tracking_id', trackingId)
       .order('timestamp', { ascending: false })
@@ -117,7 +117,7 @@ export class GpsUpdateRepository {
   async getById(id: string): Promise<GpsUpdateApiShape | null> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('id', id)
       .single();

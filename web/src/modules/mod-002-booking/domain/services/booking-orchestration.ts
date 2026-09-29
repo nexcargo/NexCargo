@@ -62,8 +62,8 @@ export async function executeMOD002Handoff(context: HandoffContext): Promise<Han
   const supabase = await createClient();
 
   const [listingResult, offerResult] = await Promise.all([
-    supabase.from('marketplace_schema.listings').select('*').eq('id', context.listingId).single(),
-    supabase.from('marketplace_schema.offers').select('*').eq('id', context.offerId).single(),
+    supabase.schema('marketplace_schema').from('listings').select('*').eq('id', context.listingId).single(),
+    supabase.schema('marketplace_schema').from('offers').select('*').eq('id', context.offerId).single(),
   ]);
 
   if (listingResult.error) {

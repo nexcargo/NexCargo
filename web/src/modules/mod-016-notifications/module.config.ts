@@ -12,7 +12,7 @@ export const MODULE_CONFIG = {
   name: 'Notifications & Messaging',
   domain: 'communication',
   version: '1.0.0',
-  status: 'SCHEDULED' as const,
+  status: 'IMPLEMENTING' as const,
   dependencies: [
     { target: 'MOD-011', types: ['IS', 'AU'] },
   ] satisfies TypedDependency[],

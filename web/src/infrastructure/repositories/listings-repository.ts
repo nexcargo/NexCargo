@@ -72,7 +72,7 @@ export class ListingsRepository {
   }): Promise<ListingApiShape> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .insert({
         shipper_id: params.shipperId,
         title: params.title,
@@ -104,7 +104,7 @@ export class ListingsRepository {
   async listPublished(): Promise<ListingApiShape[]> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('status', 'PUBLISHED')
       .eq('is_deleted', false);
@@ -119,7 +119,7 @@ export class ListingsRepository {
   async getById(id: string): Promise<ListingApiShape | null> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('id', id)
       .eq('is_deleted', false)
@@ -136,7 +136,7 @@ export class ListingsRepository {
   async updateStatus(id: string, targetStatus: string): Promise<void> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .update({
         status: targetStatus,
         updated_at: new Date().toISOString(),

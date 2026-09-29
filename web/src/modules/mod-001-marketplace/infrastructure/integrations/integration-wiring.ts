@@ -170,6 +170,11 @@ export function evaluateRBAC(role: string, resource: string, action: string): RB
   // - quotes: read=SHIPPER(listing-owner)+ADMIN+MODERATOR(governance)+SUPER_ADMIN
   
   const allowedRoles: Record<string, string[]> = {
+    bookings: ['SHIPPER', 'TRANSPORTER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
+    booking_read: ['SHIPPER', 'TRANSPORTER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
+    booking_create: ['SHIPPER'],
+    booking_update: ['SHIPPER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
+    booking_confirm: ['SHIPPER'],
     listings: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR'],
     offers: ['TRANSPORTER', 'SHIPPER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR'],
     matching: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR', 'DISPATCHER'],
@@ -177,6 +182,7 @@ export function evaluateRBAC(role: string, resource: string, action: string): RB
     tracking: ['ADMIN', 'SUPER_ADMIN'],
     tracking_status: ['TRANSPORTER', 'DISPATCHER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
     pod: ['ADMIN', 'SUPER_ADMIN', 'MODERATOR'],
+    documents: ['SHIPPER', 'TRANSPORTER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
   };
   
   const allowedActions: Record<string, string[]> = {

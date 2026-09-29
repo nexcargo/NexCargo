@@ -55,7 +55,7 @@ export class OffersRepository {
   }): Promise<OfferApiShape> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .insert({
         transporter_id: params.transporterId,
         listing_id: params.listingId,
@@ -81,7 +81,7 @@ export class OffersRepository {
   async listByListing(listingId: string): Promise<OfferApiShape[]> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('listing_id', listingId)
       .eq('is_deleted', false);
@@ -96,7 +96,7 @@ export class OffersRepository {
   async getById(id: string): Promise<OfferApiShape | null> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('id', id)
       .eq('is_deleted', false)
@@ -113,7 +113,7 @@ export class OffersRepository {
   async updateStatus(id: string, targetStatus: string): Promise<void> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .update({
         status: targetStatus,
         updated_at: new Date().toISOString(),

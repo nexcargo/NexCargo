@@ -79,7 +79,7 @@ describe('Data Binding Rule Validation', () => {
 describe('RBAC Presentation Validation', () => {
   it('accepts valid RBAC presentation constraints', () => { const r = validateRBACPresentation([UserRole.ADMIN], 'dashboard.view'); expect(r.valid).toBe(true); });
   it('rejects no visible roles', () => { const r = validateRBACPresentation([], 'dashboard.view'); expect(r.valid).toBe(false); expect(r.errors[0].code).toBe('NO_VISIBLE_ROLES'); });
-  it('rejects invalid role in visibleToRoles', () => { const r = validateRBACPresentation(['GUEST'] as UserRole[], 'dashboard.view'); expect(r.valid).toBe(false); expect(r.errors[0].code).toBe('INVALID_RBAC_ROLE'); });
+  it('rejects invalid role in visibleToRoles', () => { const r = validateRBACPresentation(['GUEST' as never], 'dashboard.view'); expect(r.valid).toBe(false); expect(r.errors[0].code).toBe('INVALID_RBAC_ROLE'); });
   it('rejects empty backend permission', () => { const r = validateRBACPresentation([UserRole.ADMIN], ''); expect(r.valid).toBe(false); expect(r.errors[0].code).toBe('BACKEND_PERMISSION_REQUIRED'); });
 });
 

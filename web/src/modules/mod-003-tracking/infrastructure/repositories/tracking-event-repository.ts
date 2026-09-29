@@ -53,7 +53,7 @@ export class TrackingEventRepository {
   async create(params: CreateTrackingEventParams): Promise<TrackingEventApiShape> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .insert({
         tracking_id: params.trackingId,
         event_type: params.eventType,
@@ -76,7 +76,7 @@ export class TrackingEventRepository {
   async getById(id: string): Promise<TrackingEventApiShape | null> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('id', id)
       .single();
@@ -92,7 +92,7 @@ export class TrackingEventRepository {
   async getHistory(trackingId: string, limit = 100, offset = 0): Promise<TrackingEventApiShape[]> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('tracking_id', trackingId)
       .order('event_timestamp', { ascending: false })
@@ -108,7 +108,7 @@ export class TrackingEventRepository {
   async getByTrackingId(trackingId: string): Promise<TrackingEventApiShape[]> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('tracking_id', trackingId)
       .order('event_timestamp', { ascending: true });

@@ -13,11 +13,11 @@ function stubEntity() {
 }
 
 function buildValidPricingModel(): PricingModelObject {
-  return { ...stubEntity(), pricingModelId: 'PRM-001', region: 'maputo-corridor', corridorId: 'corridor-001', cargoType: 'CONTAINER', baseRateStructure: { baseRatePerKm: 15, currency: 'MZN' }, variableFactors: [{ factorId: 'f1', factorName: 'fuel', weightMultiplier: 1.2, dataSourceModule: 'MOD-012', isActive: true }], constraints: [{ constraintId: 'c1', constraintType: 'MAX_FEE', maxValue: 1000 }], status: PricingModelStatus.ACTIVE, version: 1, validFrom: now };
+  return { ...stubEntity(), pricingModelId: 'PRM-001', region: 'maputo-corridor', corridorId: 'b1c2d3e4-0001-4000-8000-000000000001', cargoType: 'CONTAINER', baseRateStructure: { baseRatePerKm: 15, currency: 'MZN' }, variableFactors: [{ factorId: 'f1', factorName: 'fuel', weightMultiplier: 1.2, dataSourceModule: 'MOD-012', isActive: true }], constraints: [{ constraintId: 'c1', constraintType: 'MAX_FEE', maxValue: 1000 }], status: PricingModelStatus.ACTIVE, version: 1, validFrom: now };
 }
 
 function buildValidRecommendation(): OptimizationRecommendationObject {
-  return { ...stubEntity(), recommendationId: 'REC-001', type: RecommendationType.PRICING, rationale: 'Supply shortage detected on Maputo-Corridor.', supportingSignals: [{ signalId: 'alpha-001', signalType: 'SUPPLY_SHORTAGE', contributionWeight: 0.7 }, { signalId: 'beta-002', signalType: 'DEMAND_SPIKE', contributionWeight: 0.3 }], confidenceScore: 78, targetRegion: 'maputo-corridor', targetCorridor: 'corridor-001', suggestedAction: { actionType: 'ADJUST_RATE_CAP', maxRateAdjustmentPercent: 10 }, generatedAt: now, validUntil: new Date('2026-09-30T23:59:59Z') };
+  return { ...stubEntity(), recommendationId: 'REC-001', type: RecommendationType.PRICING, rationale: 'Supply shortage detected on Maputo-Corridor.', supportingSignals: [{ signalId: 'alpha-001', signalType: 'SUPPLY_SHORTAGE', contributionWeight: 0.7 }, { signalId: 'beta-002', signalType: 'DEMAND_SPIKE', contributionWeight: 0.3 }], confidenceScore: 78, targetRegion: 'maputo-corridor', targetCorridor: 'b1c2d3e4-0001-4000-8000-000000000001', suggestedAction: { actionType: 'ADJUST_RATE_CAP', maxRateAdjustmentPercent: 10 }, generatedAt: now, validUntil: new Date('2026-09-30T23:59:59Z') };
 }
 
 function buildValidIncentive(): IncentiveRuleObject {
@@ -25,7 +25,7 @@ function buildValidIncentive(): IncentiveRuleObject {
 }
 
 function buildValidMarketSignal(): MarketSignalObject {
-  return { ...stubEntity(), signalId: 'SIG-001', signalType: MarketSignalType.DEMAND_SPIKE, sourceModules: ['MOD-001', 'MOD-003'], intensityScore: 72, confidenceScore: 85, timestamp: now, region: 'maputo-corridor', corridorId: 'corridor-001', metadata: {} };
+  return { ...stubEntity(), signalId: 'SIG-001', signalType: MarketSignalType.DEMAND_SPIKE, sourceModules: ['MOD-001', 'MOD-003'], intensityScore: 72, confidenceScore: 85, timestamp: now, region: 'maputo-corridor', corridorId: 'b1c2d3e4-0001-4000-8000-000000000001', metadata: {} };
 }
 
 function buildValidExperiment(): ABExperimentObject {

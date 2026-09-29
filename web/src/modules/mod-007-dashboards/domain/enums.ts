@@ -2,13 +2,15 @@
 // Wave 3 — Stage 3, Increment 1 — Authorized per HAO-WAVE3-AUTH-001 (D-S3-001)
 // Reference: MOD-007 §§4 Core Domain Entities (4.1–4.9), §5 Dashboard Architecture, §7 Rules of Operation
 
-/** User role context per MOD-007 §4.1, §5 Dashboards */
+/** User role context per MOD-007 §4.1, §5 Dashboards — aligned with approved HAO taxonomy */
 export enum UserRole {
   SHIPPER = 'SHIPPER',
   TRANSPORTER = 'TRANSPORTER',
   DRIVER = 'DRIVER',
+  DISPATCHER = 'DISPATCHER',
   MODERATOR = 'MODERATOR',
   ADMIN = 'ADMIN',
+  SUPER_ADMIN = 'SUPER_ADMIN',
 }
 
 /** Dashboard layout type per MOD-007 §4.1 */

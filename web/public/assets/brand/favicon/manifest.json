@@ -1,0 +1,21 @@
+{
+  "name": "NexCargo",
+  "short_name": "NexCargo",
+  "icons": [
+    {
+      "src": "/assets/brand/symbol/nexcargo-symbol-192x192px.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/brand/symbol/nexcargo-symbol-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "theme_color": "#0A1628",
+  "background_color": "#F8F6F3",
+  "display": "standalone"
+}

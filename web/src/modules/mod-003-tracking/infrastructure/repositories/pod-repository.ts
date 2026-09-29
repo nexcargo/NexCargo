@@ -67,7 +67,7 @@ export class PodRepository {
   async create(params: CreatePodParams): Promise<PodApiShape> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .insert({
         tracking_id: params.trackingId,
         booking_id: params.bookingId,
@@ -91,7 +91,7 @@ export class PodRepository {
   async getById(id: string): Promise<PodApiShape | null> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('id', id)
       .single();
@@ -107,7 +107,7 @@ export class PodRepository {
   async getByTrackingId(trackingId: string): Promise<PodApiShape[]> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('tracking_id', trackingId);
 
@@ -132,7 +132,7 @@ export class PodRepository {
     }
 
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .update(updateData)
       .eq('id', params.podId)
       .in('verification_status', ['PENDING']); // Only allow verifying PENDING PODs
@@ -150,7 +150,7 @@ export class PodRepository {
   async getByBookingId(bookingId: string): Promise<PodApiShape[]> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('booking_id', bookingId);
 

@@ -61,13 +61,15 @@ export enum RiskCategory {
   CRITICAL = 'CRITICAL',
 }
 
-/** AI chat user role per MOD-006 §4.9 */
+/** AI chat user role per MOD-006 §4.9 — aligned with approved HAO taxonomy */
 export enum UserRole {
   SHIPPER = 'SHIPPER',
   TRANSPORTER = 'TRANSPORTER',
   DRIVER = 'DRIVER',
+  DISPATCHER = 'DISPATCHER',
   MODERATOR = 'MODERATOR',
   ADMIN = 'ADMIN',
+  SUPER_ADMIN = 'SUPER_ADMIN',
 }
 
 /** AI chat session status per MOD-006 §4.9 */

@@ -255,7 +255,7 @@ describe('MOD-014 Double Booking Prevention for Assignments', () => {
 describe('MOD-014 Cross-Border Compliance Validation', () => {
   const validCompliance = {
     vehicleId: 'veh-001',
-    corridorId: 'corridor-mz-za-001', // string type per D-S2B-002 provisional assumption
+    corridorId: 'b1c2d3e4-0001-4000-8000-000000000001', // UUID format per MOD-009 canonical identity
     countryCode: 'ZA',
     permitType: PermitType.INSURANCE,
     permitNumber: 'INS-ZA-2026-001',

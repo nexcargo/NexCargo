@@ -246,7 +246,7 @@ export class FleetRepository {
   async listFleets(ownerId?: string, limit = 50, offset = 0): Promise<FleetApiShape[]> {
     const supabase = await createClient();
     let query = supabase
-      .from(`${this.schema}.fleets`)
+      .schema(this.schema).from('fleets')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -266,7 +266,7 @@ export class FleetRepository {
   async getFleetById(id: string): Promise<FleetApiShape | null> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.fleets`)
+      .schema(this.schema).from('fleets')
       .select('*')
       .eq('id', id)
       .maybeSingle();
@@ -285,7 +285,7 @@ export class FleetRepository {
   }): Promise<FleetApiShape> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.fleets`)
+      .schema(this.schema).from('fleets')
       .insert({
         fleet_id: params.fleetId,
         name: params.name,
@@ -309,7 +309,7 @@ export class FleetRepository {
     if (updates.operationalStatus !== undefined) payload['operational_status'] = updates.operationalStatus;
 
     const result = await supabase
-      .from(`${this.schema}.fleets`)
+      .schema(this.schema).from('fleets')
       .update(payload)
       .eq('id', id)
       .select()
@@ -326,7 +326,7 @@ export class FleetRepository {
   async listVehicles(fleetId?: string, type?: string, state?: string, limit = 50, offset = 0): Promise<VehicleApiShape[]> {
     const supabase = await createClient();
     let query = supabase
-      .from(`${this.schema}.vehicles`)
+      .schema(this.schema).from('vehicles')
       .select('*')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -345,7 +345,7 @@ export class FleetRepository {
   async getVehicleById(id: string): Promise<VehicleApiShape | null> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.vehicles`)
+      .schema(this.schema).from('vehicles')
       .select('*')
       .eq('id', id)
       .maybeSingle();
@@ -375,7 +375,7 @@ export class FleetRepository {
   }): Promise<VehicleApiShape> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.vehicles`)
+      .schema(this.schema).from('vehicles')
       .insert({
         vehicle_id: params.vehicleId,
         fleet_id: params.fleetId,
@@ -414,7 +414,7 @@ export class FleetRepository {
     if (updates.complianceNotes !== undefined) payload['compliance_notes'] = updates.complianceNotes;
 
     const result = await supabase
-      .from(`${this.schema}.vehicles`)
+      .schema(this.schema).from('vehicles')
       .update(payload)
       .eq('id', id)
       .select()
@@ -431,7 +431,7 @@ export class FleetRepository {
   async listDrivers(fleetId?: string, certificationStatus?: string, availabilityState?: string, limit = 50, offset = 0): Promise<DriverApiShape[]> {
     const supabase = await createClient();
     let query = supabase
-      .from(`${this.schema}.drivers`)
+      .schema(this.schema).from('drivers')
       .select('*')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -450,7 +450,7 @@ export class FleetRepository {
   async getDriverById(id: string): Promise<DriverApiShape | null> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.drivers`)
+      .schema(this.schema).from('drivers')
       .select('*')
       .eq('id', id)
       .maybeSingle();
@@ -478,7 +478,7 @@ export class FleetRepository {
   }): Promise<DriverApiShape> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.drivers`)
+      .schema(this.schema).from('drivers')
       .insert({
         driver_id: params.driverId,
         fleet_id: params.fleetId,
@@ -515,7 +515,7 @@ export class FleetRepository {
     if (updates.licenseExpiryDate !== undefined) payload['license_expiry_date'] = updates.licenseExpiryDate;
 
     const result = await supabase
-      .from(`${this.schema}.drivers`)
+      .schema(this.schema).from('drivers')
       .update(payload)
       .eq('id', id)
       .select()
@@ -539,7 +539,7 @@ export class FleetRepository {
   ): Promise<AssignmentApiShape[]> {
     const supabase = await createClient();
     let query = supabase
-      .from(`${this.schema}.asset_assignments`)
+      .schema(this.schema).from('asset_assignments')
       .select('*')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -559,7 +559,7 @@ export class FleetRepository {
   async getAssignmentById(id: string): Promise<AssignmentApiShape | null> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.asset_assignments`)
+      .schema(this.schema).from('asset_assignments')
       .select('*')
       .eq('id', id)
       .maybeSingle();
@@ -588,7 +588,7 @@ export class FleetRepository {
 
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.asset_assignments`)
+      .schema(this.schema).from('asset_assignments')
       .insert({
         assignment_id: params.assignmentId,
         vehicle_id: params.vehicleId,
@@ -627,7 +627,7 @@ export class FleetRepository {
     if (updates.notes !== undefined) payload['notes'] = updates.notes;
 
     const result = await supabase
-      .from(`${this.schema}.asset_assignments`)
+      .schema(this.schema).from('asset_assignments')
       .update(payload)
       .eq('id', id)
       .select()
@@ -644,7 +644,7 @@ export class FleetRepository {
   async listComplianceRecords(vehicleId?: string, countryCode?: string, status?: string, limit = 50, offset = 0): Promise<ComplianceRecordApiShape[]> {
     const supabase = await createClient();
     let query = supabase
-      .from(`${this.schema}.cross_border_compliance_records`)
+      .schema(this.schema).from('cross_border_compliance_records')
       .select('*')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -675,7 +675,7 @@ export class FleetRepository {
   }): Promise<ComplianceRecordApiShape> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.cross_border_compliance_records`)
+      .schema(this.schema).from('cross_border_compliance_records')
       .insert({
         record_id: params.recordId,
         vehicle_id: params.vehicleId,
@@ -703,7 +703,7 @@ export class FleetRepository {
   async listBackhaulOpportunities(fleetId?: string, status?: string, limit = 50, offset = 0): Promise<BackhaulOpportunityApiShape[]> {
     const supabase = await createClient();
     let query = supabase
-      .from(`${this.schema}.backhaul_opportunities`)
+      .schema(this.schema).from('backhaul_opportunities')
       .select('*')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -732,7 +732,7 @@ export class FleetRepository {
   }): Promise<BackhaulOpportunityApiShape> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.backhaul_opportunities`)
+      .schema(this.schema).from('backhaul_opportunities')
       .insert({
         opportunity_id: params.opportunityId,
         fleet_id: params.fleetId,
@@ -757,7 +757,7 @@ export class FleetRepository {
   async updateBackhaulStatus(id: string, status: string): Promise<BackhaulOpportunityApiShape> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.backhaul_opportunities`)
+      .schema(this.schema).from('backhaul_opportunities')
       .update({ status })
       .eq('id', id)
       .select()

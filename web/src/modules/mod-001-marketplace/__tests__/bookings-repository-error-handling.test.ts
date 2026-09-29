@@ -6,7 +6,7 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
 }));
 
-/** Build a mock INSERT chain: from().insert().select().single() → error or success */
+/** Build a mock INSERT chain: schema().from().insert().select().single() → error or success */
 function insertChain(error?: Record<string, string>, data?: Record<string, unknown>) {
   const result = error ? { error, data: null } : { data: data ?? {}, error: null };
   return {
@@ -17,7 +17,7 @@ function insertChain(error?: Record<string, string>, data?: Record<string, unkno
   };
 }
 
-/** Build a SELECT chain for getById/getByIdByStatus: from().select().eq().eq().single() */
+/** Build a SELECT chain for getById/getByIdByStatus: schema().from().select().eq().eq().single() */
 function getChain(error?: Record<string, string>, data?: unknown) {
   const innerResult = error ? { error, data: null } : { data: data ?? null, error: null };
   return {
@@ -30,7 +30,7 @@ function getChain(error?: Record<string, string>, data?: unknown) {
   };
 }
 
-/** Build a SELECT chain for listByShipper/listByTransporter: from().select().eq().eq() */
+/** Build a SELECT chain for listByShipper/listByTransporter: schema().from().select().eq().eq() */
 function listChain(error?: Record<string, string>, data: unknown[] = []) {
   return {
     select: vi.fn().mockReturnThis(),
@@ -40,7 +40,7 @@ function listChain(error?: Record<string, string>, data: unknown[] = []) {
   };
 }
 
-/** Build a chain for update/confirm: from().update().eq().eq() */
+/** Build a chain for update/confirm: schema().from().update().eq().eq() */
 function updateChain(error?: Record<string, string>) {
   const innerResult = error ? { error, data: null } : { data: [], error: null };
   return {
@@ -57,7 +57,9 @@ describe('C2-Increment-001 BookingsRepository Error Handling — No Fake Success
   describe('BookingsRepository.create()', () => {
     it('throws on DB failure, never returns fake success', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => insertChain({ message: 'duplicate key', code: '23505' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => insertChain({ message: 'duplicate key', code: '23505' })),
+        })),
       } as any);
       await expect(
         new BookingsRepository().create({
@@ -84,7 +86,9 @@ describe('C2-Increment-001 BookingsRepository Error Handling — No Fake Success
         created_at: '2026-09-04T00:00:00Z', updated_at: '2026-09-04T00:00:00Z',
       };
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => insertChain(undefined, mockRow)),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => insertChain(undefined, mockRow)),
+        })),
       } as any);
       const result = await new BookingsRepository().create({
         bookingId: 'BKG-001', listingId: 'l1', selectedOfferId: 'o1',
@@ -100,7 +104,9 @@ describe('C2-Increment-001 BookingsRepository Error Handling — No Fake Success
 
     it('propagates FK violation errors', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => insertChain({ message: 'FK violation', code: '23503' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => insertChain({ message: 'FK violation', code: '23503' })),
+        })),
       } as any);
       await expect(
         new BookingsRepository().create({
@@ -117,14 +123,18 @@ describe('C2-Increment-001 BookingsRepository Error Handling — No Fake Success
   describe('BookingsRepository.getById()', () => {
     it('returns null only for PGRST116', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => getChain({ code: 'PGRST116' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => getChain({ code: 'PGRST116' })),
+        })),
       } as any);
       expect(await new BookingsRepository().getById('nonexistent')).toBeNull();
     });
 
     it('throws for non-PGRST116 errors', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => getChain({ message: 'timeout', code: '500' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => getChain({ message: 'timeout', code: '500' })),
+        })),
       } as any);
       await expect(new BookingsRepository().getById('x')).rejects.toThrow('Failed to get booking');
     });
@@ -133,14 +143,18 @@ describe('C2-Increment-001 BookingsRepository Error Handling — No Fake Success
   describe('BookingsRepository.getByIdByStatus()', () => {
     it('returns null only for PGRST116', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => getChain({ code: 'PGRST116' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => getChain({ code: 'PGRST116' })),
+        })),
       } as any);
       expect(await new BookingsRepository().getByIdByStatus('BKG-xxx')).toBeNull();
     });
 
     it('throws for non-PGRST116 errors', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => getChain({ message: 'db error' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => getChain({ message: 'db error' })),
+        })),
       } as any);
       await expect(new BookingsRepository().getByIdByStatus('BKG-xxx')).rejects.toThrow('Failed to get booking by ID');
     });
@@ -149,7 +163,9 @@ describe('C2-Increment-001 BookingsRepository Error Handling — No Fake Success
   describe('BookingsRepository.updateStatus()', () => {
     it('throws on DB failure', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => updateChain({ message: 'constraint violation' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => updateChain({ message: 'constraint violation' })),
+        })),
       } as any);
       await expect(new BookingsRepository().updateStatus('id', 'CONFIRMED'))
         .rejects.toThrow('Failed to update booking status');
@@ -159,7 +175,9 @@ describe('C2-Increment-001 BookingsRepository Error Handling — No Fake Success
   describe('BookingsRepository.confirmBooking()', () => {
     it('throws on DB failure', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => updateChain({ message: 'row locked' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => updateChain({ message: 'row locked' })),
+        })),
       } as any);
       await expect(new BookingsRepository().confirmBooking('id'))
         .rejects.toThrow('Failed to confirm booking');
@@ -169,7 +187,9 @@ describe('C2-Increment-001 BookingsRepository Error Handling — No Fake Success
   describe('BookingsRepository.listByShipper()', () => {
     it('throws on DB failure', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => listChain({ message: 'permission denied' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => listChain({ message: 'permission denied' })),
+        })),
       } as any);
       await expect(new BookingsRepository().listByShipper('shipper-uuid'))
         .rejects.toThrow('Failed to list bookings by shipper');
@@ -177,7 +197,9 @@ describe('C2-Increment-001 BookingsRepository Error Handling — No Fake Success
 
     it('returns empty array when no bookings found', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => listChain()),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => listChain()),
+        })),
       } as any);
       const result = await new BookingsRepository().listByShipper('shipper-uuid');
       expect(result).toEqual([]);
@@ -187,7 +209,9 @@ describe('C2-Increment-001 BookingsRepository Error Handling — No Fake Success
   describe('BookingsRepository.listByTransporter()', () => {
     it('throws on DB failure', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => listChain({ message: 'relation missing' })),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => listChain({ message: 'relation missing' })),
+        })),
       } as any);
       await expect(new BookingsRepository().listByTransporter('transporter-uuid'))
         .rejects.toThrow('Failed to list bookings by transporter');
@@ -195,7 +219,9 @@ describe('C2-Increment-001 BookingsRepository Error Handling — No Fake Success
 
     it('returns empty array when no bookings found', async () => {
       vi.mocked(createClient).mockReturnValueOnce({
-        from: vi.fn(() => listChain()),
+        schema: vi.fn(() => ({
+          from: vi.fn(() => listChain()),
+        })),
       } as any);
       const result = await new BookingsRepository().listByTransporter('transporter-uuid');
       expect(result).toEqual([]);

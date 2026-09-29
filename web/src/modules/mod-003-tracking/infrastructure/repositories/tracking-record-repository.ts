@@ -52,7 +52,7 @@ export class TrackingRecordRepository {
   async create(params: CreateTrackingRecordParams): Promise<TrackingRecordApiShape> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .insert({
         tracking_ref: params.trackingRef,
         booking_id: params.bookingId,
@@ -73,7 +73,7 @@ export class TrackingRecordRepository {
   async getById(id: string): Promise<TrackingRecordApiShape | null> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('id', id)
       .eq('is_deleted', false)
@@ -90,7 +90,7 @@ export class TrackingRecordRepository {
   async getByBookingId(bookingId: string): Promise<TrackingRecordApiShape | null> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('booking_id', bookingId)
       .eq('is_deleted', false)
@@ -108,7 +108,7 @@ export class TrackingRecordRepository {
     const supabase = await createClient();
     const now = new Date().toISOString();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .update({ status: targetStatus, last_updated: now, updated_at: now })
       .eq('id', id)
       .eq('is_deleted', false);
@@ -122,7 +122,7 @@ export class TrackingRecordRepository {
     const supabase = await createClient();
     const now = new Date().toISOString();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .update({ status: 'COMPLETED', completed_at: now, last_updated: now, updated_at: now })
       .eq('id', id)
       .eq('is_deleted', false);
@@ -136,7 +136,7 @@ export class TrackingRecordRepository {
     const supabase = await createClient();
     // Query tracking records directly (RLS policies handle access control)
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('is_deleted', false)
       .order('last_updated', { ascending: false })
@@ -152,7 +152,7 @@ export class TrackingRecordRepository {
   async listByTransporter(transporterId: string, limit = 50, offset = 0): Promise<TrackingRecordApiShape[]> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('is_deleted', false)
       .order('last_updated', { ascending: false })

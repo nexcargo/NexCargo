@@ -8,7 +8,7 @@
 // - MOD-016 notification surfaces via consumer-side design-time stubs (D-MOD016-001)
 // - MOD-010 IS/AU dependency authorized per PROMPT 0 v1.1; uses actual MOD-010 interfaces
 
-import type { ComplianceRule, SecurityEventRecord } from '@/modules/mod-010-security/domain/types/compliance';
+import type { ComplianceRule } from '@/modules/mod-010-security/domain/types/compliance';
 import type { AIGovernanceConstraint } from '@/modules/mod-010-security/domain/types/ai-governance';
 
 // ============================================================

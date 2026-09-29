@@ -1,9 +1,13 @@
+// NexCargo Auth User Helper — extracts authenticated user from Supabase session.
+// Per HAO PE-H04: role = null indicates unassigned/onboarding state, not a valid application role.
+
 import { createClient } from '@/lib/supabase/server';
 
 /**
  * Extract authenticated user from Supabase session.
  * Returns null if no valid session exists.
  * This is the authoritative source of user identity — not request headers.
+ * Per HAO PE-H04: role = null means unassigned / pending onboarding.
  */
 export async function getAuthenticatedUser() {
   const supabase = await createClient();
@@ -19,7 +23,8 @@ export async function getAuthenticatedUser() {
   return {
     id: user.id,
     email: user.email ?? '',
-    role: user.user_metadata?.role ?? 'USER',
+    /** Application role per approved taxonomy. Null when user has not completed role assignment. */
+    role: user.user_metadata?.role ?? null,
     tenantId: user.user_metadata?.tenantId,
   };
 }

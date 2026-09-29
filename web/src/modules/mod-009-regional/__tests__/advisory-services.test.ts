@@ -13,11 +13,11 @@ function stubEntity() {
 }
 
 function buildValidCorridor(): LogisticsCorridorObject {
-  return { ...stubEntity(), corridorId: 'corridor-001', corridorName: 'Beira Corridor', originRegion: 'MZ', destinationRegion: 'ZM', intermediateRegions: ['ZW'], permittedTransportModes: ['HEAVY_TRUCK', 'LIGHT_DELIVERY'], riskLevel: RiskLevel.MEDIUM, operationalRules: { permittedTransportModes: [], minimumSafetyRequirements: [], weatherSensitiveClosures: false, borderPostIds: ['bp1'] }, activeStatus: true, averageTransitTime: 3, assignmentMethod: CorridorAssignmentMethod.ORIGIN_DESTINATION_MATCH };
+  return { ...stubEntity(), corridorId: 'b1c2d3e4-0001-4000-8000-000000000001', corridorName: 'Beira Corridor', originRegion: 'MZ', destinationRegion: 'ZM', intermediateRegions: ['ZW'], permittedTransportModes: ['HEAVY_TRUCK', 'LIGHT_DELIVERY'], riskLevel: RiskLevel.MEDIUM, operationalRules: { permittedTransportModes: [], minimumSafetyRequirements: [], weatherSensitiveClosures: false, borderPostIds: ['bp1'] }, activeStatus: true, averageTransitTime: 3, assignmentMethod: CorridorAssignmentMethod.ORIGIN_DESTINATION_MATCH };
 }
 
 function buildValidSegment(): CrossBorderShipmentSegmentObject {
-  return { ...stubEntity(), segmentId: 'seg-001', trackingId: 'shipment-001', originRegion: 'MZ', destinationRegion: 'ZW', borderStatus: BorderStatus.PENDING, segmentStatus: SegmentStatus.PLANNED, complianceFlags: { requiresAdditionalReview: false, flaggedDocuments: [], lastComplianceCheckAt: now }, customsDocuments: [{ documentId: 'doc-001', documentType: 'CUSTOMS', isValidated: false }], corridorId: 'corridor-001', entryTimestamp: now, segmentationMethod: SegmentationMethod.REGION_TRANSITION };
+  return { ...stubEntity(), segmentId: 'seg-001', trackingId: 'shipment-001', originRegion: 'MZ', destinationRegion: 'ZW', borderStatus: BorderStatus.PENDING, segmentStatus: SegmentStatus.PLANNED, complianceFlags: { requiresAdditionalReview: false, flaggedDocuments: [], lastComplianceCheckAt: now }, customsDocuments: [{ documentId: 'doc-001', documentType: 'CUSTOMS', isValidated: false }], corridorId: 'b1c2d3e4-0001-4000-8000-000000000001', entryTimestamp: now, segmentationMethod: SegmentationMethod.REGION_TRANSITION };
 }
 
 function buildValidBorderEvent(): BorderTransitionEventObject {
@@ -37,7 +37,7 @@ function buildValidCongestionReport(): BorderCongestionReportObject {
 }
 
 function buildValidRegion(): RegionObject {
-  return { ...stubEntity(), regionId: 'region-mz', regionName: 'Mozambique', countryList: ['MZ'], regulatoryClassification: 'SADC_MEMBER', operationalConstraints: { maxVehicleWeightKg: 40000, requiredTransitPermits: [], workingHoursRestrictions: {}, hazardousMaterialRestrictions: false }, activeStatus: true, defaultLanguage: 'pt', supportedLanguages: ['pt', 'en'], currencyCode: 'MZN', crossBorderPermitRules: { atBorderAvailable: true }, insuranceRequirements: { yellowCardAvailable: true } };
+  return { ...stubEntity(), regionId: 'region-mz', regionName: 'Mozambique', countryList: ['MZ'], regulatoryClassification: 'SADC_MEMBER', operationalConstraints: { maxVehicleWeightKg: 40000, requiredTransitPermits: [], workingHoursRestrictions: {}, hazardousMaterialRestrictions: false }, activeStatus: true, defaultLanguage: 'pt', supportedLanguages: ['pt', 'en'], currencyCode: 'MZN', crossBorderPermitRules: {}, insuranceRequirements: {} };
 }
 
 function buildValidPermitAuth(): TempPermitAuthorizationObject {

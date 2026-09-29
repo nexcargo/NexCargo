@@ -3,6 +3,7 @@
 // Per MOD-001 §6 (Matching Engine) + §6.5 (Ranking Algorithm)
 // 
 // POST   /api/marketplace/matching     — Run matching engine for a listing
+// C1 Hardened: Uses session-based authentication (Pattern A), NOT x-user-role header (Pattern B).
 
 import { NextRequest, NextResponse } from 'next/server';
 import { runHardFilters } from '@/modules/mod-001-marketplace/domain/services/hard-filters';
@@ -14,6 +15,7 @@ import { ValidationError } from '@/shared/errors/app-errors';
 import { createCorrelationContext, resolveCorrelationId } from '@/shared/standards/correlation-id-propagation';
 import { wrapInContractFramework, recordMarketplaceMetric } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
 import { validateRBAC } from '../rbac-middleware';
+import { assertApiAuthorization, getApiAuthContext } from '@/lib/supabase/api-auth';
 
 /**
  * POST /api/marketplace/matching
@@ -24,11 +26,25 @@ export async function POST(request: NextRequest) {
   const correlationId = resolveCorrelationId(Object.fromEntries(request.headers.entries()));
   const context = createCorrelationContext({ correlationId });
 
+  // C1 Hardened: Authenticate via Supabase session (Pattern A). No x-user-role header fallback.
+  const authCtx = await getApiAuthContext(request);
+  if (!authCtx) {
+    return NextResponse.json(
+      wrapInContractFramework(null, correlationId),
+      { status: 401, headers: { 'x-correlation-id': correlationId } },
+    );
+  }
+
   try {
-    const role = request.headers.get('x-user-role') || 'SHIPPER';
+    // Use role from session (null = unassigned/onboarding state per HAO PE-H04)
+    if (!authCtx.role) {
+      return NextResponse.json(
+        wrapInContractFramework(null, correlationId),
+        { status: 403, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
     
-    // Validate RBAC permission
-    const rbacResult = await validateRBAC(role, 'matching', 'execute');
+    const rbacResult = await validateRBAC(authCtx.role, 'matching', 'execute');
     if (!rbacResult.permitted) {
       return NextResponse.json(
         wrapInContractFramework(null, correlationId),

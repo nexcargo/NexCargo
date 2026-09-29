@@ -26,7 +26,7 @@ export async function GET(
     const { id } = await params;
 
     // Pattern A auth: session-based
-    await assertApiAuthorization(request, 'bookings', 'read');
+    await assertApiAuthorization(request, 'booking_read', 'read');
 
     const repo = new BookingsRepository();
     const booking = await repo.getById(id);
@@ -86,7 +86,7 @@ export async function PATCH(
     const body = await request.json();
 
     // Pattern A auth: session-based
-    const ctx = await assertApiAuthorization(request, 'bookings', 'update');
+    const ctx = await assertApiAuthorization(request, 'booking_update', 'update');
 
     if (!body.action) throw new ValidationError('action is required');
     if (!body.currentStatus) throw new ValidationError('currentStatus is required');
@@ -123,8 +123,8 @@ export async function PATCH(
       );
     }
 
-    // Shipper can update their own bookings
-    if (ctx.userId !== booking.shipperId) {
+    const GOVERNANCE_ROLES = ['MODERATOR', 'ADMIN', 'SUPER_ADMIN'];
+    if (ctx.userId !== booking.shipperId && !GOVERNANCE_ROLES.includes(ctx.role ?? '')) {
       throw new Error('FORBIDDEN: Not authorized to update this booking');
     }
 

@@ -1,30 +1,17 @@
 // NexCargo — LanguageSwitcher Component
-// C6-04 i18n — ESS-008 §17 multilingual support
-// Switches locale via cookie for next-intl integration
-// Uses localStorage as fallback; cookie survives across page reloads
+// Switches locale by navigating between /{locale}/ routes (not cookie-only).
+// Works reliably with next-intl createMiddleware + localePrefix:'always'.
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
+import { useState, useCallback } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '../../utils';
 
-const COOKIE_NAME = 'preferredLocale';
 const LOCALES = [
   { code: 'pt', label: 'Portugu\u00eas' },
   { code: 'en', label: 'English' },
 ];
-
-function setCookie(name: string, value: string, days = 365) {
-  if (typeof document === 'undefined') return;
-  const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax`;
-}
-
-function getCookie(name: string): string | undefined {
-  if (typeof document === 'undefined') return undefined;
-  return document.cookie.split('; ').find((row) => row.startsWith(`${name}=`))?.split('=')[1];
-}
 
 export interface LanguageSwitcherProps {
   initialLocale?: string;
@@ -33,30 +20,35 @@ export interface LanguageSwitcherProps {
 export function LanguageSwitcher({
   initialLocale = 'pt',
 }: LanguageSwitcherProps) {
-  const t = useTranslations('SharedUI');
   const [open, setOpen] = useState(false);
-  // Check cookie synchronously during render; useEffect refines it if needed
-  const serverLocale = typeof document === 'undefined'
-    ? initialLocale
-    : (getCookie(COOKIE_NAME) && ['pt', 'en'].includes(getCookie(COOKIE_NAME)!))
-      ? getCookie(COOKIE_NAME)!
-      : initialLocale;
-  const [currentLocale, setCurrentLocale] = useState(serverLocale);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // Determine current locale from pathname segments
+  const currentLocale = (() => {
+    if (!pathname) return initialLocale;
+    const parts = pathname.split('/').filter(Boolean);
+    if (parts.length > 0 && ['pt', 'en'].includes(parts[0])) {
+      return parts[0];
+    }
+    return initialLocale;
+  })();
 
   const handleSwitch = useCallback((locale: string) => {
-    setCookie(COOKIE_NAME, locale);
-    setCurrentLocale(locale);
     setOpen(false);
-    window.location.reload();
-  }, []);
+    if (!pathname) return;
 
-  // Sync from cookie after hydration (handles external changes like login flow setting cookie)
-  useEffect(() => {
-    const cookieLocale = getCookie(COOKIE_NAME);
-    if (cookieLocale && ['pt', 'en'].includes(cookieLocale)) {
-      setCurrentLocale(cookieLocale);
+    // Replace the locale segment in the current path
+    const parts = pathname.split('/').filter(Boolean);
+    let newPathParts: string[];
+    if (parts.length > 0 && ['pt', 'en'].includes(parts[0])) {
+      newPathParts = [locale, ...parts.slice(1)];
+    } else {
+      newPathParts = [locale, ...parts];
     }
-  }, []);
+    const newUrl = '/' + newPathParts.join('/');
+    router.replace(newUrl);
+  }, [pathname, router]);
 
   const activeLabel = LOCALES.find((l) => l.code === currentLocale)?.label || 'PT';
 

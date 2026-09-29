@@ -109,7 +109,7 @@ export class BookingsRepository {
   async create(params: CreateBookingParams): Promise<BookingApiShape> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .insert({
         booking_id: params.bookingId,
         listing_id: params.listingId,
@@ -151,7 +151,7 @@ export class BookingsRepository {
   async getById(id: string): Promise<BookingApiShape | null> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('id', id)
       .eq('is_deleted', false)
@@ -168,7 +168,7 @@ export class BookingsRepository {
   async getByIdByStatus(bookingId: string): Promise<BookingApiShape | null> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('booking_id', bookingId)
       .eq('is_deleted', false)
@@ -185,7 +185,7 @@ export class BookingsRepository {
   async updateStatus(id: string, targetStatus: string): Promise<void> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .update({
         status: targetStatus,
         updated_at: new Date().toISOString(),
@@ -201,7 +201,7 @@ export class BookingsRepository {
   async confirmBooking(id: string): Promise<void> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .update({
         status: 'CONFIRMED' as string,
         confirmation_timestamp: new Date().toISOString(),
@@ -218,7 +218,7 @@ export class BookingsRepository {
   async listByShipper(shipperId: string): Promise<BookingApiShape[]> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('shipper_id', shipperId)
       .eq('is_deleted', false);
@@ -233,7 +233,7 @@ export class BookingsRepository {
   async listByTransporter(transporterId: string): Promise<BookingApiShape[]> {
     const supabase = await createClient();
     const result = await supabase
-      .from(`${this.schema}.${this.table}`)
+      .schema(this.schema).from(this.table)
       .select('*')
       .eq('transporter_id', transporterId)
       .eq('is_deleted', false);

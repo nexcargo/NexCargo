@@ -33,8 +33,7 @@ export async function PATCH(
   try {
     const { id } = await params;
 
-    // Pattern A auth: session-based, requires bookings update permission
-    const ctx = await assertApiAuthorization(_request, 'bookings', 'update');
+    const ctx = await assertApiAuthorization(_request, 'booking_confirm', 'update');
 
     // Retrieve existing booking
     const repo = new BookingsRepository();
@@ -45,6 +44,11 @@ export async function PATCH(
         wrapInContractFramework({ error: 'Booking not found', code: 'ERR_1002' }, correlationId),
         { status: 404, headers: { 'x-correlation-id': correlationId } },
       );
+    }
+
+    // Confirm ownership: only the Shipper may confirm their booking
+    if (ctx.userId !== booking.shipperId) {
+      throw new Error('FORBIDDEN: Only the booking Shipper may confirm this booking');
     }
 
     // Predecessor guard: only ALIGNMENT_CHECKED can advance to CONFIRMED

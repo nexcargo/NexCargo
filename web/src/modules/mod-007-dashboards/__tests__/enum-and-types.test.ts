@@ -32,12 +32,14 @@ const now = new Date('2026-08-31T10:00:00Z');
 // ============================================================
 
 describe('MOD-007 UserRole enum', () => {
-  it('contains all required roles', () => {
+  it('contains all required roles per approved HAO taxonomy', () => {
     expect(UserRole.SHIPPER).toBe('SHIPPER');
     expect(UserRole.TRANSPORTER).toBe('TRANSPORTER');
     expect(UserRole.DRIVER).toBe('DRIVER');
+    expect(UserRole.DISPATCHER).toBe('DISPATCHER');
     expect(UserRole.MODERATOR).toBe('MODERATOR');
     expect(UserRole.ADMIN).toBe('ADMIN');
+    expect(UserRole.SUPER_ADMIN).toBe('SUPER_ADMIN');
   });
 });
 

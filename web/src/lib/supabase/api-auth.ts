@@ -53,8 +53,11 @@ export async function assertApiAuth(request: NextRequest): Promise<AuthContext> 
   return ctx;
 }
 
-// Approved self-selected role values (trusted when RPC resolver unavailable)
-const SELF_SELECTED_ROLES = ['SHIPPER', 'TRANSPORTER', 'DRIVER'];
+// Approved self-selected role values (trusted when RPC resolver unavailable).
+// DRIVER is deliberately excluded: it is not a platform authorization tier.
+// Per architecture: unassociated Driver = zero operational authority.
+// Association (fleet_id assignment) is handled separately by the Transporter owner.
+const SELF_SELECTED_ROLES = ['SHIPPER', 'TRANSPORTER'];
 
 /**
  * Resolve the effective application role.

@@ -1,15 +1,15 @@
 // NexCargo Domain Enums — Canonical type definitions sourced from Primitive Registry (Priority 0)
 // All modules MUST use these enums. No local redefinitions allowed.
 
-/** User roles per PROMPT 7 + MOD-010 */
+/** User roles per PROMPT 0 v1.1 + PROMPT 7 + MOD-010. Application roles: SHIPPER, TRANSPORTER, DRIVER, DISPATCHER, MODERATOR, ADMIN, SUPER_ADMIN. AI_SYSTEM_AGENT is an internal/system actor, not a human application role. */
 export enum UserRole {
   SHIPPER = 'SHIPPER',
   TRANSPORTER = 'TRANSPORTER',
   DRIVER = 'DRIVER',
-  FLEET_OWNER = 'FLEET_OWNER',
   DISPATCHER = 'DISPATCHER',
   MODERATOR = 'MODERATOR',
   ADMIN = 'ADMIN',
+  SUPER_ADMIN = 'SUPER_ADMIN',
   AI_SYSTEM_AGENT = 'AI_SYSTEM_AGENT',
 }
 

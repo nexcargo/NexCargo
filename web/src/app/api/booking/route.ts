@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // Pattern A auth: session-based, no header fallback
-    const ctx = await assertApiAuthorization(request, 'bookings', 'create');
+    const ctx = await assertApiAuthorization(request, 'booking_create', 'create');
 
     const body = await request.json();
 

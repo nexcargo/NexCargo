@@ -2,24 +2,16 @@
 // This module validates and exposes environment variables to the application.
 // NEVER import process.env directly in application code.
 
-/** Validate that required environment variables are set */
-function validateEnv(): void {
-  const required = [
-    'NEXT_PUBLIC_SUPABASE_URL',
-    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  ];
+/** Supabase configuration */
+const _url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const _key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  const missing = required.filter((key) => !process.env[key]);
-  if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
-  }
+if (typeof window === 'undefined') {
+  if (!_url) throw new Error('NEXT_PUBLIC_SUPABASE_URL is not set');
 }
 
-validateEnv();
-
-/** Supabase configuration */
-export const DATABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+export const DATABASE_URL = _url!;
+export const SUPABASE_ANON_KEY = _key || '';
 
 /** Application configuration */
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'NexCargo';

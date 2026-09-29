@@ -32,10 +32,10 @@ CREATE POLICY "All auth users read published listings"
   ON marketplace_schema.listings FOR SELECT
   USING (status = 'PUBLISHED' AND is_deleted = FALSE);
 
--- Admin role has full access via custom function
-CREATE POLICY "Admin full access to listings"
+-- Admin/Super Admin/Moderator full access (SUPER_ADMIN has all ADMIN privileges per HAO PE-H07)
+CREATE POLICY "Admin super-admin moderator full access to listings"
   ON marketplace_schema.listings FOR ALL
-  USING (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'moderator');
+  USING (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'super_admin' OR auth.jwt()->>'role' = 'moderator');
 
 
 -- ============================================================
@@ -73,10 +73,10 @@ CREATE POLICY "Shipper reads offers for their listings"
     )
   );
 
--- Admin/moderator full access
-CREATE POLICY "Admin full access to offers"
+-- Admin/Super Admin/Moderator full access (SUPER_ADMIN has all ADMIN privileges per HAO PE-H07)
+CREATE POLICY "Admin super-admin moderator full access to offers"
   ON marketplace_schema.offers FOR ALL
-  USING (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'moderator');
+  USING (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'super_admin' OR auth.jwt()->>'role' = 'moderator');
 
 
 -- ============================================================
@@ -106,10 +106,10 @@ CREATE POLICY "Match participants read matches"
 -- System only inserts matches (via service role key or trigger)
 -- No user-facing INSERT policy - matches are created server-side
 
--- Admin/moderator full access
-CREATE POLICY "Admin full access to matches"
+-- Admin/Super Admin/Moderator full access (SUPER_ADMIN has all ADMIN privileges per HAO PE-H07)
+CREATE POLICY "Admin super-admin moderator full access to matches"
   ON marketplace_schema.matches FOR ALL
-  USING (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'moderator');
+  USING (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'super_admin' OR auth.jwt()->>'role' = 'moderator');
 
 
 -- ============================================================
@@ -133,7 +133,7 @@ CREATE POLICY "Shipper reads quotes for their listings"
 
 -- System-only INSERT (quotes generated server-side)
 
--- Admin/moderator full access
-CREATE POLICY "Admin full access to quotes"
+-- Admin/Super Admin/Moderator full access (SUPER_ADMIN has all ADMIN privileges per HAO PE-H07)
+CREATE POLICY "Admin super-admin moderator full access to quotes"
   ON marketplace_schema.quotes FOR ALL
-  USING (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'moderator');
+  USING (auth.jwt()->>'role' = 'admin' OR auth.jwt()->>'role' = 'super_admin' OR auth.jwt()->>'role' = 'moderator');

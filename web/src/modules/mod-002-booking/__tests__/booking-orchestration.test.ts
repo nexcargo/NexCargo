@@ -22,14 +22,17 @@ let rpcCallParams: Record<string, unknown> | null = null;
 const rpcState = { data: { success: true } as Record<string, unknown>, error: null as { message: string } | null };
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(() => ({
-    from: vi.fn((tableName: string) => {
-      if (tableName === 'marketplace_schema.listings') {
-        return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn(() => Promise.resolve({ data: defaultListingsData, error: null })) };
-      } else if (tableName === 'marketplace_schema.offers') {
-        return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn(() => Promise.resolve({ data: defaultOffersData, error: null })) };
-      }
-      return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn(() => Promise.resolve({ data: null, error: { message: 'Not found' } })) };
-    }),
+    schema: vi.fn((schemaName: string) => ({
+      from: vi.fn((tableName: string) => {
+        const key = `${schemaName}.${tableName}`;
+        if (key === 'marketplace_schema.listings') {
+          return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn(() => Promise.resolve({ data: defaultListingsData, error: null })) };
+        } else if (key === 'marketplace_schema.offers') {
+          return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn(() => Promise.resolve({ data: defaultOffersData, error: null })) };
+        }
+        return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn(() => Promise.resolve({ data: null, error: { message: 'Not found' } })) };
+      }),
+    })),
     rpc: async (_fn: string, params: Record<string, unknown>) => {
       rpcCallParams = params;
       return { data: rpcState.data, error: rpcState.error };

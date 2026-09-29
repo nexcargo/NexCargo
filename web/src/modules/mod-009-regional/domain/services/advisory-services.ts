@@ -63,7 +63,7 @@ export function enforceNoLegalExecutionRule(corridor: LogisticsCorridorObject): 
     errors.push({ code: 'INVALID_RISK_LEVEL', field: 'riskLevel', message: `Risk level must be one of: ${VALID_RISK_LEVELS.join(', ')}` });
   }
   if (corridor.operationalRules) {
-    const rules = corridor.operationalRules as Record<string, unknown>;
+    const rules = corridor.operationalRules;
     for (const keyword of ['auto_reject', 'customs_execution', 'legal_enforcement']) {
       if (rules[keyword] === true || rules[keyword] === 'AUTO') {
         errors.push({ code: 'NO_AUTOMATED_LEGAL_EXECUTION', field: 'operationalRules', message: `Operational rules cannot include automated legal/customs execution ('${keyword}') — all enforcement deferred to external systems + ESS-006 per §7.1` });
@@ -164,7 +164,7 @@ export function validateCurrencySpecification(context: MultiCurrencyTransactionC
   return { valid: errors.length === 0, errors };
 }
 
-export function enforceComplianceCheckpoint(profile): ValidationResult {
+export function enforceComplianceCheckpoint(profile: CountryComplianceProfileObject): ValidationResult {
   const errors: ValidationError[] = [];
   const p = profile as any;
   if (!p.countryCode || !/^[A-Z]{2,3}$/.test(p.countryCode)) {
@@ -203,7 +203,7 @@ export function validatePermitFlexibilityFlow(permit: TempPermitAuthorizationObj
   return { valid: errors.length === 0, errors };
 }
 
-export function enforceLicensingRule(region): ValidationResult {
+export function enforceLicensingRule(region: RegionObject): ValidationResult {
   const errors: ValidationError[] = [];
   const r = region as any;
   // Mozambique rule: transport licenses valid nationwide, no intra-country restrictions

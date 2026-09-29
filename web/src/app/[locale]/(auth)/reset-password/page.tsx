@@ -1,10 +1,11 @@
 // NexCargo — Reset Password Page (Server Component for Build Compatibility)
 // C6-I Public Web + Authentication Implementation
 // Handles password reset via token from email link
+// C6-Brand: Integrated NexCargoSymbol logo in header
 
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { SkipNav } from '@/shared/ui';
+import { SkipNav, NexCargoSymbol } from '@/shared/ui';
 import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
@@ -23,12 +24,27 @@ async function ResetPasswordForm() {
   return (
     <div className="flex flex-col min-h-screen bg-[#F8F6F3] dark:bg-[#0A1628]">
       <SkipNav />
+
+      {/* Compact brand header */}
+      <header className="w-full border-b border-[#E8E6E3] bg-white px-4 py-3 dark:border-zinc-800 dark:bg-[#0A1628]">
+        <div className="max-w-lg mx-auto flex items-center justify-between">
+          <Link href="/" aria-label="NexCargo Home">
+            <NexCargoSymbol />
+          </Link>
+          <Link
+            href="/sign-in"
+            className="text-sm font-medium text-[#1A5C9E] hover:text-[#164878] dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            Sign in
+          </Link>
+        </div>
+      </header>
+
       <main className="flex flex-1 w-full items-center justify-center px-8 py-12">
         <div className="w-full max-w-md space-y-8">
           {/* Header */}
           <div className="text-center">
-            <h1 className="mb-8 text-3xl font-display font-bold text-[#0A1628] dark:text-white">NexCargo</h1>
-            <h2 className="mt-6 text-2xl font-semibold text-[#0A1628] dark:text-white">{t('title')}</h2>
+            <h2 className="mt-4 text-2xl font-semibold text-[#0A1628] dark:text-white">{t('title')}</h2>
           </div>
 
           {/* Form */}

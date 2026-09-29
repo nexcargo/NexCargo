@@ -1,7 +1,9 @@
--- NexCargo Migration 004 — Marketplace Booking Handoff Atomic Transaction
+-- NexCargo Migration 004 -- Marketplace Booking Handoff Atomic Transaction (Hardened)
 -- Purpose: PostgreSQL stored function enabling genuine ACID atomic handoff
 -- for C2-Increment 003: Match PROPOSED→ACCEPTED + Listing PUBLISHED→BOOKED 
 -- + Booking REQUESTED→ALIGNMENT_CHECKED as one indivisible unit.
+--
+-- TD-C2-001/002 Hardened: Triad coherence verification + transporter identity check
 --
 -- Invoked via: supabase.rpc('marketplace_book_handoff', { params })
 -- Security: SECURITY INVOKER preserves RLS policies per authenticated session.
@@ -27,6 +29,8 @@ DECLARE
     v_offer_price numeric;
     v_offer_vehicle_type varchar(30);
     v_booking_id uuid;
+    v_match_check_listing uuid;
+    v_match_check_offer uuid;
 BEGIN
     -- Look up listing data (must exist and be PUBLISHED)
     SELECT origin_address, destination_address, description, cargo_type, weight_kg
@@ -46,6 +50,34 @@ BEGIN
 
     IF v_offer_price IS NULL THEN
         RAISE EXCEPTION 'HANDOFF_ERROR: Offer % not found or not in SUBMITTED state', p_offer_id;
+    END IF;
+
+    -- TD-C2-001 & TD-C2-002: Triad coherence + transporter identity
+    -- Verify match references THIS listing and THIS offer
+    SELECT listing_id, offer_id INTO v_match_check_listing, v_match_check_offer
+    FROM marketplace_schema.matches
+    WHERE id = p_match_id AND status = 'PROPOSED';
+
+    IF v_match_check_listing IS NULL OR v_match_check_offer IS NULL THEN
+        RAISE EXCEPTION 'HANDOFF_ERROR: Match not found or not in PROPOSED state';
+    END IF;
+
+    IF v_match_check_listing <> p_listing_id THEN
+        RAISE EXCEPTION 'HANDOFF_ERROR: Triad mismatch — match listing (%!)<>provided(%)', v_match_check_listing, p_listing_id;
+    END IF;
+
+    IF v_match_check_offer <> p_offer_id THEN
+        RAISE EXCEPTION 'HANDOFF_ERROR: Triad mismatch — match offer (%!)<>provided(%)', v_match_check_offer, p_offer_id;
+    END IF;
+
+    -- Verify offer belongs to listing and transporter matches
+    IF (SELECT listing_id FROM marketplace_schema.offers WHERE id = p_offer_id AND status = 'SUBMITTED') <> p_listing_id THEN
+        RAISE EXCEPTION 'HANDOFF_ERROR: Triad mismatch — offer listing';
+    END IF;
+
+    IF (SELECT transporter_id FROM marketplace_schema.offers WHERE id = p_offer_id AND status = 'SUBMITTED') <> p_transporter_id THEN
+        RAISE EXCEPTION 'HANDOFF_ERROR: Transporter mismatch — offer owner(%!)<>provided(%)',
+            (SELECT transporter_id FROM marketplace_schema.offers WHERE id = p_offer_id AND status = 'SUBMITTED'), p_transporter_id;
     END IF;
 
     -- Create booking with status ALIGNMENT_CHECKED (pre-alignment validated by caller)
@@ -77,8 +109,6 @@ BEGIN
     WHERE id = p_listing_id AND status = 'PUBLISHED';
 
     IF NOT FOUND THEN
-        -- Transaction will roll back automatically on any subsequent error,
-        -- but this SHOULD NOT fail since we verified PUBLISHED above.
         RAISE EXCEPTION 'HANDOFF_ERROR: Listing % failed to transition to BOOKED', p_listing_id;
     END IF;
 

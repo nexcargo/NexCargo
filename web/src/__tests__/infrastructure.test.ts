@@ -15,11 +15,23 @@ describe('NexCargo Shared Kernel — Infrastructure Bootstrap', () => {
       expect(UserRole.DRIVER).toBe('DRIVER');
     });
 
+    it('contains DISPATCHER role', () => {
+      expect(UserRole.DISPATCHER).toBe('DISPATCHER');
+    });
+
+    it('contains MODERATOR role', () => {
+      expect(UserRole.MODERATOR).toBe('MODERATOR');
+    });
+
     it('contains ADMIN role', () => {
       expect(UserRole.ADMIN).toBe('ADMIN');
     });
 
-    it('contains AI_SYSTEM_AGENT role', () => {
+    it('contains SUPER_ADMIN role', () => {
+      expect(UserRole.SUPER_ADMIN).toBe('SUPER_ADMIN');
+    });
+
+    it('contains AI_SYSTEM_AGENT as internal/system actor (not a human application role)', () => {
       expect(UserRole.AI_SYSTEM_AGENT).toBe('AI_SYSTEM_AGENT');
     });
   });

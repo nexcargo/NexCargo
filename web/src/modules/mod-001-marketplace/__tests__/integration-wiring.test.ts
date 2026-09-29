@@ -322,6 +322,185 @@ describe('MOD-001 Integration Wiring — Wave 1 Increment 4', () => {
         expect(evaluateRBAC('SHIPPER', 'pod', 'update').permitted).toBe(false);
       });
     });
+
+    // ============================================================
+    // Booking Authorization RBAC Tests — HAO Remediation
+    // ============================================================
+
+    describe('Booking RBAC — booking_read resource authorization', () => {
+      it('allows SHIPPER to read bookings', () => {
+        const result = evaluateRBAC('SHIPPER', 'booking_read', 'read');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('allows TRANSPORTER to read bookings', () => {
+        const result = evaluateRBAC('TRANSPORTER', 'booking_read', 'read');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('allows MODERATOR to read bookings', () => {
+        const result = evaluateRBAC('MODERATOR', 'booking_read', 'read');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('allows ADMIN to read bookings', () => {
+        const result = evaluateRBAC('ADMIN', 'booking_read', 'read');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('allows SUPER_ADMIN to read bookings', () => {
+        const result = evaluateRBAC('SUPER_ADMIN', 'booking_read', 'read');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('denies DRIVER from reading bookings', () => {
+        const result = evaluateRBAC('DRIVER', 'booking_read', 'read');
+        expect(result.permitted).toBe(false);
+      });
+
+      it('denies DISPATCHER from reading bookings', () => {
+        const result = evaluateRBAC('DISPATCHER', 'booking_read', 'read');
+        expect(result.permitted).toBe(false);
+      });
+    });
+
+    describe('Booking RBAC — booking_create resource authorization', () => {
+      it('allows SHIPPER to create bookings', () => {
+        const result = evaluateRBAC('SHIPPER', 'booking_create', 'create');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('denies TRANSPORTER from creating bookings', () => {
+        const result = evaluateRBAC('TRANSPORTER', 'booking_create', 'create');
+        expect(result.permitted).toBe(false);
+      });
+
+      it('denies MODERATOR from creating bookings', () => {
+        const result = evaluateRBAC('MODERATOR', 'booking_create', 'create');
+        expect(result.permitted).toBe(false);
+      });
+
+      it('denies ADMIN from creating bookings', () => {
+        const result = evaluateRBAC('ADMIN', 'booking_create', 'create');
+        expect(result.permitted).toBe(false);
+      });
+
+      it('denies SUPER_ADMIN from creating bookings', () => {
+        const result = evaluateRBAC('SUPER_ADMIN', 'booking_create', 'create');
+        expect(result.permitted).toBe(false);
+      });
+
+      it('denies DRIVER from creating bookings', () => {
+        const result = evaluateRBAC('DRIVER', 'booking_create', 'create');
+        expect(result.permitted).toBe(false);
+      });
+
+      it('denies DISPATCHER from creating bookings', () => {
+        const result = evaluateRBAC('DISPATCHER', 'booking_create', 'create');
+        expect(result.permitted).toBe(false);
+      });
+    });
+
+    describe('Booking RBAC — booking_update resource authorization', () => {
+      it('allows SHIPPER to update bookings', () => {
+        const result = evaluateRBAC('SHIPPER', 'booking_update', 'update');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('allows MODERATOR to update bookings', () => {
+        const result = evaluateRBAC('MODERATOR', 'booking_update', 'update');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('allows ADMIN to update bookings', () => {
+        const result = evaluateRBAC('ADMIN', 'booking_update', 'update');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('allows SUPER_ADMIN to update bookings', () => {
+        const result = evaluateRBAC('SUPER_ADMIN', 'booking_update', 'update');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('denies TRANSPORTER from updating bookings', () => {
+        const result = evaluateRBAC('TRANSPORTER', 'booking_update', 'update');
+        expect(result.permitted).toBe(false);
+      });
+
+      it('denies DRIVER from updating bookings', () => {
+        const result = evaluateRBAC('DRIVER', 'booking_update', 'update');
+        expect(result.permitted).toBe(false);
+      });
+
+      it('denies DISPATCHER from updating bookings', () => {
+        const result = evaluateRBAC('DISPATCHER', 'booking_update', 'update');
+        expect(result.permitted).toBe(false);
+      });
+    });
+
+    describe('Booking RBAC — booking_confirm resource authorization', () => {
+      it('allows SHIPPER to confirm bookings', () => {
+        const result = evaluateRBAC('SHIPPER', 'booking_confirm', 'update');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('denies TRANSPORTER from confirming bookings', () => {
+        const result = evaluateRBAC('TRANSPORTER', 'booking_confirm', 'update');
+        expect(result.permitted).toBe(false);
+      });
+
+      it('denies MODERATOR from confirming bookings', () => {
+        const result = evaluateRBAC('MODERATOR', 'booking_confirm', 'update');
+        expect(result.permitted).toBe(false);
+      });
+
+      it('denies ADMIN from confirming bookings', () => {
+        const result = evaluateRBAC('ADMIN', 'booking_confirm', 'update');
+        expect(result.permitted).toBe(false);
+      });
+
+      it('denies SUPER_ADMIN from confirming bookings', () => {
+        const result = evaluateRBAC('SUPER_ADMIN', 'booking_confirm', 'update');
+        expect(result.permitted).toBe(false);
+      });
+
+      it('denies DRIVER from confirming bookings', () => {
+        const result = evaluateRBAC('DRIVER', 'booking_confirm', 'update');
+        expect(result.permitted).toBe(false);
+      });
+
+      it('denies DISPATCHER from confirming bookings', () => {
+        const result = evaluateRBAC('DISPATCHER', 'booking_confirm', 'update');
+        expect(result.permitted).toBe(false);
+      });
+    });
+
+    describe('Booking RBAC — bare bookings resource (backward compat)', () => {
+      it('SHIPPERS can access bookings via bare resource', () => {
+        const result = evaluateRBAC('SHIPPER', 'bookings', 'read');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('TRANSPORTER can access bookings via bare resource', () => {
+        const result = evaluateRBAC('TRANSPORTER', 'bookings', 'read');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('MODERATOR can access bookings via bare resource', () => {
+        const result = evaluateRBAC('MODERATOR', 'bookings', 'read');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('ADMIN can access bookings via bare resource', () => {
+        const result = evaluateRBAC('ADMIN', 'bookings', 'read');
+        expect(result.permitted).toBe(true);
+      });
+
+      it('SUPER_ADMIN can access bookings via bare resource', () => {
+        const result = evaluateRBAC('SUPER_ADMIN', 'bookings', 'read');
+        expect(result.permitted).toBe(true);
+      });
+    });
   });
 
   // ============================================================
