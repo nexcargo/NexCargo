@@ -1,13 +1,15 @@
 // NexCargo MOD-002 — PATCH /api/bookings/[id]/confirm — Booking Confirmation Endpoint
-// C2-Increment 002 Implementation
-// Authorized directive: HAO-WAVE2-AUTH-001 (2026-08-25) — Wave 2 authorized
-// Reference: MOD-002 §4.7, §5.1 (State Machine)
+// C2-Increment 002 + C3 Contract Linkage
+// Authorized directive: HAO-WAVE2-AUTH-001 (Wave 2 authorized) + HAO-C3-AUTHORIZATION
+// Reference: MOD-002 §4.7, §5.1 (State Machine), MOD-002 §8 (Event Model)
 //
 // Rules:
 //   - /confirm is the SOLE mechanism that produces final CONFIRMED status.
 //   - Predecessor state MUST be ALIGNMENT_CHECKED (enforced by state machine).
 //   - Cannot bypass the Booking state machine.
 //   - Invalid state transitions fail explicitly (no fake-success).
+//   - Uses confirm_booking_with_contract() SECDEF for atomic booking+contract creation.
+//   - Per C3: booking confirmation creates/links Contract via trusted RPC.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ValidationError } from '@/shared/errors/app-errors';
@@ -17,11 +19,13 @@ import { createCorrelationContext, resolveCorrelationId } from '@/shared/standar
 import { wrapInContractFramework, recordMarketplaceMetric } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
 import { BookingsRepository } from '@/infrastructure/repositories/bookings-repository';
 import { assertApiAuthorization } from '@/lib/supabase/api-auth';
+import { createClient } from '@/lib/supabase/server';
 
 /**
  * PATCH /api/bookings/[id]/confirm
  * Advances booking from ALIGNMENT_CHECKED → CONFIRMED.
  * Validates source state is ALIGNMENT_CHECKED per authoritative state machine.
+ * Creates contract row and links contract_id to booking via confirm_booking_with_contract() SECDEF.
  */
 export async function PATCH(
   _request: NextRequest,
@@ -33,9 +37,17 @@ export async function PATCH(
   try {
     const { id } = await params;
 
+    // Validate booking UUID format early
+    if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return NextResponse.json(
+        wrapInContractFramework({ error: 'Invalid booking ID format', code: 'ERR_3001' }, correlationId),
+        { status: 400, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+
     const ctx = await assertApiAuthorization(_request, 'booking_confirm', 'update');
 
-    // Retrieve existing booking
+    // Retrieve existing booking for pre-validation (state check before SECDEF call)
     const repo = new BookingsRepository();
     const booking = await repo.getById(id);
 
@@ -70,8 +82,53 @@ export async function PATCH(
       );
     }
 
-    // Confirm booking (sets status=CONFIRMED + confirmation_timestamp)
-    await repo.confirmBooking(id);
+    // C3: Use trusted SECDEF for atomic booking confirmation + contract creation
+    // This replaces the old direct repo.confirmBooking() path which skipped contract creation entirely.
+    const supabase = await createClient();
+    const { data: result, error: secdefError } = await supabase.rpc('confirm_booking_with_contract', {
+      p_booking_id: id,
+      p_correlation_id: correlationId,
+    });
+
+    if (secdefError) {
+      const errMsg = secdefError.message;
+
+      // Map known SECDEF errors to proper API responses
+      if (errMsg.includes('BOOKING_NOT_FOUND')) {
+        return NextResponse.json(
+          wrapInContractFramework({ error: 'Booking not found or deleted', code: 'ERR_1002' }, correlationId),
+          { status: 404, headers: { 'x-correlation-id': correlationId } },
+        );
+      }
+
+      if (errMsg.includes('INVALID_PREDECESSOR')) {
+        return NextResponse.json(
+          wrapInContractFramework({ error: 'Booking must be in ALIGNMENT_CHECKED state to confirm', code: 'ERR_1005' }, correlationId),
+          { status: 409, headers: { 'x-correlation-id': correlationId } },
+        );
+      }
+
+      if (errMsg.includes('ACCESS_DENIED') || errMsg.includes('UNAUTHORIZED')) {
+        return NextResponse.json(
+          wrapInContractFramework({ error: 'Access denied: you are not the shipper of this booking', code: 'ERR_3002' }, correlationId),
+          { status: 403, headers: { 'x-correlation-id': correlationId } },
+        );
+      }
+
+      return NextResponse.json(
+        wrapInContractFramework({ error: 'Booking confirmation failed', details: errMsg, code: 'ERR_1000' }, correlationId),
+        { status: 500, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+
+    if (!result) {
+      return NextResponse.json(
+        wrapInContractFramework({ error: 'No response from booking confirmation', code: 'ERR_3098' }, correlationId),
+        { status: 500, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+
+    const secureResult = result as Record<string, unknown>;
 
     recordMarketplaceMetric('bookings.confirmed', 1, 'count', { listingId: booking.listingId });
 
@@ -83,6 +140,8 @@ export async function PATCH(
           newStatus: BookingStatus.CONFIRMED,
           confirmedBy: ctx.userId,
           confirmationTimestamp: new Date().toISOString(),
+          contractId: secureResult.contract_id as string | undefined,
+          acceptanceStatus: secureResult.acceptance_status as string | undefined,
         },
         correlationId,
       ),
