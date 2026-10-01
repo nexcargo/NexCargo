@@ -1,12 +1,74 @@
 // NexCargo — Public Landing Page (C6 — Production)
 // Full information architecture with 11 sections.
+'use client';
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { SkipNav, Button, PublicHeader, PublicFooter } from '@/shared/ui';
 import { cn } from '@/shared/ui/utils';
+import { useRef, useEffect, useState, useCallback } from 'react';
 
 export const dynamic = 'force-dynamic';
+
+/* ─── Scroll Stack Hook ─── */
+
+/**
+ * Lightweight scroll-driven transform for continuous section overlap.
+ * Sections stay in normal document flow; transforms create controlled
+ * parallax-like overlap where outgoing sections continue moving as
+ * incoming sections enter — no freezing.
+ */
+function useScrollStack(sectionCount: number) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [transforms, setTransforms] = useState<number[]>(() => new Array(sectionCount).fill(0));
+  const rafRef = useRef<number | null>(null);
+  const pendingRef = useRef(false);
+
+  const onScroll = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    if (!pendingRef.current) {
+      pendingRef.current = true;
+      rafRef.current = requestAnimationFrame(() => {
+        pendingRef.current = false;
+        const scrollY = window.scrollY;
+        const viewportH = window.innerHeight;
+        if (!containerRef.current) return;
+        const children = containerRef.current.children;
+        const newTransforms: number[] = [];
+        for (let i = 0; i < children.length && i < sectionCount; i++) {
+          const child = children[i];
+          const childRect = child.getBoundingClientRect();
+          const childTop = childRect.top + scrollY;
+          // Distance from section top to viewport top, normalized
+          const distFromViewport = childTop - scrollY - viewportH * 0.15;
+          // Apply subtle upward offset based on scroll position
+          // This creates overlap without freezing — values change continuously
+          const offset = Math.min(distFromViewport * 0.15, viewportH * 0.4);
+          newTransforms.push(offset);
+        }
+        setTransforms(newTransforms);
+      });
+    }
+  }, [sectionCount]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    // Check reduced motion preference
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (mql.matches) return;
+    // Only activate on desktop (lg breakpoint ≥1024px)
+    if (window.innerWidth < 1024) return;
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [onScroll]);
+
+  return { containerRef, transforms };
+}
 
 /* ─── Shared Primitives ─── */
 
@@ -111,11 +173,11 @@ const demoListings: DemoListing[] = [
   { origin: 'Nampula', destination: 'Cuamba', cargoTypeKey: 'demo_listing_2_cargo', weight: '12,500 kg', statusKey: 'demo_listing_2_status', statusColor: 'bg-teal-500' },
 ];
 
-function ProductDemo() {
+function ProductDemo({ className, style }: { className?: string; style?: React.CSSProperties }) {
   const t = useTranslations('Home');
 
   return (
-    <section className="bg-white py-16 sm:py-20 dark:bg-zinc-950" aria-labelledby="product-demo-title">
+    <section className={cn('bg-white py-16 sm:py-20 dark:bg-zinc-950', className)} aria-labelledby="product-demo-title" style={style}>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 id="product-demo-title" className="text-2xl sm:text-3xl font-display font-bold text-[#0A1628] dark:text-white mb-3">
@@ -215,11 +277,11 @@ function JourneyStep({
   );
 }
 
-function HowItWorks() {
+function HowItWorks({ className, style }: { className?: string; style?: React.CSSProperties }) {
   const t = useTranslations('Home');
 
   return (
-    <section className="bg-[#F8F6F3] py-16 sm:py-20 dark:bg-[#0A1628]" aria-labelledby="how-title">
+    <section className={cn('bg-[#F8F6F3] py-16 sm:py-20 dark:bg-[#0A1628]', className)} aria-labelledby="how-title" style={style}>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 id="how-title" className="text-2xl sm:text-3xl font-display font-bold text-[#0A1628] dark:text-white mb-3">
@@ -351,6 +413,9 @@ export default function Home() {
   const t = useTranslations('Home');
   const locale = typeof window !== 'undefined' ? (window.location.pathname.split('/')[1] || 'en') : 'en';
 
+  // Scroll stack for desktop-only continuous overlap
+  const { containerRef, transforms } = useScrollStack(5);
+
   return (
     <div className="flex min-h-screen flex-col bg-[#F8F6F3] font-sans dark:bg-[#0A1628]">
       <SkipNav />
@@ -358,7 +423,7 @@ export default function Home() {
       {/* Section 0: Public Header */}
       <PublicHeader locale={locale} />
 
-      {/* Section 1: Hero */}
+      {/* Section 1: Hero — calm anchor, no stacking */}
       <section className="relative overflow-hidden bg-gradient-to-b from-[#0A1628] via-[#0f1f3d] to-[#162448] py-20 sm:py-28 lg:py-36">
         <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }} />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -391,14 +456,36 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Section 2: Product Demonstration */}
-      <ProductDemo />
+      {/* Sections 2–7: Continuous scroll-driven overlap (desktop only) */}
+      <div ref={containerRef} className="relative">
 
-      {/* Section 3: How It Works — two-sided journey */}
-      <HowItWorks />
+      {/* Section 2: Product Demonstration — first layer */}
+      <ProductDemo
+        className={cn(
+          'lg:shadow-xl lg:shadow-black/[0.07] dark:lg:shadow-black/30',
+          'lg:[transition:none]'
+        )}
+        style={{ transform: `translateY(${transforms[0] ?? 0}px)` }}
+      />
+
+      {/* Section 3: How It Works — rises over ProductDemo */}
+      <HowItWorks
+        className={cn(
+          'lg:shadow-xl lg:shadow-black/[0.07] dark:lg:shadow-black/30',
+          'lg:[transition:none]'
+        )}
+        style={{ transform: `translateY(${transforms[1] ?? 0}px)` }}
+      />
 
       {/* Section 4 & 5: For Shippers / Transporters */}
-      <section className="bg-white py-16 sm:py-20 dark:bg-[#0A1628]" aria-label="Marketplace participants">
+      <section
+        className={cn(
+          'bg-white py-16 sm:py-20 dark:bg-[#0A1628] lg:shadow-xl lg:shadow-black/[0.07] dark:lg:shadow-black/30',
+          'lg:[transition:none]'
+        )}
+        aria-label="Marketplace participants"
+        style={{ transform: `translateY(${transforms[2] ?? 0}px)` }}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
             {/* Shipper */}
@@ -432,8 +519,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Section 6: Platform Capabilities — expanded to represent full product proposition */}
-      <section className="bg-[#F8F6F3] py-16 sm:py-20 dark:bg-zinc-950" aria-labelledby="features-title">
+      {/* Section 6: Platform Capabilities */}
+      <section
+        className={cn(
+          'bg-[#F8F6F3] py-16 sm:py-20 dark:bg-zinc-950 lg:shadow-xl lg:shadow-black/[0.07] dark:lg:shadow-black/30',
+          'lg:[transition:none]'
+        )}
+        aria-labelledby="features-title"
+        style={{ transform: `translateY(${transforms[3] ?? 0}px)` }}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 id="features-title" className="text-2xl sm:text-3xl font-display font-bold text-[#0A1628] dark:text-white mb-3">
@@ -453,8 +547,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Section 7: Trust & Operating Model */}
-      <section className="bg-white py-16 sm:py-20 dark:bg-[#0A1628]" aria-labelledby="trust-title">
+      {/* Section 7: Trust & Operating Model — last layer */}
+      <section
+        className={cn(
+          'bg-white py-16 sm:py-20 dark:bg-[#0A1628] lg:shadow-xl lg:shadow-black/[0.07] dark:lg:shadow-black/30',
+          'lg:[transition:none]'
+        )}
+        aria-labelledby="trust-title"
+        style={{ transform: `translateY(${transforms[4] ?? 0}px)` }}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 id="trust-title" className="text-2xl sm:text-3xl font-display font-bold text-[#0A1628] dark:text-white mb-3">
@@ -470,10 +571,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Section 8: Mozambique & Regional Positioning */}
+      </div>
+      {/* End stack wrapper */}
+
+      {/* Section 8: Mozambique & Regional Positioning — post-stack, clean reveal */}
       <MozambiqueSection />
 
-      {/* Section 9: Final Dual Conversion */}
+      {/* Section 9: Final Dual Conversion — stable ending */}
       <section className="bg-gradient-to-br from-[#1A5C9E] to-[#0F8B7A] py-16 sm:py-20" aria-label="Get started">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">

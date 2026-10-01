@@ -60,6 +60,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} ${geistMono.variable} h-full antialiased`}>
       <head>
         <link rel="manifest" href="/assets/brand/favicon/manifest.json" />
+        <link href="https://api.fontshare.com/v2/css?f[]=mona-sans@300,400,500,600&display=swap" rel="stylesheet" />
       </head>
       <body className="min-h-full flex flex-col">
         {children}
