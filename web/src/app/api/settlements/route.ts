@@ -1,15 +1,25 @@
-// NexCargo C4-III — POST /api/settlements (Settlement Request Creation)
-// Authorized by: HAO C4-III Authorization (2026-09-08)
-// Authority: MOD-013 §4.3 (SettlementRequestObject), §5.5 (Financial Flow State Machine)
-//            ESS-001F §6 (Settlement Engine), §6.3 (Settlement Rules)
-// Scope: Accept milestone trigger → validate escrow state → create SettlementRequest(PENDING).
+// NexCargo C4 — POST /api/settlements (Settlement Request + Execution)
+// Authoritative: MOD-013 §4.3 (SettlementRequestObject), §5.5 (Financial Flow State Machine)
+// ESS-001F §6 (Settlement Engine), §7 (Ledger Immutability)
+// Supports two operations via method/query param:
+//   POST → Create settlement request
+//   POST with ?execute=true → Execute existing settlement request
+// Settlement amounts are derived from authoritative escrow records.
+// Platform fees calculated server-side. Ledger entries generated atomically.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ValidationError } from '@/shared/errors/app-errors';
 import { assertApiAuthorization } from '@/lib/supabase/api-auth';
+import { resolveCorrelationId, createCorrelationContext } from '@/shared/standards/correlation-id-propagation';
 import { wrapInContractFramework } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
-import { createCorrelationContext, resolveCorrelationId } from '@/shared/standards/correlation-id-propagation';
 import { createAdminClient } from '@/infrastructure/database/supabase';
+import { SettlementExecutionService } from '@/infrastructure/services/settlement-execution-service';
+
+/** Valid trigger events */
+const VALID_TRIGGER_EVENTS = ['PICKUP_CONFIRMED', 'BORDER_CROSSING', 'DELIVERY_CONFIRMED', 'POD_APPROVED'];
+
+/** Valid settlement types */
+const VALID_SETTLEMENT_TYPES = ['FULL', 'MILESTONE', 'REFUND'];
 
 export async function POST(request: NextRequest) {
   const correlationId = resolveCorrelationId(Object.fromEntries(request.headers.entries()));
@@ -19,108 +29,22 @@ export async function POST(request: NextRequest) {
     // Require authorization — SHIPPER or ADMIN can initiate settlements on their contracts
     const ctx = await assertApiAuthorization(request, 'financial', 'create');
 
-    const body = await request.json();
-    const { escrowId, triggerEvent, settlementType, settlementAmount } = body as Record<string, unknown>;
+    const url = new URL(request.url);
+    const shouldExecute = url.searchParams.get('execute') === 'true';
+    const shouldApprove = url.searchParams.get('approve') === 'true';
 
-    // Validate required fields
-    if (!escrowId || typeof escrowId !== 'string' || escrowId.trim() === '') {
-      throw new ValidationError('escrowId is required');
-    }
-    if (!triggerEvent || typeof triggerEvent !== 'string') {
-      throw new ValidationError('triggerEvent is required');
-    }
-    if (!settlementAmount || typeof settlementAmount !== 'number' || settlementAmount <= 0) {
-      throw new ValidationError('settlementAmount must be a positive number');
+    if (shouldExecute) {
+      // EXECUTE mode: execute an existing APPROVED settlement request
+      return handleExecution(request, ctx, correlationId);
     }
 
-    const validatedTriggerEvent = ['PICKUP_CONFIRMED', 'BORDER_CROSSING', 'DELIVERY_CONFIRMED', 'POD_APPROVED']
-      .includes(triggerEvent as string)
-      ? (triggerEvent as 'PICKUP_CONFIRMED' | 'BORDER_CROSSING' | 'DELIVERY_CONFIRMED' | 'POD_APPROVED')
-      : null;
-    
-    if (!validatedTriggerEvent) {
-      throw new ValidationError(
-        `Invalid triggerEvent: ${triggerEvent}. Allowed: PICKUP_CONFIRMED, BORDER_CROSSING, DELIVERY_CONFIRMED, POD_APPROVED`,
-      );
+    if (shouldApprove) {
+      // APPROVE mode: approve a PENDING settlement request (Super Admin only)
+      return handleApproval(request, ctx, correlationId);
     }
 
-    const validatedSettlementType = ['FULL', 'MILESTONE', 'REFUND'].includes(settlementType as string)
-      ? (settlementType as 'FULL' | 'MILESTONE' | 'REFUND')
-      : 'FULL';
-
-    // Query current escrow state
-    const supabase = createAdminClient();
-    const { data: escrow, error: escrowError } = await supabase
-      .schema('financial_schema').from('escrow_records')
-      .select('id, state, amount, currency')
-      .eq('id', escrowId as string)
-      .single();
-
-    if (escrowError || !escrow) {
-      return NextResponse.json(
-        wrapInContractFramework({ error: 'Escrow not found', code: 'ERR_1002' }, correlationId),
-        { status: 404, headers: { 'x-correlation-id': correlationId } },
-      );
-    }
-
-    // Validate escrow state — only FUNDS_LOCKED and PARTIAL_RELEASE can accept settlement
-    const validEscrowStates = ['FUNDS_LOCKED', 'PARTIAL_RELEASE'];
-    if (!validEscrowStates.includes(escrow.state)) {
-      throw new ValidationError(
-        `Escrow must be in FUNDS_LOCKED or PARTIAL_RELEASE to accept settlement, got: ${escrow.state}`,
-      );
-    }
-
-    // Determine target state based on settlement type
-    const finalStateMap: Record<string, string> = {
-      FULL: 'FINAL_RELEASE',
-      MILESTONE: 'PARTIAL_RELEASE',
-      REFUND: 'PARTIAL_RELEASE',
-    };
-    const targetState = finalStateMap[validatedSettlementType] ?? 'FINAL_RELEASE';
-
-    // Create settlement request record
-    const { data: settlementRecord, error: insertError } = await supabase
-      .schema('financial_schema').from('settlement_requests')
-      .insert({
-        escrow_id: escrowId,
-        trigger_event: validatedTriggerEvent,
-        requested_by_module: 'MOD-003',
-        approval_status: 'PENDING',
-        settlement_type: validatedSettlementType,
-        settlement_amount: settlementAmount,
-        retry_count: 0,
-        correlation_id: correlationId,
-        created_by: ctx.userId,
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      return NextResponse.json(
-        wrapInContractFramework(
-          { error: 'Failed to create settlement request', code: 'ERR_1000' },
-          correlationId,
-        ),
-        { status: 500, headers: { 'x-correlation-id': correlationId } },
-      );
-    }
-
-    return NextResponse.json(
-      wrapInContractFramework(
-        {
-          settlementId: settlementRecord.id,
-          escrowId,
-          triggerEvent: validatedTriggerEvent,
-          settlementType: validatedSettlementType,
-          settlementAmount,
-          approvalStatus: 'PENDING',
-          createdAt: settlementRecord.created_at,
-        },
-        correlationId,
-      ),
-      { status: 201, headers: { 'x-correlation-id': correlationId } },
-    );
+    // CREATE mode: create a new settlement request
+    return handleCreation(request, ctx, correlationId);
   } catch (error) {
     if (error instanceof ValidationError) {
       return NextResponse.json(
@@ -134,15 +58,169 @@ export async function POST(request: NextRequest) {
         { status: 401, headers: { 'x-correlation-id': correlationId } },
       );
     }
-    if (error instanceof Error && error.message.startsWith('FORBIDDEN')) {
-      return NextResponse.json(
-        wrapInContractFramework({ error: error.message, code: 'ERR_1004' }, correlationId),
-        { status: 403, headers: { 'x-correlation-id': correlationId } },
-      );
-    }
     return NextResponse.json(
-      wrapInContractFramework(null, correlationId),
+      wrapInContractFramework({ error: 'Internal server error', details: (error as Error).message, code: 'ERR_1099' }, correlationId),
       { status: 500, headers: { 'x-correlation-id': correlationId } },
     );
   }
+}
+
+async function handleApproval(request: NextRequest, ctx: { userId: string }, correlationId: string): Promise<NextResponse> {
+  const body = await request.json();
+  const { settlementId } = body as Record<string, unknown>;
+
+  if (!settlementId || typeof settlementId !== 'string') {
+    throw new ValidationError('settlementId is required for approval');
+  }
+
+  // Validate UUID format
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(settlementId as string)) {
+    throw new ValidationError('Invalid settlementId format');
+  }
+
+  // Approve settlement via service (enforces Super Admin role)
+  const service = new SettlementExecutionService();
+  const result = await service.approveRequest(
+    settlementId as string,
+    ctx.userId,
+    correlationId,
+  );
+
+  if (!result.success) {
+    return NextResponse.json(
+      wrapInContractFramework({ error: result.message, code: 'ERR_STL_403' }, correlationId),
+      { status: 403, headers: { 'x-correlation-id': correlationId } },
+    );
+  }
+
+  return NextResponse.json(
+    wrapInContractFramework(result, correlationId),
+    { status: 200, headers: { 'x-correlation-id': correlationId } },
+  );
+}
+
+async function handleApproval(request: NextRequest, ctx: { userId: string }, correlationId: string): Promise<NextResponse> {
+  const body = await request.json();
+  const { settlementId } = body as Record<string, unknown>;
+
+  if (!settlementId || typeof settlementId !== 'string') {
+    throw new ValidationError('settlementId is required for approval');
+  }
+
+  // Validate UUID format
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(settlementId as string)) {
+    throw new ValidationError('Invalid settlementId format');
+  }
+
+  // Approve settlement via service (enforces Super Admin role)
+  const service = new SettlementExecutionService();
+  const result = await service.approveRequest(
+    settlementId as string,
+    ctx.userId,
+    correlationId,
+  );
+
+  if (!result.success) {
+    return NextResponse.json(
+      wrapInContractFramework({ error: result.message, code: 'ERR_STL_403' }, correlationId),
+      { status: 403, headers: { 'x-correlation-id': correlationId } },
+    );
+  }
+
+  return NextResponse.json(
+    wrapInContractFramework(result, correlationId),
+    { status: 200, headers: { 'x-correlation-id': correlationId } },
+  );
+}
+
+async function handleCreation(request: NextRequest, ctx: { userId: string }, correlationId: string): Promise<NextResponse> {
+  const body = await request.json();
+  const { escrowId, triggerEvent, settlementType, settlementAmount } = body as Record<string, unknown>;
+
+  // Validate required fields
+  if (!escrowId || typeof escrowId !== 'string' || escrowId.trim() === '') {
+    throw new ValidationError('escrowId is required');
+  }
+  if (!triggerEvent || typeof triggerEvent !== 'string') {
+    throw new ValidationError('triggerEvent is required');
+  }
+  if (!settlementAmount || typeof settlementAmount !== 'number' || settlementAmount <= 0) {
+    throw new ValidationError('settlementAmount must be a positive number');
+  }
+
+  // Validate trigger event
+  const validatedTriggerEvent = VALID_TRIGGER_EVENTS.includes(triggerEvent as string)
+    ? (triggerEvent as typeof VALID_TRIGGER_EVENTS[number])
+    : null;
+
+  if (!validatedTriggerEvent) {
+    throw new ValidationError(
+      `Invalid triggerEvent: ${triggerEvent}. Allowed: ${VALID_TRIGGER_EVENTS.join(', ')}`,
+    );
+  }
+
+  // Validate settlement type
+  const validatedSettlementType = VALID_SETTLEMENT_TYPES.includes(settlementType as string)
+    ? (settlementType as typeof VALID_SETTLEMENT_TYPES[number])
+    : 'FULL';
+
+  // Use settlement service for validation and creation
+  const service = new SettlementExecutionService();
+  const result = await service.createRequest({
+    escrowId: escrowId as string,
+    triggerEvent: validatedTriggerEvent,
+    settlementType: validatedSettlementType,
+    settlementAmount,
+    userId: ctx.userId,
+    correlationId,
+  });
+
+  if (!result.success) {
+    return NextResponse.json(
+      wrapInContractFramework({ error: result.message, code: 'ERR_STL_400' }, correlationId),
+      { status: 400, headers: { 'x-correlation-id': correlationId } },
+    );
+  }
+
+  return NextResponse.json(
+    wrapInContractFramework({
+      settlementId: result.settlementId,
+      message: result.message,
+    }, correlationId),
+    { status: 201, headers: { 'x-correlation-id': correlationId } },
+  );
+}
+
+async function handleExecution(request: NextRequest, ctx: { userId: string }, correlationId: string): Promise<NextResponse> {
+  const body = await request.json();
+  const { settlementId } = body as Record<string, unknown>;
+
+  if (!settlementId || typeof settlementId !== 'string') {
+    throw new ValidationError('settlementId is required for execution');
+  }
+
+  // Validate UUID format
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(settlementId as string)) {
+    throw new ValidationError('Invalid settlementId format');
+  }
+
+  // Execute settlement via service
+  const service = new SettlementExecutionService();
+  const result = await service.execute({
+    settlementId: settlementId as string,
+    userId: ctx.userId,
+    correlationId,
+  });
+
+  if (!result.success) {
+    return NextResponse.json(
+      wrapInContractFramework({ error: result.message, code: 'ERR_STL_400' }, correlationId),
+      { status: 400, headers: { 'x-correlation-id': correlationId } },
+    );
+  }
+
+  return NextResponse.json(
+    wrapInContractFramework(result, correlationId),
+    { status: 200, headers: { 'x-correlation-id': correlationId } },
+  );
 }
