@@ -14,6 +14,8 @@ import { resolveCorrelationId, createCorrelationContext } from '@/shared/standar
 import { wrapInContractFramework } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
 import { createAdminClient } from '@/infrastructure/database/supabase';
 import { SettlementExecutionService } from '@/infrastructure/services/settlement-execution-service';
+import { InMemoryEventEmitter } from '@/shared/events/emitter';
+import { EventClassification, EventCriticality } from '@/shared/types/enums';
 
 /** Valid trigger events */
 const VALID_TRIGGER_EVENTS = ['PICKUP_CONFIRMED', 'BORDER_CROSSING', 'DELIVERY_CONFIRMED', 'POD_APPROVED'];
@@ -63,40 +65,6 @@ export async function POST(request: NextRequest) {
       { status: 500, headers: { 'x-correlation-id': correlationId } },
     );
   }
-}
-
-async function handleApproval(request: NextRequest, ctx: { userId: string }, correlationId: string): Promise<NextResponse> {
-  const body = await request.json();
-  const { settlementId } = body as Record<string, unknown>;
-
-  if (!settlementId || typeof settlementId !== 'string') {
-    throw new ValidationError('settlementId is required for approval');
-  }
-
-  // Validate UUID format
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(settlementId as string)) {
-    throw new ValidationError('Invalid settlementId format');
-  }
-
-  // Approve settlement via service (enforces Super Admin role)
-  const service = new SettlementExecutionService();
-  const result = await service.approveRequest(
-    settlementId as string,
-    ctx.userId,
-    correlationId,
-  );
-
-  if (!result.success) {
-    return NextResponse.json(
-      wrapInContractFramework({ error: result.message, code: 'ERR_STL_403' }, correlationId),
-      { status: 403, headers: { 'x-correlation-id': correlationId } },
-    );
-  }
-
-  return NextResponse.json(
-    wrapInContractFramework(result, correlationId),
-    { status: 200, headers: { 'x-correlation-id': correlationId } },
-  );
 }
 
 async function handleApproval(request: NextRequest, ctx: { userId: string }, correlationId: string): Promise<NextResponse> {
@@ -217,6 +185,28 @@ async function handleExecution(request: NextRequest, ctx: { userId: string }, co
       wrapInContractFramework({ error: result.message, code: 'ERR_STL_400' }, correlationId),
       { status: 400, headers: { 'x-correlation-id': correlationId } },
     );
+  }
+
+  // C5 Increment 1 — Emit settlementCompleted canonical event (non-blocking)
+  try {
+    const { getEventBus } = await import('@/shared/events/handler-registry');
+    const emitter = InMemoryEventEmitter.createEvent({
+      eventType: 'settlementCompleted',
+      sourceModule: 'MOD-013',
+      aggregateId: settlementId as string,
+      aggregateType: 'SettlementRequest',
+      payload: {
+        shipper_id: result?.shipperId ?? '',
+        escrowId: body?.escrowId ?? '',
+      },
+      classification: EventClassification.FINANCIAL,
+      criticality: EventCriticality.CRITICAL,
+      correlationId,
+    });
+    await getEventBus().publish(emitter);
+  } catch (emissionErr: unknown) {
+    const message = emissionErr instanceof Error ? emissionErr.message : String(emissionErr);
+    console.error('[Settlements] Event emission failed (non-blocking):', message);
   }
 
   return NextResponse.json(

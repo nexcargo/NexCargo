@@ -20,6 +20,8 @@ import { wrapInContractFramework, recordMarketplaceMetric } from '@/modules/mod-
 import { BookingsRepository } from '@/infrastructure/repositories/bookings-repository';
 import { assertApiAuthorization } from '@/lib/supabase/api-auth';
 import { createClient } from '@/lib/supabase/server';
+import { InMemoryEventEmitter } from '@/shared/events/emitter';
+import { EventClassification, EventCriticality } from '@/shared/types/enums';
 
 /**
  * PATCH /api/bookings/[id]/confirm
@@ -131,6 +133,28 @@ export async function PATCH(
     const secureResult = result as Record<string, unknown>;
 
     recordMarketplaceMetric('bookings.confirmed', 1, 'count', { listingId: booking.listingId });
+
+    // C5 Increment 1 — Emit bookingConfirmed canonical event (non-blocking)
+    try {
+      const { getEventBus } = await import('@/shared/events/handler-registry');
+      const emitter = InMemoryEventEmitter.createEvent({
+        eventType: 'bookingConfirmed',
+        sourceModule: 'MOD-002',
+        aggregateId: id,
+        aggregateType: 'Booking',
+        payload: {
+          transporter_id: booking.transporterId,
+          listingId: booking.listingId,
+        },
+        classification: EventClassification.BUSINESS,
+        criticality: EventCriticality.CRITICAL,
+        correlationId,
+      });
+      await getEventBus().publish(emitter);
+    } catch (emissionErr: unknown) {
+      const message = emissionErr instanceof Error ? emissionErr.message : String(emissionErr);
+      console.error('[BookingConfirm] Event emission failed (non-blocking):', message);
+    }
 
     return NextResponse.json(
       wrapInContractFramework(

@@ -8,7 +8,7 @@
 
 | Field | Value |
 |-------|-------|
-| Last Updated | 2026-09-21 — C7-004 live verification closure: migration 028 applied live (uq_documents_dedup_active), all document tables verified, RLS policies confirmed, code review + DB-level verification + test suite confirm operational correctness. TS: 0 errors. Tests: 1,797 passing across 91 files. Build: compiles successfully. C7-005 remains NOT AUTHORIZED.
+| Last Updated | 2026-09-22 — Local routing/i18n/auth closure: auth pages moved under [locale]/(auth)/ route structure; Portuguese and English authentication flows verified locally at http://localhost:3000. TypeScript clean. Build compiles (Google Fonts download pre-existing network limitation). Commit 7a9ea05 pushed to main, synchronized with origin/main. Unrelated working-tree changes preserved. Vercel not modified. Final public homepage / branding / full C6 public-web experience outstanding next priority. C7-004 implementation-complete, live authenticated E2E verification pending.
 | Last Updated By | Post-reconciliation: Brand styling aligned (NexCargo title case), CargoLink Marketplace approved, public experience gap recovered (homepage implemented, responsive/SEO added), role taxonomy reconciled (FLEET_OWNER removed, SUPER_ADMIN added, DISPATCHER formalized, USER ? null onboarding state), legacy x-user-role fallback eliminated, HAO-R-001/R-002/R-003 all resolved. C1 closed. C2-Inc 001/002 closed. TS: 0 errors. Tests: 1,254 passing across 55 files. Wave 5 authorized conditional on entry criteria. No HAO decision from this reconciliation blocks C0-C10 development. Ready to resume established path. |
 | Session ID | 2026-09-07-post-reconciliation-verification |
 
@@ -353,6 +353,55 @@ git remote -v
 git remote get-url origin
 ```
 This is an operational safeguard following the repository transfer. Do not assume the remote is correct.
+
+---
+
+### Session: 2026-09-22   Local Routing / i18n / Authentication Closure
+
+| Field | Value |
+|-------|-------|
+| Date | 2026-09-22 |
+| Task | Complete local routing and authentication locale flows; move auth pages under locale-aware route structure |
+
+#### Root Cause
+
+Auth pages resided at `app/(auth)/` — outside the `[locale]` dynamic segment. Middleware excluded them from next-intl processing, so `/en → /sign-in` always rendered Portuguese (default fallback).
+
+#### Fix Applied
+
+- Moved all four auth pages (`sign-in`, `register`, `forgot-password`, `reset-password`) from `(auth)/` into `[locale]/(auth)/`
+- Removed auth path exclusions from `middleware.ts` matcher so next-intl middleware processes auth routes through standard locale handling
+- Auth pages use plain `<Link>` hrefs; next-intl router resolves locale-prefixed URLs automatically based on current URL context
+
+#### Browser Verification (all PASS)
+
+- `/pt/sign-in` → Portuguese sign-in page ✓
+- `/en/sign-in` → English sign-in page ✓
+- `/pt/register` → Portuguese register page ✓
+- `/en/register` → English register page ✓
+- `/pt/forgot-password` → Portuguese ✓
+- `/en/forgot-password` → English ✓
+- `/pt/reset-password` → Portuguese ✓
+- `/en/reset-password` → English ✓
+- Auth-to-auth navigation links preserve locale in both languages ✓
+- Local runtime verified at `http://localhost:3000` ✓
+
+#### TypeScript & Build
+
+- `tsc --noEmit`: clean (EXIT:0)
+- Build: compiles successfully; Google Fonts download remains a pre-existing network limitation (not caused by changes)
+
+#### Git
+
+- Commit: `7a9ea056a37dae85e93ad37eb65b39844906178d`
+- Branch: `main` pushed and synchronized with `origin/main`
+- Unrelated working-tree changes preserved
+
+#### Outstanding
+
+- Final public homepage, branding and full C6 public-web experience remain outstanding and are the next priority before returning to Vercel
+- C7-004 remains implementation-complete with live authenticated E2E verification pending
+- Vercel was not modified; deployment remains intentionally deferred
 
 ---
 
@@ -858,3 +907,84 @@ Foundation / Module Implementation / Validation / Deployment / Mobile Preparatio
 
 **2026-09-18 Governance Normalization — C7 Development State After Custom-Schema Remediation:** This document was reconciled against repository state, HAO decision evidence, and read-only audit findings. Changes made: (1) New section "Normalized C7 Governance Structure" inserted before Current Phase — formalizes C7-001 through C7-005 status table; (2) "Authoritative Trigger — ContractSigned → Tracking" subsection added with HAO decision evidence citations; (3) "Historical Gap Clarification" subsection added explaining BookingConfirmed → Tracking references as superseded; (4) "Remaining OPEN Items" subsection clarifying C7-004 and C7-005 as the only two remaining items requiring authorization; (5) Current Phase line updated from "C7 FULLY DEPLOYED" to "C7 TRACKING INFRASTRUCTURE/SECURITY DEPLOYED" to distinguish infrastructure closure from remaining business work; (6) Current Phase Notes updated: "C7 Final Closure" → "C7 Tracking Infrastructure/Security — CLOSED", added item (7) ContractSigned → Tracking, added *Open C7 items* note for C7-004/C7-005; (7) Three "Remaining C7 Gaps" sections updated (C7-Inc-001 lines 674-680, C7-Inc-002 lines 708-713, END-OF-DAY lines 761-765) — each gap referencing Booking → Tracking now includes clarification that it was resolved by C7-003 and BookingConfirmed → Tracking is explicitly excluded; (8) C7-Increment-001 closure note updated (line 717) — changed "remains explicitly UNAUTHORIZED" to "was subsequently RESOLVED by HAO-AUTH-WORKSTREAM-A-C3C7-HANDOFF"; (9) C7-Increment-002 closure note updated (line 719) — added supersession clause; (10) NEXT SESSION block updated — expanded to reference normalized structure, clarify open items as C7-004/C7-005, explicit BookingConfirmed exclusion; (11) Continuity Notes session status row updated (line 545) — added reconciliation note. No source code modified. No module.config.ts changed. No database modifications performed. No implementation performed. No commits made. Governance documentation only.
 
+
+---
+
+## C5 Increment 1 — Dependency Resolution Pass (Remediation)
+
+### Session Status: Implementation + Remediation Complete — Awaiting HAO Commit Authorization
+
+This pass resolved the settlement shipperId data gap that prevented settlementCompleted notifications from being created.
+
+#### Settlement Data Path Correction
+
+**Root cause:** The execute_settlement() SECDEF RPC in migration 030 had access to the full escrow→contract→booking chain but never queried the booking table for shipper_id. The result JSON did not include shipper_id, causing the route handler to emit shipper_id: '' (empty string), which the notification handler rejected.
+
+**Fix applied (additive, no business semantics changed):**
+
+1. **Migration 030** (execute_settlement() RPC): Added Step 3b to resolve shipper_id via escrow → contract → booking FK chain. Returns COALESCE(v_shipper_id::text, '') in the result JSON.
+
+2. **Service interface** (SettlementExecutionResult.shipperId): Changed from shipperId?: string (optional, never populated) to shipperId: string (required). All error return paths updated to include shipperId: ''.
+
+3. **Route handler** (settlements/route.ts): Already used esult?.shipperId ?? '' — now receives real UUID from RPC instead of empty string.
+
+**Data path after fix:**
+`
+successful settlement execution
+→ execute_settlement() RPC resolves shipper_id from bookings table
+→ SettlementExecutionResult.shipperId = real auth.users UUID
+→ settlementCompleted event payload.shipper_id = real UUID
+→ resolveRecipient() returns { recipientId: shipperId, sourceModule: 'MOD-013' }
+→ createNotificationFromEvent() inserts into communication_schema.notifications
+→ Status: QUEUED
+`
+
+**No financial/business semantics changed.** The shipper_id is derived from existing FK relationships. No new tables, columns, roles, or relationships created. SECDEF function behavior unchanged except for one additional SELECT on an already-loaded escrow chain.
+
+#### Production Database Baseline Findings
+
+**Finding:** The production Supabase project (cvdggspiudmudbbdkjrc.supabase.co) has NO application tables deployed. All 31 migrations are absent:
+- communication_schema.notifications: Does not exist (PGRST205)
+- logistics_schema.bookings: Does not exist
+- logistics_schema.contracts: Does not exist
+- inancial_schema.escrow_records: Does not exist
+- inancial_schema.settlement_requests: Does not exist
+- supabase_migrations.schema_migrations: Does not exist
+
+**Conclusion:** The production database is a fresh/reset instance with zero migrations applied. It does NOT contain any C1–C4 or C5 schema.
+
+**Required migration sequence for C5 operational deployment:**
+1.  01_initial.sql — Core schemas (marketplace, logistics, financial, communication, etc.)
+2.  02_rls_policies.sql — RLS policies
+3.  03_bookings.sql — Bookings table
+4.  04_marketplace_handoff_rpc.sql — Marketplace RPCs
+5.  05_contracts_and_escrow_rls.sql — Contracts + escrow
+6.  06_payment_intents.sql — Payment intents
+7.  07_settlement_ledger_c4iii.sql — Settlement requests + ledger
+8.  08_notifications_c5i.sql — Notification persistence (C5-I) ← Required for C5 Increment 1
+9.  09_monitoring_schema_c5ii.sql — Monitoring schema
+10.  10 through  30 — Remaining migrations up to C4 financial execution
+
+**Live verification blocked:** Cannot perform live E2E verification until at minimum migrations 001–008 are deployed. Migration deployment requires separate infrastructure/production authorization outside this tool's capability.
+
+#### Retained Corrections (Verified Intact)
+
+| Item | Status | Evidence |
+|------|--------|----------|
+| Payment event gating (webhook) | CONFIRMED INTACT | Events emitted only when secdefSuccess === true (lines 171, 263 of payment/route.ts) |
+| Contract signing recipient | CONFIRMED INTACT | Uses esult?.shipper_id (line 118 of contracts/[id]/accept/route.ts), NOT booking_id |
+| Correlation ID propagation | CONFIRMED INTACT | Full chain verified: headers → correlationId → emitter → event → notification DB |
+
+#### Test Results
+
+- **Notification handler tests:** 40 passing (37 original + 3 new settlement recipient tests)
+- **TypeScript compilation:** No NEW errors introduced. Pre-existing errors unchanged (7 total, all listed in WIP context packet).
+
+#### Files Changed
+
+| File | Change |
+|------|--------|
+| web/src/infrastructure/migrations/030_c4_financial_execution.sql | Added Step 3b: shipper_id resolution query; added shipper_id to RPC return JSON |
+| web/src/infrastructure/services/settlement-execution-service.ts | shipperId required (not optional); all error paths include shipperId: '' |
+| web/src/modules/mod-016-notifications/__tests__/notification-event-handler.test.ts | 4 settlement recipient tests (UUID format validation, empty string rejection, non-UUID handling) |
+| docs/governance/nexcargo-development-state.md | Added C5 Increment 1 dependency resolution entry |

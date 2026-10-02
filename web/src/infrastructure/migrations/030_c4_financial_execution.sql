@@ -448,6 +448,20 @@ BEGIN
         RAISE EXCEPTION 'ESCROW_NOT_FOUND: escrow % not found', v_settlement.escrow_id;
     END IF;
 
+    -- Step 3b: Resolve shipper_id from escrow → contract → booking chain
+    -- This exposes the already-existing Shipper relationship required by the notification layer.
+    DECLARE
+        v_shipper_id UUID;
+    BEGIN
+        SELECT b.shipper_id INTO v_shipper_id
+        FROM financial_schema.escrow_records e
+        JOIN logistics_schema.contracts c ON c.id = e.contract_id
+        JOIN logistics_schema.bookings b ON b.id = c.booking_id
+        WHERE e.id = v_settlement.escrow_id
+          AND b.is_deleted = FALSE
+        LIMIT 1;
+    END;
+
     -- Step 4: Use AUTHORITY amount from escrow — NEVER trust client input
     -- The settlement_amount from the request is advisory; the authoritative
     -- available amount comes from the escrow record.
@@ -534,6 +548,7 @@ BEGIN
         'action', 'settlement_executed',
         'settlement_id', v_settlement.id::text,
         'escrow_id', v_escrow.id::text,
+        'shipper_id', COALESCE(v_shipper_id::text, ''),
         'authoritative_amount', v_authoritative_amount,
         'platform_fee', v_platform_fee,
         'transporter_payout', v_transporter_payout,

@@ -99,7 +99,16 @@ Each registered event SHALL define the following metadata:
 | Event | Owner | Produced By | Consumers | Classification | Criticality | Immutable | Description |
 |-|-|-|-|-|-|-|-|
 | listingCreated | MOD-001 | MOD-001 | MOD-002, MOD-012 | Business | High | Yes | A shipment listing has been created. |
-| bookingConfirmed | MOD-002 | MOD-002 | MOD-003, MOD-005 | Business | Critical | Yes | A booking has been confirmed. |
+| bookingConfirmed | MOD-002 | MOD-002 | MOD-003, MOD-005, MOD-016 | Business | Critical | Yes | A booking has been confirmed. |
+| contractSigned | MOD-002 | MOD-002 | MOD-003, MOD-005, MOD-016 | Business | Critical | Yes | A contract has been signed by both parties. |
+| escrowLockConfirmed | MOD-005 | MOD-005 | MOD-013, MOD-016 | Financial | Critical | Yes | Funds have been locked in escrow per external confirmation. |
+| paymentConfirmed | MOD-005 | MOD-005 | MOD-013, MOD-016 | Financial | Critical | Yes | Payment has been confirmed by the provider. |
+| paymentFailed | MOD-005 | MOD-005 | MOD-013, MOD-016 | Financial | Critical | Yes | Payment has failed per provider callback. |
+| settlementCompleted | MOD-013 | MOD-013 | MOD-005, MOD-016 | Financial | Critical | Yes | Settlement has been completed and funds distributed. |
+| disputeHoldPlaced | MOD-015 | MOD-015 | MOD-005, MOD-016 | Compliance | High | Yes | A hold has been placed on funds due to a dispute. |
+| trackingStatusChanged | MOD-003 | MOD-003 | MOD-001, MOD-016 | Business | High | Yes | Shipment tracking status has been updated. |
+| supportTicketCreated | MOD-015 | MOD-015 | MOD-016 | Business | Medium | Yes | A support ticket has been created. |
+| documentUploaded | MOD-004 | MOD-004 | MOD-016 | Business | Medium | Yes | A document has been uploaded to the system. |
 
 NOTE: The example rows above illustrate the registry structure. They are not exhaustive. The full event catalogue is maintained in the Module Event Ownership sections (§13).
 
@@ -190,6 +199,14 @@ Canonical events SHALL NOT:
 - contractSigned
 - contractAmended
 - contractCompleted
+- escrowLockConfirmed
+- paymentConfirmed
+- paymentFailed
+- settlementCompleted
+- disputeHoldPlaced
+- trackingStatusChanged
+- supportTicketCreated
+- documentUploaded
 
 ---
 
@@ -354,6 +371,52 @@ It SHALL NOT trigger automatic booking.
 - contractTerminated
 - contractCompleted
 
+## MOD-003 Owned Events
+
+- trackingRequested
+- pickupConfirmed
+- transitStarted
+- deliveryConfirmed
+- podSubmitted
+- trackingStatusChanged
+
+## MOD-004 Owned Events
+
+- documentsUploaded
+- documentVerified
+- documentRejected
+- documentUploaded
+
+## MOD-015 Owned Events
+
+- supportTicketCreated
+- disputeFiled
+- disputeHoldPlaced
+- disputeEvidenceSubmitted
+
+## MOD-003 Owned Events
+
+- trackingRequested
+- pickupConfirmed
+- transitStarted
+- deliveryConfirmed
+- podSubmitted
+- trackingStatusChanged
+
+## MOD-004 Owned Events
+
+- documentsUploaded
+- documentVerified
+- documentRejected
+- documentUploaded
+
+## MOD-015 Owned Events
+
+- supportTicketCreated
+- disputeFiled
+- disputeHoldPlaced
+- disputeEvidenceSubmitted
+
 ---
 
 # 14. Implementation Independence
@@ -442,8 +505,8 @@ NexCargo SHALL NOT originate custody events.
 Preferred examples:
 
 - escrowLockConfirmed
-- escrowReleaseConfirmed
 - settlementCompleted
+- paymentConfirmed
 - paymentFailed
 
 ---

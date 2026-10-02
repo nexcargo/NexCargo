@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ValidationError } from '@/shared/errors/app-errors';
 import { resolveCorrelationId, createCorrelationContext } from '@/shared/standards/correlation-id-propagation';
 import { wrapInContractFramework } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
+import { InMemoryEventEmitter } from '@/shared/events/emitter';
+import { EventClassification, EventCriticality } from '@/shared/types/enums';
 
 /** Predefined mock webhook secret — only for development/testing. Never production. */
 const MOCK_WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'c4-mock-secret-do-not-use-in-production';
@@ -83,7 +85,7 @@ if (eventIdCache.size > 10000) {
 // Core Webhook Processing — Connects to SECDEF functions
 // ============================================================
 
-async function processPaymentWebhook(parsed: Record<string, unknown>): Promise<{
+async function processPaymentWebhook(parsed: Record<string, unknown>, correlationId: string): Promise<{
   success: boolean;
   httpStatus: number;
   body: Record<string, unknown>;
@@ -129,12 +131,13 @@ async function processPaymentWebhook(parsed: Record<string, unknown>): Promise<{
     // Call SECDEF function to update payment intent and advance escrow
     // This is done via a direct fetch to the Supabase REST API since we're in an edge route
     // The SECDEF function handles all validation, state transitions, and ledger entry creation
+    let secdefSuccess = false;
     try {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
       if (supabaseUrl && serviceRoleKey) {
-        await fetch(`${supabaseUrl}/rest/v1/rpc/confirm_payment_via_webhook`, {
+        const secdefResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/confirm_payment_via_webhook`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -149,11 +152,58 @@ async function processPaymentWebhook(parsed: Record<string, unknown>): Promise<{
             p_correlation_id: null,
           }),
         });
+
+        if (!secdefResponse.ok) {
+          console.error('[Webhook] SECDEF confirm_payment_via_webhook returned non-OK status:', secdefResponse.status);
+        } else {
+          secdefSuccess = true;
+        }
+      } else {
+        // No DB configured — skip SECDEF call, do not emit events
+        console.warn('[Webhook] SECDEF skipped: missing Supabase credentials');
       }
     } catch (_err) {
-      // SECDEF call failed — log but still acknowledge webhook
-      // The payment intent can be manually reconciled via reconciliation endpoint
+      // SECDEF call failed — log but do NOT emit success events
       console.error('[Webhook] SECDEF confirm_payment_via_webhook failed:', _err);
+    }
+
+    // C5 Increment 1 — Emit escrowLockConfirmed + paymentConfirmed canonical events ONLY if SECDEF succeeded
+    if (secdefSuccess) {
+      try {
+        const { getEventBus } = await import('@/shared/events/handler-registry');
+        const emitter1 = InMemoryEventEmitter.createEvent({
+          eventType: 'escrowLockConfirmed',
+          sourceModule: 'MOD-005',
+          aggregateId: paymentIntentId,
+          aggregateType: 'Escrow',
+          payload: {
+            shipper_id: parsed.shipperId ?? '',
+            transporter_id: parsed.transporterId ?? '',
+          },
+          classification: EventClassification.FINANCIAL,
+          criticality: EventCriticality.CRITICAL,
+          correlationId,
+        });
+        const emitter2 = InMemoryEventEmitter.createEvent({
+          eventType: 'paymentConfirmed',
+          sourceModule: 'MOD-005',
+          aggregateId: paymentIntentId,
+          aggregateType: 'PaymentIntent',
+          payload: {
+            shipper_id: parsed.shipperId ?? '',
+            transporter_id: parsed.transporterId ?? '',
+            amount,
+            currency,
+          },
+          classification: EventClassification.FINANCIAL,
+          criticality: EventCriticality.CRITICAL,
+          correlationId,
+        });
+        await getEventBus().publishBatch([emitter1, emitter2]);
+      } catch (emissionErr: unknown) {
+        const message = emissionErr instanceof Error ? emissionErr.message : String(emissionErr);
+        console.error('[PaymentWebhook] Event emission failed (non-blocking):', message);
+      }
     }
 
     return {
@@ -175,12 +225,13 @@ async function processPaymentWebhook(parsed: Record<string, unknown>): Promise<{
   if (status === 'FAILED' || status === 'CANCELLED' || status === 'REJECTED') {
     storeProcessedEvent(eventId, referenceId, 'FAILED');
 
+    let secdefSuccess = false;
     try {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
       if (supabaseUrl && serviceRoleKey) {
-        await fetch(`${supabaseUrl}/rest/v1/rpc/confirm_payment_via_webhook`, {
+        const secdefResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/confirm_payment_via_webhook`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -195,9 +246,41 @@ async function processPaymentWebhook(parsed: Record<string, unknown>): Promise<{
             p_correlation_id: null,
           }),
         });
+
+        if (!secdefResponse.ok) {
+          console.error('[Webhook] SECDEF confirm_payment_via_webhook (failure) returned non-OK status:', secdefResponse.status);
+        } else {
+          secdefSuccess = true;
+        }
+      } else {
+        console.warn('[Webhook] SECDEF skipped: missing Supabase credentials');
       }
     } catch (_err) {
       console.error('[Webhook] SECDEF confirm_payment_via_webhook (failure) failed:', _err);
+    }
+
+    // C5 Increment 1 — Emit paymentFailed canonical event ONLY if SECDEF successfully processed the failure outcome
+    if (secdefSuccess) {
+      try {
+        const { getEventBus } = await import('@/shared/events/handler-registry');
+        const emitter = InMemoryEventEmitter.createEvent({
+          eventType: 'paymentFailed',
+          sourceModule: 'MOD-005',
+          aggregateId: paymentIntentId,
+          aggregateType: 'PaymentIntent',
+          payload: {
+            shipper_id: parsed.shipperId ?? '',
+            failure_reason: failureReason || 'Provider reported failure',
+          },
+          classification: EventClassification.FINANCIAL,
+          criticality: EventCriticality.CRITICAL,
+          correlationId,
+        });
+        await getEventBus().publish(emitter);
+      } catch (emissionErr: unknown) {
+        const message = emissionErr instanceof Error ? emissionErr.message : String(emissionErr);
+        console.error('[PaymentWebhook] Event emission failed (non-blocking):', message);
+      }
     }
 
     return {
@@ -270,7 +353,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 2: Process payload
-    const result = await processPaymentWebhook(parsed);
+    const result = await processPaymentWebhook(parsed, correlationId);
 
     return NextResponse.json(
       wrapInContractFramework(result.body, correlationId),

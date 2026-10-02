@@ -15,6 +15,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { resolveCorrelationId, createCorrelationContext } from '@/shared/standards/correlation-id-propagation';
 import { wrapInContractFramework } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
 import { createClient } from '@/lib/supabase/server';
+import { InMemoryEventEmitter } from '@/shared/events/emitter';
+import { EventClassification, EventCriticality } from '@/shared/types/enums';
 
 /**
  * PATCH /api/contracts/[id]/accept
@@ -103,6 +105,27 @@ export async function PATCH(
     }
 
     const result = data as Record<string, unknown>;
+
+    // C5 Increment 1 — Emit contractSigned canonical event (non-blocking)
+    try {
+      const { getEventBus } = await import('@/shared/events/handler-registry');
+      const emitter = InMemoryEventEmitter.createEvent({
+        eventType: 'contractSigned',
+        sourceModule: 'MOD-002',
+        aggregateId: id,
+        aggregateType: 'Contract',
+        payload: {
+          shipper_id: result?.shipper_id ?? '',
+        },
+        classification: EventClassification.BUSINESS,
+        criticality: EventCriticality.CRITICAL,
+        correlationId,
+      });
+      await getEventBus().publish(emitter);
+    } catch (emissionErr: unknown) {
+      const message = emissionErr instanceof Error ? emissionErr.message : String(emissionErr);
+      console.error('[ContractAccept] Event emission failed (non-blocking):', message);
+    }
 
     return NextResponse.json(
       wrapInContractFramework(result, correlationId),

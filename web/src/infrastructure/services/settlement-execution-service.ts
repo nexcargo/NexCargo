@@ -18,6 +18,7 @@ export interface SettlementExecutionResult {
   action: string;
   settlementId?: string;
   escrowId?: string;
+  shipperId: string;
   authoritativeAmount?: number;
   platformFee?: number;
   transporterPayout?: number;
@@ -59,6 +60,7 @@ export class SettlementExecutionService {
       return {
         success: false,
         action: 'settlement_not_found',
+        shipperId: '',
         message: `Settlement request not found: ${params.settlementId}`,
       };
     }
@@ -69,6 +71,7 @@ export class SettlementExecutionService {
       return {
         success: false,
         action: 'settlement_not_approved',
+        shipperId: '',
         message: `Settlement must be APPROVED before execution, got: ${settlement.approval_status}`,
       };
     }
@@ -78,6 +81,7 @@ export class SettlementExecutionService {
       return {
         success: false,
         action: 'invalid_settlement_type',
+        shipperId: '',
         message: `Invalid settlement type: ${settlement.settlement_type}`,
       };
     }
@@ -87,6 +91,38 @@ export class SettlementExecutionService {
       return {
         success: false,
         action: 'invalid_trigger_event',
+        shipperId: '',
+        message: `Invalid trigger event: ${settlement.trigger_event}`,
+      };
+    }
+
+    // Validate approval status — ONLY APPROVED settlements may execute.
+    // PENDING must be explicitly approved via approve_settlement() SECDEF.
+    if (settlement.approval_status !== 'APPROVED') {
+      return {
+        success: false,
+        action: 'settlement_not_approved',
+        shipperId: '',
+        message: `Settlement must be APPROVED before execution, got: ${settlement.approval_status}`,
+      };
+    }
+
+    // Validate settlement type
+    if (!VALID_SETTLEMENT_TYPES.includes(settlement.settlement_type)) {
+      return {
+        success: false,
+        action: 'invalid_settlement_type',
+        shipperId: '',
+        message: `Invalid settlement type: ${settlement.settlement_type}`,
+      };
+    }
+
+    // Validate trigger event
+    if (!VALID_TRIGGER_EVENTS.includes(settlement.trigger_event)) {
+      return {
+        success: false,
+        action: 'invalid_trigger_event',
+        shipperId: '',
         message: `Invalid trigger event: ${settlement.trigger_event}`,
       };
     }
@@ -105,6 +141,7 @@ export class SettlementExecutionService {
         return {
           success: false,
           action: 'settlement_exceeds_escrow',
+          shipperId: '',
           message: errMsg,
         };
       }
@@ -113,6 +150,7 @@ export class SettlementExecutionService {
         return {
           success: false,
           action: 'negative_payout',
+          shipperId: '',
           message: errMsg,
         };
       }
@@ -121,6 +159,25 @@ export class SettlementExecutionService {
         return {
           success: false,
           action: 'unauthorized',
+          shipperId: '',
+          message: 'Unauthorized: no authenticated user in SECDEF context',
+        };
+      }
+
+      if (errMsg.includes('NEGATIVE_PAYOUT')) {
+        return {
+          success: false,
+          action: 'negative_payout',
+          shipperId: '',
+          message: errMsg,
+        };
+      }
+
+      if (errMsg.includes('UNAUTHORIZED')) {
+        return {
+          success: false,
+          action: 'unauthorized',
+          shipperId: '',
           message: 'Unauthorized: no authenticated user in SECDEF context',
         };
       }

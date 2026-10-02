@@ -23,10 +23,11 @@ describe('MOD-016 Module Structure', () => {
       expect(values).toContain('CRITICAL');
     });
 
-    it('DeliveryStatus should have exactly 4 values', () => {
+    it('DeliveryStatus should have exactly 5 values', () => {
       const values = Object.values(DeliveryStatus);
-      expect(values).toHaveLength(4);
+      expect(values).toHaveLength(5);
       expect(values).toContain('QUEUED');
+      expect(values).toContain('PROCESSING');
       expect(values).toContain('SENT');
       expect(values).toContain('DELIVERED');
       expect(values).toContain('FAILED');

@@ -16,6 +16,7 @@ export enum PriorityLevel {
 /** Delivery status states per MOD-016 §4.1, §4.4, §7.3 */
 export enum DeliveryStatus {
   QUEUED = 'QUEUED',
+  PROCESSING = 'PROCESSING',
   SENT = 'SENT',
   DELIVERED = 'DELIVERED',
   FAILED = 'FAILED',
