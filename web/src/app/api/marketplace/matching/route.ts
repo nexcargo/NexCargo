@@ -9,13 +9,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { runHardFilters } from '@/modules/mod-001-marketplace/domain/services/hard-filters';
 import { scoreAndRankOffers, highlightTopFive, applyUserOverride } from '@/modules/mod-001-marketplace/domain/services/matching-engine';
 import { determineRelaxationStrategy, generateNoMatchExplanation } from '@/modules/mod-001-marketplace/domain/services/no-match-relaxation';
-import type { ShipmentListing } from '@/modules/mod-001-marketplace/domain/types/listings';
-import type { TransportOffer } from '@/modules/mod-001-marketplace/domain/types/offers';
+import { ListingStatus } from '@/modules/mod-001-marketplace/domain/enums';
+import { toShipmentListing, toTransportOffer } from '@/modules/mod-001-marketplace/infrastructure/repositories/persistence-mapper';
+import { ListingsRepository } from '@/infrastructure/repositories/listings-repository';
+import { OffersRepository } from '@/infrastructure/repositories/offers-repository';
 import { ValidationError } from '@/shared/errors/app-errors';
 import { createCorrelationContext, resolveCorrelationId } from '@/shared/standards/correlation-id-propagation';
 import { wrapInContractFramework, recordMarketplaceMetric } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
 import { validateRBAC } from '../rbac-middleware';
 import { assertApiAuthorization, getApiAuthContext } from '@/lib/supabase/api-auth';
+
+const PLATFORM_ROLES = ['MODERATOR', 'ADMIN', 'SUPER_ADMIN'];
 
 /**
  * POST /api/marketplace/matching
@@ -53,35 +57,41 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
+
     // Required fields
     if (!body.listingId) {
       throw new ValidationError('listingId is required');
     }
 
-    // Parse listing data (stub — actual DB query in later increment)
-    const listing = {
-      listingId: body.listingId,
-      shipperId: body.shipperId || 'unknown',
-      origin: { latitude: -25.9692, longitude: 32.5855, address: 'Maputo Port' },
-      destination: { latitude: -15.7806, longitude: 42.9165, address: 'Beira Terminal' },
-      cargoType: body.cargoType || 'GENERAL',
-      weightKg: body.weightKg || 10000,
-      volumeM3: body.volumeM3 || 50,
-      timeWindow: body.timeWindow || { earliestPickup: '2026-09-01T08:00:00Z', latestDelivery: '2026-09-05T18:00:00Z' },
-      acceptedVehicleTypes: body.acceptedVehicleTypes || ['HEAVY_TRUCK'],
-      pricingModel: 'FIXED' as never,
-      status: 'PUBLISHED' as never,
-      id: 'stub-listing-id',
-      created_at: new Date(),
-      updated_at: new Date(),
-      version: 1,
-      bumpVersion: () => {},
-      toJSON: () => ({}),
-    } as ShipmentListing;
+    // I-4 §3D: the engine runs on authoritative stored data, never on a caller-supplied listing.
+    const listingsRepository = new ListingsRepository();
+    const storedListing = await listingsRepository.getById(String(body.listingId));
+    if (!storedListing) {
+      return NextResponse.json(
+        wrapInContractFramework({ error: `Listing ${body.listingId} not found` }, correlationId),
+        { status: 404, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
 
-    // Parse offer data (stub — actual DB query in later increment)
-    const offers = body.offers || [];
+    // Ownership: a marketplace member may only run matching against their own listing.
+    const isPlatform = !!authCtx.platformRole && PLATFORM_ROLES.includes(authCtx.platformRole);
+    if (!isPlatform && storedListing.shipperId !== authCtx.userId) {
+      return NextResponse.json(
+        wrapInContractFramework({ error: 'FORBIDDEN: listing belongs to another shipper' }, correlationId),
+        { status: 403, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+
+    // MOD-001 §5.3:421-425 — a match proposal is generated only for PUBLISHED listings.
+    if (storedListing.status !== ListingStatus.PUBLISHED) {
+      throw new ValidationError(`Only PUBLISHED listings can be matched, got "${storedListing.status}"`);
+    }
+
+    const listing = toShipmentListing(storedListing);
+
+    const offersRepository = new OffersRepository();
+    const storedOffers = await offersRepository.listByListing(listing.listingId);
+    const offers = storedOffers.map(toTransportOffer);
 
     // Step 1: Apply hard filters (§6.4.1)
     const filteredOffers = runHardFilters(listing, offers);

@@ -3,24 +3,32 @@
 // Fetch tracking record + latest summary with role-based visibility
 
 import { NextRequest, NextResponse } from 'next/server';
+import { assertApiAuthorization, authDenialResponse } from '@/lib/supabase/api-auth';
 import { TrackingRecordRepository } from '@/modules/mod-003-tracking/infrastructure/repositories/tracking-record-repository';
 import { TrackingEventRepository } from '@/modules/mod-003-tracking/infrastructure/repositories/tracking-event-repository';
 import { GpsUpdateRepository } from '@/modules/mod-003-tracking/infrastructure/repositories/gps-update-repository';
 
 /**
  * GET /api/tracking/[trackingId]
- * 
+ *
  * Returns the tracking record along with:
  * - Latest event status summary
  * - Last known GPS location (if available)
- * 
+ *
  * Access controlled by RLS policies on logistics_schema tables.
+ *
+ * I-2 PART C item 6: RLS alone was not enough here. MOD-010 §4.2 requires role validation on every API
+ * request, and an unauthenticated call reached the query layer as the anon role. The resource is the new
+ * 'tracking_read' pair, which is the party-scoped read MOD-003 §7.3:995 describes; the row set is still
+ * decided by RLS, so this adds a 401/403 signal without widening or narrowing any row.
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ trackingId: string }> }
 ) {
   try {
+    await assertApiAuthorization(request, 'tracking_read', 'read');
+
     const { trackingId } = await params;
     if (!trackingId || typeof trackingId !== 'string') {
       return NextResponse.json(
@@ -73,6 +81,8 @@ export async function GET(
 
     return NextResponse.json(response);
   } catch (error) {
+    const denial = authDenialResponse(error);
+    if (denial) return denial;
     console.error('[TrackingDetail] Error:', error);
     return NextResponse.json(
       { error: 'internal_error', message: 'Failed to fetch tracking detail' },

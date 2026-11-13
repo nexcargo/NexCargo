@@ -1347,7 +1347,7 @@ If unclear:
 
 
 
-Initial numerical default weights are proposed and require HAO approval. See §6.4.4 PROPOSED INITIAL DEFAULTS — HAO APPROVAL REQUIRED for the proposed weighting model.
+Initial numerical default weights are proposed and require LA approval. See §6.4.4 PROPOSED INITIAL DEFAULTS — LA APPROVAL REQUIRED for the proposed weighting model.
 
 
 
@@ -1365,3 +1365,13 @@ a neutral, structured marketplace abstraction that can be transformed into imple
 
 that the marketplace remains focused on commercial matching – it defines demand, supply, and advisory pairing, while explicitly delegating operational execution (fleet, tracking) to the transporter and contract layer (MOD-002).
 
+
+---
+
+DOCUMENTATION CHANGE HISTORY
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-11-03 | NXC-HOA-AUTH-D01-ITEM-06-STAGE-2 | History in this document commences with this row. Earlier changes to this document are not reconstructed here; the governing record for them is the Development State decision register. §12 OUTPUT EXPECTATION FOR AI BUILDER: the "If unclear" note now requires LA approval for the proposed initial default weights and refers to the LA APPROVAL REQUIRED designation for the proposed weighting model, recording that the approval sits with the current designation. The weighting model, its proposed default values, the matching and quoting behaviour, the advisory-only status of ranking and quoting, the §6.4.4 cross-reference and every MOD-001 capability boundary are unchanged; no approval requirement was added, removed or relocated, and no authority was altered. | LA authorisation NXC-HOA-AUTH-D01-ITEM-06-STAGE-2 (2026-11-03); PROMPT 0 v1.3 §11 Designation Successor |
+
+Version effect: MOD-001's recorded version is unchanged — a designation transition alters no capability, requirement, priority or architectural rule, so no version record in INDEX §7.1 or the Development State register is affected by this block.

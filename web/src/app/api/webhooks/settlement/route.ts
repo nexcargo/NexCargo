@@ -126,6 +126,7 @@ export async function POST(request: NextRequest) {
               'Content-Type': 'application/json',
               'apikey': serviceRoleKey,
               'Authorization': `Bearer ${serviceRoleKey}`,
+              'Content-Profile': 'financial_schema',
               'Prefer': 'return=representation',
             },
             body: JSON.stringify({ approval_status: 'EXECUTED' }),
@@ -160,6 +161,7 @@ export async function POST(request: NextRequest) {
               'Content-Type': 'application/json',
               'apikey': serviceRoleKey,
               'Authorization': `Bearer ${serviceRoleKey}`,
+              'Content-Profile': 'financial_schema',
               'Prefer': 'return=representation',
             },
             body: JSON.stringify({

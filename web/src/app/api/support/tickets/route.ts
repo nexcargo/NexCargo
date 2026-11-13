@@ -46,9 +46,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // Validate required fields
-    if (!body.requesterRole || typeof body.requesterRole !== 'string') {
-      throw new ValidationError('Missing required field: requesterRole');
-    }
     if (!body.category || typeof body.category !== 'string') {
       throw new ValidationError('Missing required field: category');
     }
@@ -62,12 +59,18 @@ export async function POST(request: NextRequest) {
       throw new ValidationError('Missing required field: description');
     }
 
-    // Validate requesterRole enum value
-    const validRequesterRoles = ['SHIPPER', 'TRANSPORTER', 'DRIVER'];
-    const requesterRole = body.requesterRole.toUpperCase() as string;
-    if (!validRequesterRoles.includes(requesterRole)) {
+    // I-2 PART C item 6 (F-I2-09): requester_role is attested from the session, not asserted by the body.
+    // MOD-015 §4.1:291 requires support to be role-aware, and a triage/escalation record is only worth
+    // anything if the role in it is the one the platform resolved for that user. A body value that conflicts
+    // with the resolved role is a client error, so it is reported instead of being stored or silently dropped.
+    const requesterRole = authCtx.marketplaceRole ?? authCtx.platformRole;
+    if (!requesterRole) {
+      // Unreachable while the guard above is in force: support_tickets authorizes only resolved roles.
+      throw new ValidationError('No attested role for this session; support ticket creation is denied.');
+    }
+    if (typeof body.requesterRole === 'string' && body.requesterRole.toUpperCase() !== requesterRole) {
       throw new ValidationError(
-        `Invalid requesterRole: ${body.requesterRole}. Valid values: ${validRequesterRoles.join(', ')}.`,
+        `requesterRole must match the authenticated session role (${requesterRole}).`,
       );
     }
 
@@ -110,10 +113,11 @@ export async function POST(request: NextRequest) {
     const client = (await import('@/infrastructure/database/supabase')).createAdminClient();
 
     const result = await client
-      .from(`${LOGISTICS_SCHEMA}.support_tickets`)
+      .schema(LOGISTICS_SCHEMA)
+      .from('support_tickets')
       .insert({
         ticket_id: ticketId,
-        requester_id: authCtx.userId || body.requesterId,
+        requester_id: authCtx.userId,
         requester_role: requesterRole,
         category: category,
         priority_level: priorityLevel,
@@ -191,7 +195,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // C1 Hardened: Mandatory auth — no session → 401 immediately.
-    await assertApiAuthorization(request, 'support_tickets', 'read');
+    const authCtx = await assertApiAuthorization(request, 'support_tickets', 'read');
 
     const url = new URL(request.url);
     const statusFilter = url.searchParams.get('statusFilter');
@@ -204,12 +208,20 @@ export async function GET(request: NextRequest) {
     const client = (await import('@/infrastructure/database/supabase')).createAdminClient();
 
     let query = client
-      .from(`${LOGISTICS_SCHEMA}.support_tickets`)
+      .schema(LOGISTICS_SCHEMA)
+      .from('support_tickets')
       .select(
         'id, ticket_id, requester_id, requester_role, category, priority_level, channel, case_id, status, sla_breach, created_at, updated_at, created_by',
         { count: 'exact' },
       )
       .eq('is_deleted', false);
+
+    // I-2 PART C item 6 (F-I2-09): this query runs with the service role, which is exactly why RLS cannot
+    // scope it here. The queue is a governance surface (MOD-015:143, :521 escalate through canonical
+    // governance roles), so a non-governance caller is pinned to their own tickets in code.
+    if (!authCtx.platformRole) {
+      query = query.eq('requester_id', authCtx.userId);
+    }
 
     // Apply optional filters
     if (statusFilter) {

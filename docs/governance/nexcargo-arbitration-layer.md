@@ -78,8 +78,11 @@ When conflict exists, resolution follows this strict hierarchy:
 
 ### 5.1 Absolute Priority Order
 
+0. **PROMPT 0 v1.3 (Master System Prompt)**
+   - The current governing authority. PROMPT 0 §DOCUMENT PRECEDENCE sets the order PROMPT 0 → ESS → MOD → approved integration contracts → source code, and PROMPT 1 §conflict rule records that Prompt 0 always overrides. BOOT states that it does not override any other specification layer. Where the numbered list below appears to place any layer above PROMPT 0, PROMPT 0 v1.3 governs (HAO decision D-01 Item 3, direction 3-D).
+
 1. **BOOT (NEXCARGO_BOOT.md)**
-   - Behavioral kernel overrides all structural interpretation
+   - Behavioral kernel overrides all structural interpretation, subject to its own stated limitation that it does not override another specification layer
 
 2. **ESS (Execution Support Specifications)**
    - Security, financial, compliance, integration rules override MODs
@@ -119,7 +122,7 @@ MOD-005 and MOD-013 define escrow logic
 **Resolution:**
 
 - MOD-005 = escrow orchestration only (initiation, release)
-- MOD-013 = settlement execution and reconciliation
+- MOD-013 = settlement instruction handling and reconciliation; it performs no funds movement and holds no external execution authority (MOD-013 §7.1, §7.2; PROMPT 0 v1.3 §FINANCIAL SYSTEM RULES). The bank or authorised payment provider remains the sole external execution authority (HAO decision D-01 Item 3, direction 3-D).
 
 ### 6.3 TYPE C — SPECIFICATION GAP
 
@@ -308,3 +311,14 @@ The Arbitration Layer MUST ensure:
 The Arbitration Layer ensures:
 
 NexCargo remains logically consistent, structurally deterministic, and non-contradictory across all layers of its specification ecosystem.
+
+---
+
+DOCUMENTATION CHANGE HISTORY
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-11-03 | NXC-HOA-AUTH-D01-ITEM-06-STAGE-1 | Change-history block established under the INDEX §7.4 Document Change-History Standard. History in this document commences with this row. Earlier changes to this document are not reconstructed here; the governing record for them is the Development State decision register. The row below records the evidenced change that the register supports, dated when the change was actually made. Creating this block altered no precedence rule, conflict class or resolution procedure in this layer. | HAO decision D-01 Item 6 Stage 1 (NXC-HOA-AUTH-D01-ITEM-06-STAGE-1); INDEX §7.4 |
+| 2026-11-02 | NXC-HOA-AUTH-D01-ITEM-03-001 | Direction 3-D applied: §5.1's priority order now leads with the current PROMPT 0 version, because PROMPT 0 §DOCUMENT PRECEDENCE sets the order PROMPT 0 → ESS → MOD → approved integration contracts → source code and PROMPT 1 records that Prompt 0 always overrides, together with the note that BOOT states it does not override any other specification layer; §6.2's MOD-013 entry now records that MOD-013 handles settlement instruction and reconciliation, performs no funds movement and holds no external execution authority, the bank or authorised payment provider remaining the sole external execution authority. The remaining ordering of those ladders is unchanged and any structural re-ordering still requires a separate architecture decision; no conflict class, arbitration trigger, escalation path or safety-dominance rule was created or altered. | HAO decision D-01 Item 3, direction 3-D (NXC-HOA-AUTH-D01-ITEM-03-001); Development State register, D-01 Item 3 row; PROMPT 0 v1.3 §DOCUMENT PRECEDENCE, §FINANCIAL SYSTEM RULES |
+
+Version effect: the Arbitration Layer remains v1.0 — no version increase, no loader change and no INDEX §7.1 change. This block records a change already made and registered under the authorisation cited in it; creating the block changed no rule in this layer.

@@ -227,6 +227,8 @@ All critical decisions MUST require:
 
 \- Admin approval
 
+The human owner must hold the authority the decision actually requires. For a financial decision, "Admin approval" means Admin acting within delegated authority on an ordinary workflow approval; a decision reserved to SUPER_ADMIN by ESS-001F §15.9 Tier 2 or by PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS is not satisfied by Admin approval, and no approval by any role is financial execution (HAO decision D-01 Item 3, direction 3-A).
+
 
 
 AI can only:
@@ -354,6 +356,8 @@ Only:
 
 
 Moderators/Admin (via RBAC) can act
+
+Scope of that sentence is bounded by the financial authority model (HAO decision D-01 Item 3, directions 3-A and 3-B): blocking a transaction, freezing an account or enforcing a financial penalty is an ordinary operational act only where an existing specification authorises the acting role to perform it. Admin acts within delegated authority; a matter reserved to SUPER_ADMIN under ESS-001F §15.9 Tier 2 or PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS is not an Admin act; a Moderator may investigate, recommend and handle ordinary non-financial cases, and may not freeze accounts, block transactions for financial effect or decide a financial outcome. No human role gains funds execution authority from this section — the bank or authorised payment provider remains the sole external execution authority (ESS-001F §2.2, §15.4).
 
 
 
@@ -647,3 +651,14 @@ AI is a decision-support layer — not a control layer.
 
 It increases efficiency without reducing human accountability.
 
+
+---
+
+DOCUMENTATION CHANGE HISTORY
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-11-03 | NXC-HOA-AUTH-D01-ITEM-06-STAGE-1 | Change-history block established under the INDEX §7.4 Document Change-History Standard. History in this document commences with this row. Earlier changes to this document are not reconstructed here; the governing record for them is the Development State decision register. The row below records the evidenced change that the register and this document's own inline citation support, dated when the change was actually made. Creating this block altered no AI capability, prohibition or governance rule in this standard. | HAO decision D-01 Item 6 Stage 1 (NXC-HOA-AUTH-D01-ITEM-06-STAGE-1); INDEX §7.4 |
+| 2026-11-02 | NXC-HOA-AUTH-D01-ITEM-03-001 | §5 and §8 aligned to the approved financial authority model. §5 states that the human owner must hold the authority the decision actually requires: for a financial decision "Admin approval" means Admin acting within delegated authority on an ordinary workflow approval, a matter reserved to SUPER_ADMIN by ESS-001F §15.9 Tier 2 or by PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS is not satisfied by Admin approval, and no approval by any role is financial execution. §8 bounds the "Moderators/Admin (via RBAC) can act" sentence: blocking a transaction, freezing an account or enforcing a financial penalty is an ordinary operational act only where an existing specification authorises the acting role, a Moderator may investigate, recommend and handle ordinary non-financial cases but may not freeze accounts, block transactions for financial effect or decide a financial outcome, and no human role gains funds execution authority from this section because the bank or authorised payment provider remains the sole external execution authority. AI allowed capabilities, the four forbidden-action classes, the decision tiers and the No Execution, No Custody and No Decision Authority principles are unchanged. | HAO decision D-01 Item 3, directions 3-A and 3-B (NXC-HOA-AUTH-D01-ITEM-03-001); Development State register, D-01 Item 3 row; ESS-001F §2.2, §15.4, §15.9 |
+
+Version effect: ESS-003 remains v1.0 — no version increase, no loader change and no INDEX §7.1 change. This block records a change already made and registered under the authorisation cited in it; creating the block changed no rule in this standard.

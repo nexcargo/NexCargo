@@ -1,0 +1,34 @@
+{
+  "sessions": {
+    "term-1790077875404-85d8lg": {
+      "id": "term-1790077875404-85d8lg",
+      "name": "dev-server",
+      "status": "active",
+      "createdAt": "2026-09-22T11:51:15.405Z",
+      "lastActivity": "2026-09-22T11:51:37.759Z",
+      "workingDir": "G:\\NexCargo\\nexcargov2",
+      "history": [
+        {
+          "command": "cd G:\\NexCargo\\nexcargov2\\web; npm run dev 2>&1",
+          "output": "The system cannot find the path specified.\r\n",
+          "timestamp": "2026-09-22T11:51:21.685Z",
+          "exitCode": 1
+        },
+        {
+          "command": "Set-Location 'G:\\NexCargo\\nexcargov2\\web'; npm run dev 2>&1",
+          "output": "'Set-Location' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n",
+          "timestamp": "2026-09-22T11:51:28.116Z",
+          "exitCode": 1
+        },
+        {
+          "command": "cd /d G:\\NexCargo\\nexcargov2\\web && npm run dev 2>&1",
+          "output": "\n> web@0.1.0 dev\n> next dev\n\n⚠ Port 3000 is in use by process 26384, using available port 3001 instead.\n▲ Next.js 16.2.12 (Turbopack)\n- Local:         http://localhost:3001\n- Network:       http://192.168.16.117:3001\n- Environments: .env.local\n✓ Ready in 852ms\n⨯ Another next dev server is already running.\n\n- Local:        http://localhost:3000\n- PID:          26384\n- Dir:          G:\\NexCargo\\nexcargov2\\web\n- Log:          .next\\dev\\logs\\next-development.log\n\nRun taskkill /PID 26384 /F to stop it.\n\u001b[?25h\n",
+          "timestamp": "2026-09-22T11:51:37.759Z",
+          "exitCode": 1
+        }
+      ],
+      "env": {}
+    }
+  },
+  "version": "3.0.0"
+}

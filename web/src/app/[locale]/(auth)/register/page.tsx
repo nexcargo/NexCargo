@@ -5,11 +5,17 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { SkipNav, NexCargoSymbol } from '@/shared/ui';
+import { AuthNotice } from '../auth-notice';
 
 export const dynamic = 'force-dynamic';
 
-export default async function RegisterPage() {
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; status?: string }>;
+}) {
   const t = await getTranslations('Register');
+  const { error, status } = await searchParams;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F8F6F3] dark:bg-[#0A1628]">
@@ -38,6 +44,11 @@ export default async function RegisterPage() {
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{t('subtitle')}</p>
           </div>
 
+          <div className="space-y-2">
+            <AuthNotice code={error} kind="error" />
+            <AuthNotice code={status} kind="status" />
+          </div>
+
           {/* Form */}
           <form action="/api/auth/register" method="POST" className="space-y-6">
             <div className="space-y-4">
@@ -55,7 +66,7 @@ export default async function RegisterPage() {
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-[#0A1628] dark:text-white mb-1">{t('password_label')}</label>
                 <input
-                  id="password" name="password" type="password" autoComplete="new-password" required minLength={6}
+                  id="password" name="password" type="password" autoComplete="new-password" required minLength={8}
                   placeholder={t('password_placeholder')}
                   className="block w-full rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-[#0A1628] placeholder-zinc-500 shadow-sm transition-colors focus:border-[#1A5C9E] focus:outline-none focus:ring-2 focus:ring-[#1A5C9E]/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:placeholder-zinc-500"
                 />
@@ -74,11 +85,12 @@ export default async function RegisterPage() {
               {/* Role Selection */}
               <div>
                 <span className="block text-sm font-medium text-[#0A1628] dark:text-white mb-2">{t('role_selection_title')}</span>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {/* DRIVER is intentionally absent: it is an operational classification assigned by a
+                      Transporter, never self-selected at registration. */}
                   {[
                     { value: 'SHIPPER', labelKey: 'shipper_option', descKey: 'shipper_description' },
                     { value: 'TRANSPORTER', labelKey: 'transporter_option', descKey: 'transporter_description' },
-                    { value: 'DRIVER', labelKey: 'driver_option', descKey: 'driver_description' },
                   ].map((roleOption) => (
                     <label
                       key={roleOption.value}

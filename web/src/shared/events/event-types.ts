@@ -28,6 +28,8 @@ export interface EventSubscription {
   handler: EventHandler;
   priority?: number; // Lower number = higher priority (default: 0)
   maxRetries?: number; // Default: 3
+  /** Stable identity recorded in analytics_schema.event_consumer_state (I-3 §4B). */
+  consumerName?: string;
 }
 
 /** Event emitter interface */

@@ -8,6 +8,8 @@ import {
   ChannelExecutionStatus,
   MAX_RETRY_COUNT,
   RETRY_BASE_DELAY_MS,
+  MAX_BACKOFF_EXPONENT,
+  BACKOFF_JITTER_RATIO,
   computeBackoffDelay,
 } from '../domain/types/delivery-pipeline';
 import type { ClaimedNotification, ChannelExecutionResult } from '../domain/types/delivery-pipeline';
@@ -34,13 +36,14 @@ function createTestNotification(overrides?: Partial<ClaimedNotification>): Claim
     locale: 'pt',
     templateId: null,
     eventCorrelationId: 'corr-uuid-001',
+    correlationRef: 'corr-uuid-001',
+    sourceEventId: null,
     deliveryStatus: 'QUEUED' as any,
     retryCount: 0,
     providerChannel: null,
     nextRetryAt: null,
     createdAt: new Date('2026-09-09T12:00:00Z'),
     updatedAt: new Date('2026-09-09T12:00:00Z'),
-    version: 1,
     ...overrides,
   };
 }
@@ -166,12 +169,17 @@ describe('MOD-016 C5-II — StubChannelExecutor', () => {
         expect(executor.channelType).toBe(channel);
       });
 
-      it('should return SUCCESS for valid input', async () => {
+      it('should report PROVIDER_NOT_CONFIGURED for valid input', async () => {
         const notification = createTestNotification({ channelType: channel });
         const result = await executor.execute(notification, `target-for-${channel}`);
 
-        expect(result.status).toBe(ChannelExecutionStatus.SUCCESS);
-        expect(result.providerReferenceId).toContain(`STUB-${channel}-`);
+        // I-3 §9: an unimplemented provider must not be disguised as a completed
+        // integration. The C5-II stub returned SUCCESS with a fabricated STUB-
+        // reference, which made the pipeline mark undelivered rows SENT.
+        expect(result.status).toBe(ChannelExecutionStatus.FAILED);
+        expect(result.errorMessage).toContain('PROVIDER_NOT_CONFIGURED');
+        expect(result.errorMessage).toContain(channel);
+        expect(result.providerReferenceId).toBeUndefined();
         expect(result.isRetryable).toBe(false);
       });
 
@@ -183,11 +191,14 @@ describe('MOD-016 C5-II — StubChannelExecutor', () => {
         expect(result.isRetryable).toBe(false);
       });
 
-      it('should verify valid stub reference', async () => {
+      it('should report PROVIDER_NOT_CONFIGURED when verifying a reference', async () => {
+        // No provider exists, so no reference can be verified against one.
         const ref = `STUB-${channel}-notif-test`;
         const result = await executor.verifyDelivery(ref);
 
-        expect(result.status).toBe(ChannelExecutionStatus.SUCCESS);
+        expect(result.status).toBe(ChannelExecutionStatus.FAILED);
+        expect(result.errorMessage).toContain('PROVIDER_NOT_CONFIGURED');
+        expect(result.providerReferenceId).toBeUndefined();
       });
 
       it('should reject invalid stub reference format', async () => {
@@ -259,24 +270,23 @@ describe('MOD-016 C5-II — resolveRecipientTarget', () => {
     expect(target).toBe('user-123');
   });
 
-  it('should return stub email for EMAIL', () => {
-    const target = resolveRecipientTarget('user-123', NotificationChannel.EMAIL);
-    expect(target).toContain('@nexcargo.stub');
+  // I-3 §4C: no provider credentials exist for these channels, so no delivery
+  // target may be fabricated. A null target makes the processor report a terminal
+  // PROVIDER_NOT_CONFIGURED failure instead of inventing an email/phone/token.
+  it('should return null for EMAIL (no provider configured)', () => {
+    expect(resolveRecipientTarget('user-123', NotificationChannel.EMAIL)).toBeNull();
   });
 
-  it('should return stub phone for SMS', () => {
-    const target = resolveRecipientTarget('user-123', NotificationChannel.SMS);
-    expect(target).toMatch(/^\+2589/);
+  it('should return null for SMS (no provider configured)', () => {
+    expect(resolveRecipientTarget('user-123', NotificationChannel.SMS)).toBeNull();
   });
 
-  it('should return stub device token for PUSH', () => {
-    const target = resolveRecipientTarget('user-123', NotificationChannel.PUSH);
-    expect(target).toContain('device-token-');
+  it('should return null for PUSH (no provider configured)', () => {
+    expect(resolveRecipientTarget('user-123', NotificationChannel.PUSH)).toBeNull();
   });
 
-  it('should return stub WhatsApp number for WHATSAPP', () => {
-    const target = resolveRecipientTarget('user-123', NotificationChannel.WHATSAPP);
-    expect(target).toMatch(/^\+2588/);
+  it('should return null for WHATSAPP (no provider configured)', () => {
+    expect(resolveRecipientTarget('user-123', NotificationChannel.WHATSAPP)).toBeNull();
   });
 
   it('should throw for unknown channel type', () => {
@@ -289,9 +299,12 @@ describe('MOD-016 C5-II — resolveRecipientTarget', () => {
 // Test Suite: Retry Engine (computeBackoffDelay)
 // ============================================================
 
-describe('MOD-016 C5-II — Retry Engine', () => {
-  it('should have MAX_RETRY_COUNT set to 3', () => {
-    expect(MAX_RETRY_COUNT).toBe(3);
+describe('MOD-016 — Retry Engine (I-3 §4B / ESS-001C §4.1)', () => {
+  it('should have MAX_RETRY_COUNT set to 5', () => {
+    // ESS-001C §4.1 requires 5–10 bounded retries; migration 059 caps attempts at 5.
+    expect(MAX_RETRY_COUNT).toBe(5);
+    expect(MAX_RETRY_COUNT).toBeGreaterThanOrEqual(5);
+    expect(MAX_RETRY_COUNT).toBeLessThanOrEqual(10);
   });
 
   it('should have RETRY_BASE_DELAY_MS set to 1000', () => {
@@ -299,22 +312,46 @@ describe('MOD-016 C5-II — Retry Engine', () => {
   });
 
   describe('computeBackoffDelay()', () => {
-    it('should return base delay for retry count 0', () => {
-      const delay = computeBackoffDelay(0);
-      expect(delay).toBe(1000); // 1s
+    // ESS-001C §4.1 mandates exponential backoff WITH jitter, so the result is a
+    // band [base*2^n, base*2^n * 1.3) rather than a deterministic value.
+    function expectInBand(retryCount: number, baseDelayMs = RETRY_BASE_DELAY_MS) {
+      const floor = baseDelayMs * Math.pow(2, Math.min(retryCount, MAX_BACKOFF_EXPONENT));
+      const delay = computeBackoffDelay(retryCount, baseDelayMs);
+      expect(delay).toBeGreaterThanOrEqual(floor);
+      expect(delay).toBeLessThan(Math.ceil(floor * (1 + BACKOFF_JITTER_RATIO)));
+    }
+
+    it('should return the base delay band for retry count 0', () => {
+      expectInBand(0);
     });
 
-    it('should double delay for each retry count', () => {
-      expect(computeBackoffDelay(0)).toBe(1_000);     // 2^0 * 1000
-      expect(computeBackoffDelay(1)).toBe(2_000);     // 2^1 * 1000
-      expect(computeBackoffDelay(2)).toBe(4_000);     // 2^2 * 1000
-      expect(computeBackoffDelay(3)).toBe(8_000);     // 2^3 * 1000
+    it('should double the delay band for each retry count', () => {
+      expectInBand(0); // 1000..1300
+      expectInBand(1); // 2000..2600
+      expectInBand(2); // 4000..5200
+      expectInBand(3); // 8000..10400
     });
 
     it('should respect custom base delay', () => {
-      expect(computeBackoffDelay(0, 500)).toBe(500);
-      expect(computeBackoffDelay(1, 500)).toBe(1_000);
-      expect(computeBackoffDelay(2, 500)).toBe(2_000);
+      expectInBand(0, 500);
+      expectInBand(1, 500);
+      expectInBand(2, 500);
+    });
+
+    it('should apply jitter so identical retry counts are not all equal', () => {
+      const samples = Array.from({ length: 40 }, () => computeBackoffDelay(4));
+      expect(new Set(samples).size).toBeGreaterThan(1);
+    });
+
+    it('should clamp the exponent so the delay cannot grow without bound', () => {
+      const ceiling = RETRY_BASE_DELAY_MS * Math.pow(2, MAX_BACKOFF_EXPONENT);
+      expect(computeBackoffDelay(MAX_BACKOFF_EXPONENT + 25)).toBeLessThan(
+        Math.ceil(ceiling * (1 + BACKOFF_JITTER_RATIO)),
+      );
+    });
+
+    it('should never return a negative delay', () => {
+      expect(computeBackoffDelay(-3)).toBeGreaterThanOrEqual(RETRY_BASE_DELAY_MS);
     });
   });
 });

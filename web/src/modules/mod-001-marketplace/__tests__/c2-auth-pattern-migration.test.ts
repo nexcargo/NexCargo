@@ -1,112 +1,129 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { assertApiAuthorization, getApiAuthContext } from '@/lib/supabase/api-auth';
+import { createClient } from '@/lib/supabase/server';
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
 }));
 
-// Helper: create mock client with rpc() failing → forces metadata fallback path
-function makeMock(user: any) {
+// I-1 §3.6 — the only role inputs are the two database resolvers:
+//   public.effective_user_role()        -> platform tiers  (app.platform_roles)
+//   public.effective_marketplace_role() -> marketplace     (app.marketplace_memberships)
+// user_metadata is client-writable, so it is never consulted for authority.
+type RpcResult = string | null | 'error';
+
+function makeMock(user: any, marketplace: RpcResult, platform: RpcResult) {
+  const shaped = (value: RpcResult) =>
+    value === 'error'
+      ? { data: null, error: new Error('RPC unavailable in test') }
+      : { data: value, error: null };
+
   return {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user }, error: null }) },
-    rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable in test') })),
+    rpc: vi.fn(async (fn: string) =>
+      fn === 'effective_marketplace_role' ? shaped(marketplace) : shaped(platform),
+    ),
   } as any;
 }
 
-describe('C2-Increment-002 Auth Migration — Pattern A Verification', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+function session(user: any, marketplace: RpcResult, platform: RpcResult) {
+  vi.mocked(createClient).mockResolvedValue(makeMock(user, marketplace, platform));
+}
 
-  describe('assertApiAuthorization pattern', () => {
-    it('throws UNAUTHORIZED when no session user', async () => {
-      const { createClient } = await import('@/lib/supabase/server');
-      vi.mocked(createClient).mockReturnValue({
-        auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }) },
-        rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable') })),
-      } as any);
-
-      await expect(assertApiAuthorization({} as any, 'matching', 'read'))
-        .rejects.toThrow('UNAUTHORIZED');
-    });
-
-    it('throws FORBIDDEN when RBAC evaluation denies access (unassigned role)', async () => {
-      const { createClient } = await import('@/lib/supabase/server');
-      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@test.com', user_metadata: { role: null } }));
-
-      // Unassigned/null role → getEffectiveRole returns null → FORBIDDEN
-      await expect(assertApiAuthorization({} as any, 'matching', 'execute'))
-        .rejects.toThrow(/FORBIDDEN/i);
-    });
-
-    it('returns AuthContext on successful auth + RBAC pass', async () => {
-      const { createClient } = await import('@/lib/supabase/server');
-      vi.mocked(createClient).mockReturnValue(makeMock({
-        id: 'shipper-1',
-        email: 'shipper@nexcargo.com',
-        user_metadata: { role: 'SHIPPER' },
-      }));
-
-      // SHIPPER passes metadata fallback whitelist AND evaluateRBAC for matching/execute
-      const ctx = await assertApiAuthorization({} as any, 'matching', 'execute');
-      expect(ctx.userId).toBe('shipper-1');
-      expect(ctx.email).toBe('shipper@nexcargo.com');
-      expect(ctx.role).toBe('SHIPPER');
-    });
+describe('C2 Auth Pattern — I-1 authoritative role resolution', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  describe('getApiAuthContext pattern', () => {
-    it('returns null when no user in session', async () => {
-      const { createClient } = await import('@/lib/supabase/server');
-      vi.mocked(createClient).mockReturnValue({
-        auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }) },
-        rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable') })),
-      } as any);
+  it('resolves a legitimate marketplace role from the marketplace resolver', async () => {
+    session({ id: 'shipper-1', email: 'shipper@nexcargo.com' }, 'SHIPPER', null);
 
-      expect(await getApiAuthContext({} as any)).toBeNull();
-    });
+    const ctx = await assertApiAuthorization({} as any, 'matching', 'execute');
 
-    it('extracts userId/email/role from session user metadata', async () => {
-      const { createClient } = await import('@/lib/supabase/server');
-      vi.mocked(createClient).mockReturnValue(makeMock({
-        id: 'transporter-99',
-        email: 'trans@fleet.mz',
-        user_metadata: { role: 'TRANSPORTER', tenantId: 'tenant-a' },
-      }));
-
-      const result = await getApiAuthContext({} as any);
-      expect(result!.userId).toBe('transporter-99');
-      expect(result!.email).toBe('trans@fleet.mz');
-      expect(result!.role).toBe('TRANSPORTER');
-      expect(result!.tenantId).toBe('tenant-a');
-    });
-
-    it('returns null role when user_metadata.role is absent (unassigned/onboarding state)', async () => {
-      const { createClient } = await import('@/lib/supabase/server');
-      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'u1', email: 'a@b.c', user_metadata: {} }));
-
-      expect((await getApiAuthContext({} as any))!.role).toBeNull();
-    });
+    expect(ctx.marketplaceRole).toBe('SHIPPER');
+    expect(ctx.platformRole).toBeNull();
+    expect(ctx.role).toBe('SHIPPER');
   });
 
-  describe('No header-based fallback (Pattern B elimination)', () => {
-    it('assertApiAuthorization does not accept x-user-role header as identity source', async () => {
-      const { createClient } = await import('@/lib/supabase/server');
-      vi.mocked(createClient).mockReturnValue({
-        auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }) },
-        rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable') })),
-      } as any);
+  it('resolves a platform role from the platform resolver', async () => {
+    session({ id: 'mod-1', email: 'mod@nexcargo.com' }, null, 'MODERATOR');
 
-      await expect(assertApiAuthorization({ headers: new Map([['x-user-role', 'ADMIN']]) } as any, 'bookings', 'create'))
-        .rejects.toThrow('UNAUTHORIZED');
-    });
+    const ctx = await assertApiAuthorization({} as any, 'matching', 'execute');
 
-    it('getApiAuthContext returns null when no session exists (even with x-user-role header)', async () => {
-      const { createClient } = await import('@/lib/supabase/server');
-      vi.mocked(createClient).mockReturnValue({
-        auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }) },
-        rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable') })),
-      } as any);
+    expect(ctx.platformRole).toBe('MODERATOR');
+    expect(ctx.marketplaceRole).toBeNull();
+    expect(ctx.role).toBe('MODERATOR');
+  });
 
-      expect(await getApiAuthContext({ headers: new Map([['x-user-role', 'MODERATOR']]) } as any)).toBeNull();
-    });
+  it('never falls back to metadata when a resolver RPC errors', async () => {
+    session({ id: 'u1', email: 'a@b.c', user_metadata: { role: 'SHIPPER' } }, 'error', 'error');
+
+    expect((await getApiAuthContext({} as any))!.role).toBeNull();
+    await expect(assertApiAuthorization({} as any, 'matching', 'execute')).rejects.toThrow(/FORBIDDEN/);
+  });
+
+  it('does not grant platform authority from a metadata value of SUPER_ADMIN', async () => {
+    session(
+      { id: 'attacker', email: 'a@b.c', user_metadata: { role: 'SUPER_ADMIN' } },
+      null,
+      null,
+    );
+
+    const ctx = await getApiAuthContext({} as any);
+    expect(ctx!.platformRole).toBeNull();
+    expect(ctx!.role).toBeNull();
+    await expect(assertApiAuthorization({} as any, 'matching', 'execute')).rejects.toThrow(/FORBIDDEN/);
+  });
+
+  it('does not establish marketplace membership from a metadata role value', async () => {
+    session(
+      { id: 'u2', email: 'a@b.c', user_metadata: { role: 'TRANSPORTER' } },
+      null,
+      null,
+    );
+
+    const ctx = await getApiAuthContext({} as any);
+    expect(ctx!.marketplaceRole).toBeNull();
+    expect(ctx!.role).toBeNull();
+    await expect(assertApiAuthorization({} as any, 'matching', 'execute')).rejects.toThrow(/FORBIDDEN/);
+  });
+
+  it('does not resolve DRIVER — the classification is not selectable and holds no granted role', async () => {
+    session({ id: 'u3', email: 'a@b.c', user_metadata: { role: 'DRIVER' } }, 'DRIVER', 'DRIVER');
+
+    const ctx = await getApiAuthContext({} as any);
+    expect(ctx!.marketplaceRole).toBeNull();
+    expect(ctx!.platformRole).toBeNull();
+    expect(ctx!.role).toBeNull();
+  });
+
+  it('fails safely on an invalid or missing membership row', async () => {
+    session({ id: 'u4', email: 'a@b.c', user_metadata: { role: 'ADMIN' } }, 'CONTRIBUTOR', null);
+
+    const ctx = await getApiAuthContext({} as any);
+    expect(ctx!.marketplaceRole).toBeNull();
+    expect(ctx!.role).toBeNull();
+  });
+
+  it('returns null with no session user, whatever the headers claim', async () => {
+    session(null, 'SHIPPER', 'ADMIN');
+
+    expect(await getApiAuthContext({ headers: new Map([['x-user-role', 'ADMIN']]) } as any)).toBeNull();
+    await expect(
+      assertApiAuthorization({ headers: new Map([['x-user-role', 'ADMIN']]) } as any, 'bookings', 'create'),
+    ).rejects.toThrow('UNAUTHORIZED');
+  });
+
+  it('keeps non-authority metadata available without affecting role resolution', async () => {
+    session(
+      { id: 't1', email: 'fleet@nexcargo.mz', user_metadata: { tenantId: 'tenant-a', role: 'ADMIN' } },
+      'TRANSPORTER',
+      null,
+    );
+
+    const ctx = await getApiAuthContext({} as any);
+    expect(ctx!.tenantId).toBe('tenant-a');
+    expect(ctx!.marketplaceRole).toBe('TRANSPORTER');
+    expect(ctx!.role).toBe('TRANSPORTER');
   });
 });

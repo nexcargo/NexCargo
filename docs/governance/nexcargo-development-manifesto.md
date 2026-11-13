@@ -92,6 +92,13 @@ Deployments
 Each layer serves a distinct purpose while contributing to a unified development process.
 
 
+Document revision history is governed by INDEX §7.4, Document Change-History Standard.
+
+Every authorised change to an active specification adds one dated entry to that document's own change-history block, citing the authorisation ID under which the change was made.
+
+The Development State decision register remains the central record of what was authorised and why; a document's change history is not a substitute for it, and neither replaces the other.
+
+
 
 4. Authoritative Source Principle
 

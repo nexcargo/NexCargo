@@ -648,7 +648,7 @@ Must remain transparent to users.
 
 
 
-AI may recommend adjustments.
+AI may recommend adjustments. A recommendation is never a change (§7.1). Human authority over a committed fee or commission value is defined outside this module: routine configuration inside already-approved policy is Admin authority (ESS-001F §15.1, §15.2; MOD-013 §4.7), and commercial authorisation of an exceptional or negotiated arrangement is SUPER_ADMIN authority (PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS Domain 5). This module names no approver of its own and creates no instrument, threshold or concession (HAO decision D-01 Item 3, direction 3-C).
 
 
 
@@ -1760,3 +1760,14 @@ carrier retention is improved through personalised engagement
 
 the platform operates as an adaptive, competitive, and self-optimising commercial marketplace
 
+
+---
+
+DOCUMENTATION CHANGE HISTORY
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-11-03 | NXC-HOA-AUTH-D01-ITEM-06-STAGE-1 | Change-history block established under the INDEX §7.4 Document Change-History Standard. History in this document commences with this row. Earlier changes to this document are not reconstructed here; the governing record for them is the Development State decision register. The row below records the evidenced change that the register and this document's own inline citation support, dated when the change was actually made. Creating this block altered no pricing rule, incentive structure, permission or authority boundary in this module. | HAO decision D-01 Item 6 Stage 1 (NXC-HOA-AUTH-D01-ITEM-06-STAGE-1); INDEX §7.4 |
+| 2026-11-02 | NXC-HOA-AUTH-D01-ITEM-03-001 | §4.6 aligned to the approved commercial authority split: an AI recommendation remains never a change, and human authority over a committed fee or commission value is stated as living outside this module — routine configuration inside already-approved policy is Admin authority under ESS-001F §15.1 and §15.2 with MOD-013 §4.7, while commercial authorisation of an exceptional or negotiated arrangement is SUPER_ADMIN authority under PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS Domain 5. The module names no approver of its own and creates no instrument, threshold or concession. Pricing behaviour, the No Execution principle and every existing role authority are unchanged. | HAO decision D-01 Item 3, direction 3-C (NXC-HOA-AUTH-D01-ITEM-03-001); Development State register, D-01 Item 3 row; ESS-001F §15.1, §15.2 |
+
+Version effect: MOD-018 remains v1.0 — no version increase, no loader change and no INDEX §7.1 change. This block records a change already made and registered under the authorisation cited in it; creating the block changed no rule or boundary in this module.

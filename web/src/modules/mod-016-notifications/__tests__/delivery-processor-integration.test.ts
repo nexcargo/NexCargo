@@ -34,13 +34,14 @@ function createTestNotification(overrides?: Partial<ClaimedNotification>): Claim
     locale: 'pt',
     templateId: null,
     eventCorrelationId: 'corr-uuid-001',
+    correlationRef: 'corr-uuid-001',
+    sourceEventId: null,
     deliveryStatus: 'QUEUED' as any,
     retryCount: 0,
     providerChannel: null,
     nextRetryAt: null,
     createdAt: new Date('2026-09-09T12:00:00Z'),
     updatedAt: new Date('2026-09-09T12:00:00Z'),
-    version: 1,
     ...overrides,
   };
 }
@@ -134,7 +135,7 @@ describe('MOD-016 C5-II — Successful Delivery Pipeline', () => {
     expect(expectedFinalStatus).toBe(DeliveryStatus.DELIVERED);
   });
 
-  it('should execute non-IN_APP channel and mark as SENT', async () => {
+  it('should report PROVIDER_NOT_CONFIGURED for non-IN_APP channels instead of SENT', async () => {
     const notification = createTestNotification({
       channelType: NotificationChannel.EMAIL,
       eventCorrelationId: 'corr-email-001',
@@ -143,15 +144,20 @@ describe('MOD-016 C5-II — Successful Delivery Pipeline', () => {
     const executor = registry.getExecutor(NotificationChannel.EMAIL);
     expect(executor).toBeDefined();
 
-    const executionResult = await executor!.execute(notification, 'user-123@nexcargo.stub');
-    expect(executionResult.status).toBe(ChannelExecutionStatus.SUCCESS);
+    // I-3 §9: no authorized EMAIL provider exists, so the executor must report a
+    // terminal failure. The previous stub returned SUCCESS and the pipeline marked
+    // the row SENT, disguising an unimplemented integration as a completed one.
+    const executionResult = await executor!.execute(notification, 'user-123');
+    expect(executionResult.status).toBe(ChannelExecutionStatus.FAILED);
+    expect(executionResult.isRetryable).toBe(false);
+    expect(executionResult.errorMessage).toContain('PROVIDER_NOT_CONFIGURED');
+    expect(executionResult.providerReferenceId).toBeUndefined();
 
-    // Non-IN_APP channels map to SENT status
-    const finalStatus = notification.channelType === NotificationChannel.IN_APP
+    // A failed execution never maps to SENT or DELIVERED.
+    const finalStatus = executionResult.status === ChannelExecutionStatus.SUCCESS
       ? DeliveryStatus.DELIVERED
-      : DeliveryStatus.SENT;
-
-    expect(finalStatus).toBe(DeliveryStatus.SENT);
+      : DeliveryStatus.FAILED;
+    expect(finalStatus).toBe(DeliveryStatus.FAILED);
   });
 });
 
@@ -161,23 +167,19 @@ describe('MOD-016 C5-II — Successful Delivery Pipeline', () => {
 
 describe('MOD-016 C5-II — Retryable Failure and Backoff', () => {
   it('should calculate correct backoff delay for each retry count', () => {
-    // computeBackoffDelay is tested in delivery-pipeline.test.ts
-    // Here we verify the constants used by the processor
+    // I-3 §4B: ESS-001C §4.1 requires 5–10 bounded retries, and migration 059
+    // caps attempts at 5, so MAX_RETRY_COUNT is 5 rather than the C5-II value 3.
 
-    expect(MAX_RETRY_COUNT).toBe(3);
+    expect(MAX_RETRY_COUNT).toBe(5);
     expect(RETRY_BASE_DELAY_MS).toBe(1000);
 
-    // Expected backoff sequence:
-    // retry 0 (after first failure): 1000 × 2^0 = 1000ms = 1s
-    // retry 1 (after second failure): 1000 × 2^1 = 2000ms = 2s
-    // retry 2 (after third failure): 1000 × 2^2 = 4000ms = 4s
-    // retry 3 (>= MAX): terminal FAILED
-
-    const delays = [0, 1, 2].map((retryCount) =>
+    // Base (pre-jitter) backoff sequence for attempts 0..4:
+    // 1000, 2000, 4000, 8000, 16000 ms. Attempt 5 >= MAX is terminal FAILED.
+    const delays = Array.from({ length: MAX_RETRY_COUNT }, (_, retryCount) =>
       RETRY_BASE_DELAY_MS * Math.pow(2, retryCount),
     );
 
-    expect(delays).toEqual([1000, 2000, 4000]);
+    expect(delays).toEqual([1000, 2000, 4000, 8000, 16000]);
   });
 
   it('should set next_retry_at on retryable failure', () => {
@@ -230,11 +232,8 @@ describe('MOD-016 C5-II — Retryable Failure and Backoff', () => {
 
 describe('MOD-016 C5-II — Retry Exhaustion', () => {
   it('should reach terminal FAILED after MAX_RETRY_COUNT attempts', () => {
-    // retry_count semantics: number of attempts already performed
-    // Initial: retry_count = 0
-    // After 1st failure: retry_count = 1, still < MAX (3) → retryable
-    // After 2nd failure: retry_count = 2, still < MAX (3) → retryable
-    // After 3rd failure: retry_count = 3, >= MAX (3) → terminal FAILED
+    // retry_count semantics: number of attempts already performed.
+    // Initial 0; after failure N the count is N; N >= MAX_RETRY_COUNT is terminal.
 
     const maxRetries = MAX_RETRY_COUNT;
     let retryCount = 0;
@@ -249,13 +248,20 @@ describe('MOD-016 C5-II — Retry Exhaustion', () => {
       if (isTerminal) break;
     }
 
-    expect(outcomes).toHaveLength(3);
-    expect(outcomes[0]).toEqual({ retryCount: 1, isTerminal: false });
-    expect(outcomes[1]).toEqual({ retryCount: 2, isTerminal: false });
-    expect(outcomes[2]).toEqual({ retryCount: 3, isTerminal: true });
+    expect(outcomes).toHaveLength(MAX_RETRY_COUNT);
+    expect(outcomes.slice(0, -1)).toEqual(
+      Array.from({ length: MAX_RETRY_COUNT - 1 }, (_, i) => ({
+        retryCount: i + 1,
+        isTerminal: false,
+      })),
+    );
+    expect(outcomes[outcomes.length - 1]).toEqual({
+      retryCount: MAX_RETRY_COUNT,
+      isTerminal: true,
+    });
 
     // Verify no infinite loop: loop terminates when retryCount >= MAX_RETRY_COUNT
-    expect(retryCount).toBe(3);
+    expect(retryCount).toBe(MAX_RETRY_COUNT);
   });
 
   it('should clear next_retry_at on terminal FAILED', () => {

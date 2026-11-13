@@ -58,6 +58,8 @@ It governs how:
 
 \- fleets, vehicles, and drivers are \*\*registered\*\* by transporters for marketplace participation
 
+\- a \*\*Driver is a canonical operational platform role under a specific Transporter\*\*, not an independent marketplace participant: onboarding, organisational association and operational status are controlled exclusively by the authorising Transporter, and Driver-to-Transporter association is distinct from Driver-to-vehicle and Driver-to-shipment/booking assignment (PROMPT 0 v1.3 §USER ROLES and §ROLE PROVISIONING AND DELEGATION)
+
 \- capacity and availability data is \*\*structured\*\* for matching (MOD-001)
 
 \- compliance status (licences, insurance, permits) is \*\*declared and validated\*\*
@@ -646,7 +648,7 @@ Declared asset events:
 
 | `VehicleAddedToFleet` | New vehicle registered |
 
-| `DriverRegistered` | New driver registered |
+| `DriverRegistered` | New driver registered by its authorising Transporter |
 
 | `AssetAssigned` | Asset linked to shipment |
 
@@ -828,3 +830,19 @@ MOD-014 ensures:
 
 \- cross-border compliance is declared and validated
 
+
+
+
+
+
+---
+
+
+DOCUMENTATION CHANGE HISTORY (role taxonomy reconciliation — NXC-HOA-AUTH-ROLE-001)
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-10-30 | NXC-HOA-AUTH-ROLE-001 | §2 scope bullet added stating Driver's canonical classification and the three non-interchangeable Driver relationships; §8 declared-event table entry for DriverRegistered attributed to the authorising Transporter. | PROMPT 0 v1.2 §ROLE PROVISIONING AND DELEGATION; HAO decision HD-RT-2 |
+| 2026-10-30 | NXC-HOA-DECISION-HD-RT-8 | Version-pointer maintenance only: the §2 Driver classification bullet now cites PROMPT 0 v1.3, which carries the v1.2 role taxonomy and provisioning rules forward unchanged. No fleet, Driver-assignment or FLEET_OWNER rule was altered. | HAO decision HD-RT-8 |
+
+Version metadata of this document is unchanged: this is a documentation-consistency reconciliation of the role taxonomy, not an architectural revision of this layer.

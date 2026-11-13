@@ -3,7 +3,7 @@
 // During C4, only the Sandbox adapter is active for all methods.
 // Future production providers will be plugged into this registry.
 
-import type { PaymentProviderAdapter, PaymentMethodType, PaymentProviderRegistry } from './provider-interface';
+import type { PaymentProviderAdapter, PaymentMethodType, ProductionProviderKey, PaymentProviderRegistry } from './provider-interface';
 import { SandboxPaymentProvider } from './sandbox-adapter';
 
 /**
@@ -118,7 +118,7 @@ export class BankTransferProviderAdapter implements PaymentProviderAdapter {
  * Future: each method resolves to its production adapter when available.
  */
 class PaymentProviderRegistryImpl implements PaymentProviderRegistry {
-  private readonly adapters = new Map<PaymentMethodType, PaymentProviderAdapter>();
+  private readonly adapters = new Map<PaymentMethodType | ProductionProviderKey, PaymentProviderAdapter>();
 
   constructor() {
     // C4: All methods use sandbox adapter
@@ -131,7 +131,8 @@ class PaymentProviderRegistryImpl implements PaymentProviderRegistry {
     this.adapters.set('PAYPAL', sandbox);
     this.adapters.set('BANK_TRANSFER', sandbox);
 
-    // Production placeholder adapters (not wired up)
+    // Production boundaries: held for list() visibility only. get()/has() accept
+    // canonical PaymentMethodType, so these keys can never be resolved to an adapter.
     this.adapters.set('MPESA_PROD', new MPesaProviderAdapter());
     this.adapters.set('EMOLA_PROD', new EMolaProviderAdapter());
     this.adapters.set('MKESH_PROD', new MKeshProviderAdapter());
@@ -151,7 +152,7 @@ class PaymentProviderRegistryImpl implements PaymentProviderRegistry {
     return this.adapters.has(method);
   }
 
-  list(): { name: string; method: PaymentMethodType; productionReady: boolean }[] {
+  list(): { name: string; method: PaymentMethodType | ProductionProviderKey; productionReady: boolean }[] {
     return Array.from(this.adapters.entries()).map(([method, adapter]) => ({
       name: adapter.providerName,
       method,

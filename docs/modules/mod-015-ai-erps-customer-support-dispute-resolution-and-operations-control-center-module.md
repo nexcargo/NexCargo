@@ -90,7 +90,7 @@ support lifecycle states (Open → Investigating → Pending → Resolved → Cl
 
 
 
-assignment to support agents, supervisors, or moderators
+assignment to support agents, supervisors, or moderators — Support Agent and Supervisor are functional assignments inside an existing canonical platform role with explicitly bounded least-privilege access, not independent RBAC roles (PROMPT 0 v1.3 §USER ROLES — Non-role terminology)
 
 
 
@@ -140,7 +140,7 @@ AI auto-detection of incidents (MOD-006)
 
 3.4 Escalation Framework
 
-escalation triggers and levels (L1 Support Agent → L2 Supervisor → L3 Admin/Moderator)
+escalation triggers and levels (L1 Support Agent → L2 Supervisor → L3 Admin/Moderator) — escalation levels are workflow capacities of canonical roles, not separate roles
 
 
 
@@ -346,7 +346,7 @@ resolutionOutcome – optional final state
 
 
 
-decisionMakerId – moderator/admin reference
+decisionMakerId – reference to the deciding Admin (within delegated authority) or SUPER_ADMIN (where ESS-001F §15.9 Tier 2 applies). Moderator-assigned investigators and reviewers are recorded in the case history and are not the decision maker for a financial outcome (PROMPT 0 v1.3 §PERMISSION RULES; §7.3).
 
 
 
@@ -374,7 +374,7 @@ All disputes must be tied to a shipment or transaction.
 
 
 
-Escrow funds (MOD-013) may be frozen during disputes.
+Escrow funds (MOD-013) may be frozen during disputes. The freeze is an instruction requested through the governed pathway (MOD-005 §4.4; ESS-001F §15.3, §15.9), not an action performed inside MOD-015, and a freeze requested by a SUPER_ADMIN under PROMPT 0 v1.3 Domain 1 may not be lifted by Admin (ESS-001F §15.2 suspension boundary; §15.4).
 
 
 
@@ -382,7 +382,7 @@ Resolution requires audit trail and justification.
 
 
 
-Moderator approval is required for financial impact decisions (MOD-010).
+A decision with financial impact is approved by Admin within delegated authority, or by SUPER_ADMIN where ESS-001F §15.9 Tier 2 applies (MOD-010 §4.2 enforces the APPROVE action type and names no approver). A Moderator may investigate, examine evidence, record findings, recommend and continue ordinary case handling, and may not approve a financial intervention or exercise authority reserved to Admin or SUPER_ADMIN (PROMPT 0 v1.3 §PERMISSION RULES; ESS-001F §15.6; §7.3; HAO decision D-01 Item 3, direction 3-A).
 
 
 
@@ -518,7 +518,7 @@ SLA timers start upon case creation.
 
 
 
-Escalation levels: Level 1 (Support Agent) → Level 2 (Supervisor) → Level 3 (Admin/Moderator).
+Escalation levels: Level 1 (Support Agent) → Level 2 (Supervisor) → Level 3 (Admin/Moderator). Each level is exercised by a user holding a canonical role; the level label does not grant permissions by itself, and the acting user's RBAC role is recorded for audit.
 
 
 
@@ -626,7 +626,7 @@ approvalStatus – PENDING / APPROVED / REJECTED / EXECUTED
 
 
 
-approvedBy – moderator/admin reference
+approvedBy – reference to the approving Admin (within delegated authority) or SUPER_ADMIN (where ESS-001F §15.9 Tier 2 applies). A Moderator is not an approver of a refund or compensation (PROMPT 0 v1.3 §PERMISSION RULES; ESS-001F §15.6; §7.3).
 
 
 
@@ -650,7 +650,7 @@ Refunds require dispute resolution approval.
 
 
 
-Compensation must follow predefined policy rules.
+Compensation must follow predefined policy rules. The policy is financial and commercial configuration, not a MOD-015 setting: routine compensation parameters are maintained under Admin routine configuration (ESS-001F §15.1, §15.2), and any concession outside approved policy is SUPER_ADMIN commercial authorisation (PROMPT 0 v1.3 Domain 5). MOD-015 defines no policy setter of its own and creates no compensation instrument (HAO decision D-01 Item 3, direction 3-C).
 
 
 
@@ -912,15 +912,31 @@ Decision Recommendation
 
 &#x20;      ↓
 
+Formal Escrow Intervention (exception step — only where a governed Escrow Intervention Request applies under ESS-001F §15.6; otherwise this step does not occur)
+
+&#x20;      ↓
+
 External Validation (if financial, MOD-013)
 
 &#x20;      ↓
 
-Final Resolution
+Final Resolution (decided by Admin within delegated authority, or by SUPER_ADMIN where ESS-001F §15.9 Tier 2 applies — §4.2, §7.3)
 
 &#x20;      ↓
 
 Closure
+
+Escrow intervention step (HAO decision D-01 Item 5, authorisation NXC-HOA-AUTH-D01-ITEM-05-001):
+
+A formal Escrow Intervention Request enters the flow above only where one of the six closed eligibility triggers recorded in ESS-001F §15.6 applies, and only when initiated by an authenticated human Admin acting within delegated authority or by a human SUPER_ADMIN. The initiating actor records the applicable trigger, the supporting evidence, the reasons, the scope and the intended action as ESS-001F §15.6 requires. Dissatisfaction with an outcome is not a trigger and does not open this step.
+
+The request is a separate governed record defined in ESS-001F §15.7 whose status follows the lifecycle in ESS-001F §15.8. Review and decision proceed as follows: the assigned reviewer and the decision-maker are each an actor other than the initiator (ESS-001F §15.9 independence rule); a Tier 1 request is decided inside the governed escrow intervention authority by an authorised Admin or SUPER_ADMIN; a Tier 2 request is decided only by an authenticated human SUPER_ADMIN and is not available to Admin (ESS-001F §15.2, §15.9; PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS Domain 1).
+
+Separations remain intact at this step. A Moderator investigates, examines evidence and recommends, and may not initiate, review for decision or decide an intervention (ESS-001F §15.6; §7.3). A decision on a request is not approval of the underlying financial instrument: instrument approval remains with its own authority (MOD-005 §4.3, §4.4; MOD-013 §4.3). Execution remains outside NexCargo entirely — only the bank or authorised payment provider executes, and only a bank confirmation changes a financial state (ESS-001F §2.1, §2.2, §15.3, §15.5; MOD-013 §7.1, §7.2).
+
+Events: escrowInterventionRequested is emitted when the request is raised, and escrowInterventionDecided when the ESS-001F §15.9 decision is recorded (Event Registry §13, owner MOD-005; Event Registry §17 Escrow Intervention Request Events). Neither event authorises, executes or confirms a bank or payment-provider transaction, and neither is an ordinary dispute-status transition.
+
+Evidence references, reviewer assignment, decision attribution and the implementation outcome remain appended to the case history (§4.2) and to the audit trail (MOD-010 §4.5; ESS-006; ESS-001F §15.10). The ordinary lifecycle above is unchanged: this step is an exception pathway reached only through a governed request, it is never automatic approval of a financial action, and no request state alters escrow, dispute, settlement or ledger state outside the bank-confirmed pathway (ESS-001F §15.8; §7.9 records that the intervention exercises no authority inside this module).
 
 5.3 Incident Lifecycle
 
@@ -1152,11 +1168,11 @@ Moderators investigate and recommend.
 
 
 
-Admins oversee system configuration.
+Admins oversee system configuration and ordinary financial workflow approvals within delegated authority (ESS-001F §15.1, §15.2); exceptional, high-impact and expressly reserved matters are decided by SUPER_ADMIN (PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS; ESS-001F §15.9 Tier 2).
 
 
 
-Financial outcomes are resolved via MOD-013 + ESS-001F.
+Financial outcomes are resolved via MOD-013 + ESS-001F by the Admin or SUPER_ADMIN decision maker, never by a Moderator decision (§4.2, §4.6).
 
 
 
@@ -1247,6 +1263,24 @@ bypass escalation hierarchy
 
 
 execute system corrections
+
+
+
+7.9 Escrow Intervention Eligibility Reference
+
+The closed list of circumstances in which a human Admin or SUPER_ADMIN may initiate an escrow-related intervention is defined once, authoritatively, in ESS-001F §15.6 (HAO decisions D-01 and D-01 Item 1). MOD-015 adds no trigger, and the support layer gains no authority from this rule.
+
+
+
+Eligibility to initiate an intervention is distinct from the dispute lifecycle in §5.2, from the escalation framework in §3.4, and from financial execution authority. A dispute being filed, escalated or recorded is not itself a trigger, and dissatisfaction with a resolution outcome is not a trigger.
+
+
+
+Intervention exercises no authority inside MOD-015. It cannot reverse, bypass or rewrite a dispute state, the decision vocabulary, or the case history required by §7.4, and it does not change the rule that MOD-015 structures the process without deciding outcomes (§7.1).
+
+
+
+The Escrow Intervention Request logical object, its lifecycle and its decision tiers are defined once, authoritatively, in ESS-001F §15.7 to §15.10 (HAO decision D-01 Item 2). An EIR is not a MOD-015 case type and adds no case, status, escalation level or outcome vocabulary to this module. Where an EIR references a dispute, that reference is optional and the EIR neither replaces nor re-opens the case. The §3.4 escalation framework, the §4.4 escalation object and the §5.2 dispute lifecycle are unchanged, and §7.1 No Decision Authority continues to apply to everything in this module. The EIR’s use of the §4.2 status names is vocabulary reuse only: an EIR status is not a case status, and a request recorded as RESOLVED does not resolve, re-open or imply approval of the linked dispute (NXC-HOA-AUTH-D01-ITEM-02-R1).
 
 
 
@@ -1678,3 +1712,24 @@ the platform continuously improves through resolution analytics
 
 
 
+
+
+
+
+
+---
+
+
+DOCUMENTATION CHANGE HISTORY (role taxonomy reconciliation — NXC-HOA-AUTH-ROLE-001)
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-10-30 | NXC-HOA-AUTH-ROLE-001 | Support Agent and Supervisor documented as functional assignments inside canonical roles rather than platform roles; escalation level semantics clarified. L1/L2/L3 enumeration values unchanged. | PROMPT 0 v1.2 §USER ROLES — Non-role terminology; HAO decision HD-RT-4 |
+| 2026-10-30 | NXC-HOA-DECISION-HD-RT-8 | Version-pointer maintenance only: the Support Agent / Supervisor non-role statement now cites PROMPT 0 v1.3 §USER ROLES. The SUPER_ADMIN dispute-override authority approved under HD-RT-8 is recorded at master-specification level only; no escalation path, queue, permission or case-handling rule in this module was created or changed by it, and that elaboration remains subject to separate authorisation. | HAO decision HD-RT-8 (PROMPT 0 v1.3) |
+| 2026-11-02 | NXC-HOA-AUTH-D01-001 | §7.9 added as a cross-reference to the closed escrow-intervention eligibility trigger list, which is defined once, authoritatively, in ESS-001F §15.6 under HAO decision D-01. No trigger, escalation level, lifecycle state, decision vocabulary, permission or authority boundary in this module was created, renamed or altered; the No Decision Authority rule (§7.1) is unchanged. | HAO decision D-01 (NXC-HOA-AUTH-D01-001); PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS Domain 1 |
+| 2026-11-02 | NXC-HOA-AUTH-D01-ITEM-03-001 | §4.2, §4.6, §5.2 and §7.3 financial-decision wording aligned to the approved authority model: a decision with financial impact is taken by Admin within delegated authority or by SUPER_ADMIN where ESS-001F §15.9 Tier 2 applies, a Moderator investigates, records findings and recommends, and an escrow freeze follows the governed pathway and may not be lifted by Admin where SUPER_ADMIN requested it. Compensation policy distinguishes Admin routine configuration from SUPER_ADMIN commercial authorisation. No field, escalation level, lifecycle state, queue or action type was added, renamed or removed. | HAO decision D-01 Item 3 (NXC-HOA-AUTH-D01-ITEM-03-001); PROMPT 0 v1.3 §USER ROLES — RBAC Model and §PERMISSION RULES; ESS-001F §15.1 to §15.5 |
+| 2026-11-03 | NXC-HOA-AUTH-D01-ITEM-05-001 | §5.2 gained a formal Escrow Intervention Request exception step between Decision Recommendation and External Validation, together with the notes governing it: initiation only where one of the six closed ESS-001F §15.6 eligibility triggers applies, by an authenticated human Admin acting within delegated authority or by a human SUPER_ADMIN; reviewer and decision-maker each other than the initiator, Tier 1 decided inside the governed escrow intervention authority and Tier 2 reserved to SUPER_ADMIN; Moderator confined to investigation, evidence examination and recommendation, with instrument approval and external execution remaining separate; emission of escrowInterventionRequested and escrowInterventionDecided and their non-financial effect recorded; evidence, assignment, attribution and outcome kept appended to case history and audit trail. The ordinary dispute lifecycle sequence, escalation levels, queues, permissions, §4.2 case handling and the §7.9 No Decision Authority rule are unchanged, and no state, field, queue or authority was created. | HAO decision D-01 Item 5 (NXC-HOA-AUTH-D01-ITEM-05-001); ESS-001F §15.6 to §15.10; Event Registry §13 and §17 |
+
+Version metadata of this document is unchanged: this is a documentation-consistency reconciliation of the role taxonomy, not an architectural revision of this layer.
+
+Version effect (2026-11-03 row above): MOD-015 remains v1.0 — no version increase, no loader change, no INDEX §7.1 change. The step added under NXC-HOA-AUTH-D01-ITEM-05-001 documents an exception pathway whose eligibility triggers, authority tiers, record and lifecycle are defined in ESS-001F §15.6 to §15.10; this module's ownership of dispute and case records and its No Decision Authority rule are unchanged. The statement immediately above remains the version record for the rows it was written for.

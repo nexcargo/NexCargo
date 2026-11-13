@@ -1,4 +1,4 @@
-import type { NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 import createMiddleware from 'next-intl/middleware';
 
@@ -12,8 +12,14 @@ const intlMiddleware = createMiddleware({
 });
 
 export async function middleware(request: NextRequest) {
-  await updateSession(request);
-  return intlMiddleware(request);
+  // API routes are not locale-prefixed. Running next-intl over them would redirect
+  // POST /api/... to /pt/api/... and lose the request body, so they bypass it.
+  const response = request.nextUrl.pathname.startsWith('/api/')
+    ? NextResponse.next({ request })
+    : intlMiddleware(request);
+
+  // Session refresh has to write onto the response that is actually returned.
+  return updateSession(request, response);
 }
 
 export const config = {

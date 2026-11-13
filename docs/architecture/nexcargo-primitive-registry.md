@@ -117,7 +117,7 @@ shipment (logical marketplace entity)
 booking
 contract
 pricing
-carrier (external actor)
+carrier (industry term for an external transport provider; not a canonical NexCargo platform role and not a synonym for Transporter — see PROMPT 0 v1.3 §USER ROLES, Non-role terminology)
 transporter (external actor)
 shipper (external actor)
 listing
@@ -129,6 +129,8 @@ ensures unified interpretation of domain concepts
 Scope
 
 ALL MODs
+
+Actor terminology: the canonical platform classifications are Shipper, Transporter, Driver, Dispatcher, Moderator, Admin, SUPER_ADMIN and System (PROMPT 0 v1.3 §USER ROLES). The ontology entries above describe marketplace counterparties in business terms and create no additional role.
 
 0.3 Event System Primitive
 
@@ -284,7 +286,9 @@ Central rule enforcement system across MODs.
 
 Defines precedence:
 
-BOOT → INDEX → ARBITRATION → ESS → MODS
+PROMPT 0 v1.3 → BOOT → INDEX → ARBITRATION → ESS → MODS
+
+PROMPT 0 v1.3 §DOCUMENT PRECEDENCE is the governing order and PROMPT 1 records that Prompt 0 always overrides; BOOT states that it does not override another specification layer. The leading position of PROMPT 0 above is a subordinate-reference correction to align this ladder with the governing authority (HAO decision D-01 Item 3, direction 3-D); the remaining ordering is unchanged and any structural re-ordering of this ladder requires a separate architecture decision.
 
 5.3 Dependency Graph Enforcement Model
 
@@ -305,6 +309,8 @@ Defines deterministic dispute progression lifecycle.
 6.3 Resolution Authority Hierarchy Model
 
 Defines arbitration authority rules.
+
+TODO: requires specification from BOOT / ESS / MOD — the model's tiers and rules are not defined anywhere in the current corpus. ESS-001F §15.9 decision tiers are EIR decision routing recorded by HAO decision D-01 Item 2 and are not a definition of this primitive. This entry records the void only; it defines no tier, authority or rule, and filling it requires a separate HAO authorisation (HAO decision D-01 Item 3, §5 of the execution instruction).
 
 6.4 Evidence Model
 
@@ -343,6 +349,8 @@ PRIMITIVE REGISTRY
         ↓
 MOD SPECIFICATIONS
 
+This is the primitive-definition authority chain only. It is not a document-precedence statement: precedence across all layers is defined by PROMPT 0 v1.3 §DOCUMENT PRECEDENCE — SOURCE OF TRUTH and recorded at §5.2 of this registry (HAO decision D-01 Item 3, direction 3-D).
+
 Meaning:
 
 BOOT defines execution rules
@@ -356,3 +364,16 @@ MODs define marketplace behavior
 NexCargo is a marketplace system.
 It does not execute logistics.
 It coordinates logistics actors.
+
+
+---
+
+DOCUMENTATION CHANGE HISTORY (role taxonomy reconciliation — NXC-HOA-AUTH-ROLE-001)
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-10-30 | NXC-HOA-AUTH-ROLE-001 | §0.2 Shared Domain Ontology: "carrier" restated as an industry term for an external transport provider rather than a platform role, with an explicit note that the ontology entries create no additional classifications. Canonical taxonomy cited to PROMPT 0 v1.2. | HAO decision HD-RT-4; PROMPT 0 v1.2 §USER ROLES — Non-role terminology |
+| 2026-10-30 | NXC-HOA-DECISION-HD-RT-8 | §0.2 carrier entry and the actor-terminology note now cite PROMPT 0 v1.3. No primitive, ontology entry or actor classification was added, renamed or removed. | HAO decision HD-RT-8 |
+| 2026-11-02 | NXC-HOA-AUTH-D01-ITEM-03-001 | §5.2 global policy hierarchy now leads with PROMPT 0 v1.3, so that the recorded precedence agrees with the governing specification instead of placing BOOT above it; the note states that any structural re-ordering of the ladder requires a separate architecture decision. §6.3 Resolution Authority Hierarchy Model carries a specification-gap marker recording that its tiers and rules are defined nowhere in the current corpus; the entry records the void and defines no tier, authority or rule. No primitive, actor classification or ontology entry was added, renamed or removed. | HAO decision D-01 Item 3, direction 3-D (NXC-HOA-AUTH-D01-ITEM-03-001); PROMPT 0 v1.3 §PERMISSION RULES; Arbitration Layer §5.1; gap-marker convention per Arbitration Layer §6.3 TYPE C |
+
+Document version metadata is unchanged: this is a documentation-consistency reconciliation of the role taxonomy, not an architectural revision of this layer.

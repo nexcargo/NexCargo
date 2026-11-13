@@ -1,0 +1,27 @@
+{
+  "patterns": {},
+  "memories": [],
+  "trajectories": [],
+  "errors": {},
+  "file_sequences": [],
+  "agents": {},
+  "edges": [],
+  "stats": {
+    "total_patterns": 0,
+    "total_memories": 0,
+    "total_trajectories": 0,
+    "total_errors": 0,
+    "session_count": 0,
+    "last_session": 0
+  },
+  "activeTrajectories": {
+    "traj_1790862309738_cy1iusxbr": {
+      "id": "traj_1790862309738_cy1iusxbr",
+      "context": "20261001134509-visual-verification-of-homepage-: Visual verification of homepage scroll-stack effect - sections 2-7 should show continuous overlap on desktop (≥1024px)",
+      "agent": "browser-session",
+      "file": null,
+      "steps": [],
+      "startTime": 1790862309738
+    }
+  }
+}

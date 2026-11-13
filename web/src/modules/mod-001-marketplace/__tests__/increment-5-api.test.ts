@@ -4,11 +4,16 @@ import { GET as matchesGET, POST as matchesPOST } from '@/app/api/marketplace/ma
 import { CargoType, MatchStatus } from '@/modules/mod-001-marketplace/domain/enums';
 import { createClient } from '@/lib/supabase/server';
 
-// Helper: create mock client. rpc() always fails → forces metadata fallback in getEffectiveRole.
-function makeMock(user: any) {
+// Helper: mock client. I-1 §3.6 — the database resolvers are the only role source;
+// effective_marketplace_role() supplies the marketplace classification and user_metadata none.
+function makeMock(user: any, marketplace: string | null = 'SHIPPER') {
   return {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user }, error: null }) },
-    rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable in test') })),
+    rpc: vi.fn(async (fn: string) =>
+      fn === 'effective_marketplace_role'
+        ? { data: marketplace, error: null }
+        : { data: null, error: null },
+    ),
   } as any;
 }
 
@@ -50,7 +55,7 @@ describe('C2-Increment-002 MOD-001 Increment 5 API Routes — Auth Migration & M
 
   describe('GET /api/marketplace/matches (Pattern A migrated)', () => {
     it('returns empty match list for authenticated SHIPPER', async () => {
-      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com', user_metadata: { role: 'SHIPPER' } }));
+      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com' }));
       const request = new NextRequest('http://localhost:3000/api/marketplace/matches?listingId=listing-001', { headers: {} });
       const response = await matchesGET(request);
       const data = await response.json();
@@ -60,7 +65,7 @@ describe('C2-Increment-002 MOD-001 Increment 5 API Routes — Auth Migration & M
     });
 
     it('returns 400 when listingId query param is missing (authenticated user)', async () => {
-      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com', user_metadata: { role: 'SHIPPER' } }));
+      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com' }));
       const request = new NextRequest('http://localhost:3000/api/marketplace/matches', { headers: {} });
       const response = await matchesGET(request);
       expect(response.status).toBe(400);
@@ -74,14 +79,14 @@ describe('C2-Increment-002 MOD-001 Increment 5 API Routes — Auth Migration & M
     });
 
     it('returns 403 for TRANSPORTER trying to read matches (RBAC denied)', async () => {
-      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com', user_metadata: { role: 'TRANSPORTER' } }));
+      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com' }, 'TRANSPORTER'));
       const request = new NextRequest('http://localhost:3000/api/marketplace/matches?listingId=listing-001', { headers: {} });
       const response = await matchesGET(request);
       expect(response.status).toBe(403);
     });
 
     it('includes correlation ID header', async () => {
-      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com', user_metadata: { role: 'SHIPPER' } }));
+      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com' }));
       const request = new NextRequest('http://localhost:3000/api/marketplace/matches?listingId=listing-001', { headers: {} });
       const response = await matchesGET(request);
       expect(response.headers.get('x-correlation-id')).toBeDefined();
@@ -90,7 +95,7 @@ describe('C2-Increment-002 MOD-001 Increment 5 API Routes — Auth Migration & M
 
   describe('POST /api/marketplace/matches (Pattern A migrated)', () => {
     it('creates a match proposal for authenticated SHIPPER', async () => {
-      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com', user_metadata: { role: 'SHIPPER' } }));
+      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com' }));
       const body = { listingId: 'listing-001', offerId: 'offer-001', matchScore: 85.5, rankingPosition: 1, reasoningTrace: 'Excellent corridor alignment' };
       const request = new NextRequest('http://localhost:3000/api/marketplace/matches', {
         method: 'POST',
@@ -109,7 +114,7 @@ describe('C2-Increment-002 MOD-001 Increment 5 API Routes — Auth Migration & M
     });
 
     it('does not include BaseEntity persistence fields', async () => {
-      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com', user_metadata: { role: 'SHIPPER' } }));
+      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com' }));
       const body = { listingId: 'listing-001', offerId: 'offer-001', matchScore: 80, rankingPosition: 2 };
       const request = new NextRequest('http://localhost:3000/api/marketplace/matches', {
         method: 'POST',
@@ -123,7 +128,7 @@ describe('C2-Increment-002 MOD-001 Increment 5 API Routes — Auth Migration & M
     });
 
     it('returns 400 when listingId is missing', async () => {
-      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com', user_metadata: { role: 'SHIPPER' } }));
+      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com' }));
       const body = { offerId: 'offer-001', matchScore: 80, rankingPosition: 1 };
       const request = new NextRequest('http://localhost:3000/api/marketplace/matches', {
         method: 'POST',
@@ -135,7 +140,7 @@ describe('C2-Increment-002 MOD-001 Increment 5 API Routes — Auth Migration & M
     });
 
     it('returns 400 when matchScore is out of range (>100)', async () => {
-      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com', user_metadata: { role: 'SHIPPER' } }));
+      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com' }));
       const body = { listingId: 'l1', offerId: 'o1', matchScore: 150, rankingPosition: 1 };
       const request = new NextRequest('http://localhost:3000/api/marketplace/matches', {
         method: 'POST',
@@ -147,7 +152,7 @@ describe('C2-Increment-002 MOD-001 Increment 5 API Routes — Auth Migration & M
     });
 
     it('returns 400 when rankingPosition < 1', async () => {
-      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com', user_metadata: { role: 'SHIPPER' } }));
+      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com' }));
       const body = { listingId: 'l1', offerId: 'o1', matchScore: 80, rankingPosition: 0 };
       const request = new NextRequest('http://localhost:3000/api/marketplace/matches', {
         method: 'POST',
@@ -159,7 +164,7 @@ describe('C2-Increment-002 MOD-001 Increment 5 API Routes — Auth Migration & M
     });
 
     it('returns 403 for TRANSPORTER creating matches (RBAC denied)', async () => {
-      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com', user_metadata: { role: 'TRANSPORTER' } }));
+      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com' }, 'TRANSPORTER'));
       const body = { listingId: 'l1', offerId: 'o1', matchScore: 80, rankingPosition: 1 };
       const request = new NextRequest('http://localhost:3000/api/marketplace/matches', {
         method: 'POST',
@@ -183,7 +188,7 @@ describe('C2-Increment-002 MOD-001 Increment 5 API Routes — Auth Migration & M
     });
 
     it('includes correlation ID header', async () => {
-      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com', user_metadata: { role: 'SHIPPER' } }));
+      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com' }));
       const body = { listingId: 'l1', offerId: 'o1', matchScore: 80, rankingPosition: 1 };
       const request = new NextRequest('http://localhost:3000/api/marketplace/matches', {
         method: 'POST',
@@ -195,7 +200,7 @@ describe('C2-Increment-002 MOD-001 Increment 5 API Routes — Auth Migration & M
     });
 
     it('no longer accepts x-user-role header as identity source', async () => {
-      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com', user_metadata: { role: 'TRANSPORTER' } }));
+      vi.mocked(createClient).mockReturnValue(makeMock({ id: 'user-1', email: 'test@nexcargo.com' }, 'TRANSPORTER'));
       const body = { listingId: 'l1', offerId: 'o1', matchScore: 80, rankingPosition: 1 };
       const request = new NextRequest('http://localhost:3000/api/marketplace/matches', {
         method: 'POST',

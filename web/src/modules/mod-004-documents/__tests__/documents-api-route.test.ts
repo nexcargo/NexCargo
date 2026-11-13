@@ -8,75 +8,242 @@ import type { DocumentCreateInput, DocumentSummary } from '@/modules/mod-004-doc
 /** Local copy of allowed extensions (module-internal constant not exported) */
 const TEST_ALLOWED_EXTENSIONS = new Set(['.pdf', '.docx', '.xlsx', '.jpg', '.jpeg', '.png', '.tiff', '.tif']);
 
-/** Global mock client registry — shared across all DB-dependent tests */
-type QueryChain = {
-  eq: ReturnType<typeof vi.fn>;
-  single: ReturnType<typeof vi.fn>;
-  limit: ReturnType<typeof vi.fn>;
-  order: ReturnType<typeof vi.fn>;
+/**
+ * Admin-client double for the MOD-004 repository.
+ *
+ * Built from plain closures inside `vi.hoisted` rather than `vi.fn()` doubles: the
+ * mock factory runs before this module body, and the `vi.resetAllMocks()` in
+ * `beforeEach` would strip an implementation attached to a spy.
+ *
+ * The chain mirrors PostgREST: every verb chains, the chain itself awaits to
+ * `{ data, error }`, and a database failure is *returned* rather than thrown, so
+ * the repository's own error handling decides whether a caller sees a rejection.
+ * Anything the repository must not do (wrong schema, unmapped table) throws
+ * immediately instead of resolving to a plausible-looking empty result.
+ */
+type StubError = { code?: string; message?: string };
+type StubPayload = Record<string, unknown>;
+
+interface StubResult {
+  data: unknown;
+  error: StubError | null;
+}
+
+type StubChain = Promise<StubResult> & {
+  select: (columns?: string) => StubChain;
+  insert: (payload: StubPayload) => StubChain;
+  eq: (column: string, value: unknown) => StubChain;
+  order: (column: string, options: { ascending: boolean }) => StubChain;
+  limit: (count: number) => StubChain;
+  single: () => StubChain;
 };
 
-let currentQueryResult: { data: unknown; error: unknown } = { data: null, error: null };
+interface StubClient {
+  schema: (name: string) => { from: (table: string) => StubChain };
+}
 
-function setDbResult(data: unknown, errorCode?: string): void {
-  const selectFn = vi.fn();
-  const eqFn = vi.fn();
-  const limitFn = vi.fn();
-  const singleFn = vi.fn();
-  const orderFn = vi.fn();
+/** A `logistics_schema.documents` row exactly as the repository reads it. */
+interface StubDocumentRow {
+  id: string;
+  document_id: string;
+  document_type: string;
+  linked_entity_type: string;
+  linked_entity_id: string;
+  status: string;
+  created_by: string;
+  updated_by: string;
+  file_reference: string;
+  file_hash: string;
+  expiry_date: string | null;
+  issue_date: string | null;
+  correlation_id: string | null;
+  is_deleted: boolean;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
 
-  // Build chained query result shape
-  const buildChain = (): QueryChain => ({
-    eq: eqFn,
-    single: singleFn,
-    limit: limitFn,
-    order: orderFn,
-  });
+interface LoggedRead { table: string; filters: StubPayload }
+interface LoggedWrite { table: string; payload: StubPayload }
 
-  eqFn.mockReturnValue(buildChain());
+function compareValues(left: unknown, right: unknown): number {
+  if (typeof left === 'number' && typeof right === 'number') return left - right;
+  return String(left).localeCompare(String(right));
+}
 
-  // Make selectFn return a chainable object
-  selectFn.mockReturnValue({
-    eq: eqFn,
-  });
+/** PostgREST returns only the projected columns, so a missing one stays missing. */
+function pickColumns(row: StubPayload, columns: string[]): StubPayload {
+  return columns.reduce<StubPayload>((acc, column) => {
+    if (column in row) acc[column] = row[column];
+    return acc;
+  }, {});
+}
 
-  const dbRow = {
-    id: 'r-id',
-    document_id: 'doc-id',
+const db = vi.hoisted(() => {
+  const DOCUMENT_TABLES = [
+    'documents',
+    'document_versions',
+    'document_linkages',
+    'document_approvals',
+    'ocr_results',
+    'digital_signatures',
+    'document_expiry_records',
+  ];
+
+  const DOCUMENT_ROW: StubDocumentRow = {
+    id: 'row-0001',
+    document_id: 'doc-001',
     document_type: 'CONTRACT',
     linked_entity_type: 'contract',
-    linked_entity_id: 'c-001',
+    linked_entity_id: 'contract-001',
     status: 'ACTIVE',
-    created_by: 'u1',
-    updated_by: 'u1',
-    file_reference: 'c/doc.pdf',
-    file_hash: 'hash',
+    created_by: 'user-001',
+    updated_by: 'user-001',
+    file_reference: 'contracts/doc-001.pdf',
+    file_hash: 'abc123',
     expiry_date: null,
     issue_date: null,
     correlation_id: null,
     is_deleted: false,
     version: 1,
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: '2026-01-01T00:00:00Z',
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z',
   };
 
-  // Override default behavior based on currentQueryResult
-  if (errorCode === 'PGRST116') {
-    singleFn.mockReturnValue({ data: null, error: { code: 'PGRST116' } });
-  } else if (errorCode === 'PGRST999') {
-    singleFn.mockReturnValue({ data: null, error: { code: 'PGRST999', message: 'db error' } });
-  } else {
-    singleFn.mockReturnValue({ data: currentQueryResult.data, error: errorCode ? { code: errorCode } : null });
+  /** Columns the database generates; a representation-returning INSERT echoes them. */
+  const SERVER_DEFAULTS: StubPayload = {
+    id: 'row-generated',
+    is_deleted: false,
+    version: 1,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z',
+  };
+
+  const seed = new Map<string, unknown[]>();
+  const reads: LoggedRead[] = [];
+  const writes: LoggedWrite[] = [];
+  let failure: StubError | null = null;
+
+  function buildChain(table: string): StubChain {
+    const filters: StubPayload = {};
+    let inserted: StubPayload | null = null;
+    let projection: string[] | null = null;
+    let wantsSingle = false;
+    let wantsLimit: number | null = null;
+    let ordering: { column: string; ascending: boolean } | null = null;
+
+    function settle(): StubResult {
+      if (failure) return { data: null, error: failure };
+
+      if (inserted) {
+        writes.push({ table, payload: inserted });
+        return { data: wantsSingle ? { ...SERVER_DEFAULTS, ...inserted } : null, error: null };
+      }
+
+      reads.push({ table, filters: { ...filters } });
+      const matched = (seed.get(table) ?? []).filter((row) =>
+        Object.entries(filters).every(([column, value]) => (row as StubPayload)[column] === value),
+      );
+      let rows = matched;
+      if (ordering) {
+        const { column, ascending } = ordering;
+        rows = [...rows].sort((a, b) => {
+          const direction = compareValues((a as StubPayload)[column], (b as StubPayload)[column]);
+          return ascending ? direction : -direction;
+        });
+      }
+
+      if (wantsSingle) {
+        const first = rows[0];
+        return first === undefined
+          ? { data: null, error: { code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned' } }
+          : { data: project(first), error: null };
+      }
+      const page = wantsLimit === null ? rows : rows.slice(0, wantsLimit);
+      return { data: page.map(project), error: null };
+    }
+
+    function project(row: unknown): unknown {
+      return projection === null ? row : pickColumns(row as StubPayload, projection);
+    }
+
+    const chain = Promise.resolve().then(settle) as StubChain;
+    return Object.assign(chain, {
+      select: (columns?: string): StubChain => {
+        if (columns && columns !== '*') projection = columns.split(',').map((name) => name.trim());
+        return chain;
+      },
+      insert: (payload: StubPayload): StubChain => {
+        inserted = payload;
+        return chain;
+      },
+      eq: (column: string, value: unknown): StubChain => {
+        filters[column] = value;
+        return chain;
+      },
+      order: (column: string, options: { ascending: boolean }): StubChain => {
+        ordering = { column, ascending: options.ascending };
+        return chain;
+      },
+      limit: (count: number): StubChain => {
+        wantsLimit = count;
+        return chain;
+      },
+      single: (): StubChain => {
+        wantsSingle = true;
+        return chain;
+      },
+    });
   }
 
-  limitFn.mockReturnValue({ data: currentQueryResult.data, error: errorCode ? { code: errorCode } : null });
-  orderFn.mockReturnValue({ data: currentQueryResult.data, error: errorCode ? { code: errorCode } : null });
-}
+  function createAdminClient(): StubClient {
+    return {
+      schema(name: string) {
+        if (name !== 'logistics_schema') {
+          throw new Error(`DocumentRepository requested an unexpected schema: ${name}`);
+        }
+        return {
+          from(table: string) {
+            if (!DOCUMENT_TABLES.includes(table)) {
+              throw new Error(`DocumentRepository queried an unmapped table: ${table}`);
+            }
+            return buildChain(table);
+          },
+        };
+      },
+    };
+  }
+
+  return {
+    DOCUMENT_ROW,
+    reads,
+    writes,
+    reset() {
+      seed.clear();
+      reads.length = 0;
+      writes.length = 0;
+      failure = null;
+    },
+    setRows(table: string, rows: unknown[]) {
+      seed.set(table, rows);
+    },
+    /** Make requests answer like a failing database so the repository's error paths stay assertable. */
+    setError(error: StubError) {
+      failure = error;
+    },
+    createAdminClient,
+  };
+});
+
 
 // ─── Top-level mocks that must execute before any module imports ────────────
 
 vi.mock('@/lib/env', () => ({
   DATABASE_URL: 'https://test-project.supabase.co',
+}));
+
+vi.mock('@/infrastructure/database/supabase', () => ({
+  createAdminClient: () => db.createAdminClient(),
 }));
 
 vi.mock('@/modules/mod-004-documents/infrastructure/storage/nexca-storage', () => ({
@@ -94,6 +261,7 @@ vi.mock('@/modules/mod-004-documents/infrastructure/storage/nexca-storage', () =
 
 beforeEach(() => {
   vi.resetAllMocks();
+  db.reset();
 });
 
 // --------------------------------------------------------------------------- *
@@ -231,15 +399,6 @@ describe('A. RBAC Integration — Documents Resource Authorization', () => {
  * B. Contract Validation Helper Tests — mocking repository methods
  * -------------------------------------------------------------------------- **/
 
-// We need a persistent vi.mock for supabase that works across all dynamic imports.
-// Since vi.mock is hoisted, we define it once here and use setDbResult() in tests.
-vi.mock('@/infrastructure/database/supabase', async () => {
-  // Access the outer scope's function
-  // Use require to reference module-scoped variables
-  const mod = await vi.importActual<{ setDbResult: Function }>('G:/NexCargo/nexcargov2/web/src/modules/mod-004-documents/__tests__/documents-api-route.test.ts');
-  return { createAdminClient: () => null };
-});
-
 describe('B. Contract Validation — Conceptual Flow Verification', () => {
   // The upload route calls repo.findExistingByHashAndEntity() before storage upload.
   // If linkedEntityType === 'contract' and contract not found → 404 (fail-fast).
@@ -265,56 +424,95 @@ describe('C. Repository Method Signatures — New C7-004 Methods', () => {
     repo = await loadRepo();
   });
 
-  it('DocumentRepository.prototype.contractExists is an async function', () => {
+  it('DocumentRepository.prototype.contractExists is an async function', async () => {
     expect(typeof repo.findExistingByHashAndEntity).toBe('function');
     const result = repo.findExistingByHashAndEntity('hash', 'type', 'id');
     expect(result).toBeInstanceOf(Promise);
+    await expect(result).resolves.toBeNull();
   });
 
-  it('DocumentRepository.prototype.findExistingByHashAndEntity is an async function', () => {
+  it('DocumentRepository.prototype.findExistingByHashAndEntity is an async function', async () => {
     expect(typeof repo.findExistingByHashAndEntity).toBe('function');
     const result = repo.findExistingByHashAndEntity('hash', 'type', 'id');
     expect(result).toBeInstanceOf(Promise);
+    await result;
+
+    // The dedup probe is pinned to the documented (hash, type, id, not-deleted) combo.
+    expect(db.reads[db.reads.length - 1]).toEqual({
+      table: 'documents',
+      filters: { file_hash: 'hash', linked_entity_type: 'type', linked_entity_id: 'id', is_deleted: false },
+    });
   });
 
   it('contractExists accepts a single string argument (contractId)', async () => {
-    try {
-      await repo.findExistingByHashAndEntity('hash', 'type', '00000000-0000-0000-0000-000000000001');
-    } catch (_e) {
-      // Expected without real DB connection — signature still valid
-    }
+    await expect(
+      repo.findExistingByHashAndEntity('hash', 'type', '00000000-0000-0000-0000-000000000001'),
+    ).resolves.toBeNull();
+
+    let pending!: ReturnType<typeof repo.findExistingByHashAndEntity>;
     expect(() => {
-      void repo.findExistingByHashAndEntity('hash', 'type', 'any-string-here');
+      pending = repo.findExistingByHashAndEntity('hash', 'type', 'any-string-here');
     }).not.toThrow();
+    await expect(pending).resolves.toBeNull();
   });
 
   it('findExistingByHashAndEntity accepts three string arguments (hash, entityType, entityId)', async () => {
-    try {
-      await repo.findExistingByHashAndEntity('sha256hash', 'shipment', 'ship-uuid-001');
-    } catch (_e) {
-      // Expected without real DB connection
-    }
+    db.setRows('documents', [db.DOCUMENT_ROW]);
+
+    const existing = await repo.findExistingByHashAndEntity('abc123', 'contract', 'contract-001');
+    expect(existing?.documentId).toBe('doc-001');
+    expect(existing?.fileHash).toBe('abc123');
+
+    let pending!: ReturnType<typeof repo.findExistingByHashAndEntity>;
     expect(() => {
-      void repo.findExistingByHashAndEntity('hash', 'entity', 'id');
+      pending = repo.findExistingByHashAndEntity('hash', 'entity', 'id');
     }).not.toThrow();
+    await expect(pending).resolves.toBeNull();
   });
 
-  it('findById method still exists and accepts string documentId', () => {
+  it('findById method still exists and accepts string documentId', async () => {
     expect(typeof repo.findById).toBe('function');
-    const result = repo.findById('00000000-0000-0000-0000-000000000001');
+    db.setRows('documents', [db.DOCUMENT_ROW]);
+
+    const result = repo.findById('doc-001');
     expect(result).toBeInstanceOf(Promise);
+
+    const detail = await result;
+    expect(detail?.documentId).toBe('doc-001');
+    expect(detail?.fileReference).toBe('contracts/doc-001.pdf');
+    expect(detail?.versions).toEqual([]);
+    expect(detail?.expiryRecord).toBeNull();
+
+    // No row is the repository's null signal, not a thrown error.
+    await expect(repo.findById('doc-missing')).resolves.toBeNull();
   });
 
-  it('listByEntity method still exists with correct signature', () => {
+  it('findById surfaces a database failure as a rejection', async () => {
+    db.setError({ code: 'PGRST999', message: 'connection lost' });
+    await expect(repo.findById('doc-001')).rejects.toThrow(/Failed to find document: connection lost/);
+  });
+
+  it('listByEntity method still exists with correct signature', async () => {
     expect(typeof repo.listByEntity).toBe('function');
+    db.setRows('documents', [db.DOCUMENT_ROW]);
+
     const result = repo.listByEntity('contract', 'contract-001', { status: 'ACTIVE' });
     expect(result).toBeInstanceOf(Promise);
+
+    const summaries = await result;
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0]).toMatchObject({ documentId: 'doc-001', documentType: 'CONTRACT', status: 'ACTIVE' });
+
+    await expect(repo.listByEntity('contract', 'contract-001', { status: 'EXPIRED' })).resolves.toEqual([]);
   });
 
-  it('listByStatus method still exists with correct signature', () => {
+  it('listByStatus method still exists with correct signature', async () => {
     expect(typeof repo.listByStatus).toBe('function');
+    db.setRows('documents', [db.DOCUMENT_ROW]);
+
     const result = repo.listByStatus('ACTIVE');
     expect(result).toBeInstanceOf(Promise);
+    await expect(result).resolves.toHaveLength(1);
   });
 
   it('create method exists with correct signature accepting DocumentCreateInput', async () => {
@@ -332,10 +530,67 @@ describe('C. Repository Method Signatures — New C7-004 Methods', () => {
       updatedBy: 'user-001',
     };
 
-    // Signature should accept this object without type errors
+    // Signature should accept this object, and create() must fan the write out
+    // across document + linkage + v1 version in that order.
+    let pending!: ReturnType<typeof repo.create>;
     expect(() => {
-      void repo.create(input);
+      pending = repo.create(input);
     }).not.toThrow();
+
+    const created = await pending;
+    expect(created.documentId).toBe('doc-001');
+    expect(created.status).toBe('UPLOADED');
+    expect(created.linkedEntityId).toBe('contract-001');
+    expect(db.writes.map((write) => write.table)).toEqual([
+      'documents',
+      'document_linkages',
+      'document_versions',
+    ]);
+    expect(db.writes[1].payload).toMatchObject({
+      document_id: 'doc-001',
+      module_reference: 'MOD-004',
+      entity_reference: 'contract-001',
+    });
+    expect(db.writes[2].payload).toMatchObject({ document_id: 'doc-001', version_number: 1 });
+  });
+
+  it('create writes an expiry record only when the document carries an expiry date', async () => {
+    const created = await repo.create({
+      documentId: 'doc-002',
+      documentType: 'CONTRACT',
+      linkedEntityType: 'contract',
+      linkedEntityId: 'contract-002',
+      fileReference: 'contracts/doc-002.pdf',
+      fileHash: 'def456',
+      createdBy: 'user-001',
+      updatedBy: 'user-001',
+      expiryDate: '2026-12-31T00:00:00.000Z',
+    });
+    expect(created.expiryDate).toBeInstanceOf(Date);
+    expect(db.writes.map((write) => write.table)).toEqual([
+      'documents',
+      'document_linkages',
+      'document_expiry_records',
+      'document_versions',
+    ]);
+  });
+
+  it('create rejects with an AppError when the database refuses the insert', async () => {
+    db.setError({ code: '23505', message: 'duplicate key value violates unique constraint' });
+
+    await expect(
+      repo.create({
+        documentId: 'doc-dup',
+        documentType: 'POD',
+        linkedEntityType: 'shipment',
+        linkedEntityId: 'ship-001',
+        fileReference: 'shipments/ship-001/pod.pdf',
+        fileHash: 'dup-hash',
+        createdBy: 'user-001',
+        updatedBy: 'user-001',
+      }),
+    ).rejects.toThrow('Failed to create document: duplicate key value violates unique constraint');
+    expect(db.writes).toEqual([]);
   });
 });
 
@@ -603,7 +858,15 @@ describe('F. Integration Flows — Conceptual Upload & Download Sequences', () =
       createdBy: 'user-001',
       updatedBy: 'user-001',
     };
-    expect(() => { void repo.create(input); }).not.toThrow();
+    let pending!: ReturnType<typeof repo.create>;
+    expect(() => {
+      pending = repo.create(input);
+    }).not.toThrow();
+
+    const created = await pending;
+    expect(created.documentId).toBe('doc-required');
+    expect(created.documentType).toBe('POD');
+    expect(created.fileHash).toBe('req-hash');
   });
 
   it('DocumentCreateInput accepts optional correlationId field', async () => {
@@ -635,7 +898,13 @@ describe('F. Integration Flows — Conceptual Upload & Download Sequences', () =
     };
     // Type-check: the row structure maps to DocumentDetail
     expect(mockDocRow.file_reference).toBe('c/d.pdf');
-    expect(repo.findById('doc-detail-001')).toBeInstanceOf(Promise);
+
+    db.setRows('documents', [mockDocRow]);
+    const pending = repo.findById('doc-detail-001');
+    expect(pending).toBeInstanceOf(Promise);
+
+    const detail = await pending;
+    expect(detail?.fileReference).toBe('c/d.pdf');
   });
 
   it('ValidationError class extends Error and has correct code', async () => {

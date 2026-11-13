@@ -140,7 +140,7 @@ Each JWT MUST include:
 
 
 
-Roles (from Prompt 0):
+Roles (from PROMPT 0 v1.3 §USER ROLES — canonical eight-classification taxonomy):
 
 
 
@@ -156,7 +156,9 @@ Roles (from Prompt 0):
 
 \- Admin
 
-\- AI System Agent (restricted)
+\- SUPER_ADMIN
+
+\- System (non-human actor; AI System Agent is its AI designation)
 
 
 
@@ -169,6 +171,12 @@ Rules:
 \- roles do NOT enforce security alone
 
 \- AI System Agent has read + recommend only permissions
+
+\- Driver access is provisioned exclusively by an authorised Transporter; DRIVER is not selectable through public registration (PROMPT 0 v1.3 §ROLE PROVISIONING AND DELEGATION)
+
+\- Dispatcher authority exists only as explicit, bounded, revocable delegation from a specific Transporter
+
+\- SUPER_ADMIN holds the explicitly defined superset of the approved Moderator and Admin permissions; no permission accrues from hierarchy position alone, and financial permissions remain governed by the financial specifications
 
 
 
@@ -813,3 +821,19 @@ ESS-006 ensures:
 
 Supabase is not just a database — it is the security enforcement layer of NexCargo.
 
+
+
+
+
+
+---
+
+
+DOCUMENTATION CHANGE HISTORY (role taxonomy reconciliation — NXC-HOA-AUTH-ROLE-001)
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-10-30 | NXC-HOA-AUTH-ROLE-001 | §4.1 role list aligned with the canonical eight-classification taxonomy: SUPER_ADMIN and System added; "AI System Agent (restricted)" restated as the AI designation inside System. §4.1 rules extended with Driver, Dispatcher and SUPER_ADMIN authority boundaries. | PROMPT 0 v1.2 §USER ROLES and §PERMISSION RULES; HAO decisions HD-RT-1, HD-RT-2, HD-RT-3 |
+| 2026-10-30 | NXC-HOA-DECISION-HD-RT-8 | Version-pointer maintenance only: the §4.1 role list and the Driver provisioning rule now cite PROMPT 0 v1.3, which carries §USER ROLES and §ROLE PROVISIONING AND DELEGATION forward unchanged from v1.2. No security, compliance, audit-log or role rule in this specification was altered; the five HD-RT-8 executive authority domains are recorded in the master specification only and create no ESS-006 permission entry. | HAO decision HD-RT-8 (NXC-HOA-DECISION-HD-RT-8, PROMPT 0 v1.3) |
+
+Version metadata of this document is unchanged: this is a documentation-consistency reconciliation of the role taxonomy, not an architectural revision of this layer.

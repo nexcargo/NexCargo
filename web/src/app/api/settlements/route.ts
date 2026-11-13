@@ -18,10 +18,10 @@ import { InMemoryEventEmitter } from '@/shared/events/emitter';
 import { EventClassification, EventCriticality } from '@/shared/types/enums';
 
 /** Valid trigger events */
-const VALID_TRIGGER_EVENTS = ['PICKUP_CONFIRMED', 'BORDER_CROSSING', 'DELIVERY_CONFIRMED', 'POD_APPROVED'];
+const VALID_TRIGGER_EVENTS = ['PICKUP_CONFIRMED', 'BORDER_CROSSING', 'DELIVERY_CONFIRMED', 'POD_APPROVED'] as const;
 
 /** Valid settlement types */
-const VALID_SETTLEMENT_TYPES = ['FULL', 'MILESTONE', 'REFUND'];
+const VALID_SETTLEMENT_TYPES = ['FULL', 'MILESTONE', 'REFUND'] as const;
 
 export async function POST(request: NextRequest) {
   const correlationId = resolveCorrelationId(Object.fromEntries(request.headers.entries()));
@@ -116,10 +116,8 @@ async function handleCreation(request: NextRequest, ctx: { userId: string }, cor
     throw new ValidationError('settlementAmount must be a positive number');
   }
 
-  // Validate trigger event
-  const validatedTriggerEvent = VALID_TRIGGER_EVENTS.includes(triggerEvent as string)
-    ? (triggerEvent as typeof VALID_TRIGGER_EVENTS[number])
-    : null;
+  // Validate trigger event against the allow-list, yielding the matched literal
+  const validatedTriggerEvent = VALID_TRIGGER_EVENTS.find((event) => event === triggerEvent) ?? null;
 
   if (!validatedTriggerEvent) {
     throw new ValidationError(
@@ -127,10 +125,8 @@ async function handleCreation(request: NextRequest, ctx: { userId: string }, cor
     );
   }
 
-  // Validate settlement type
-  const validatedSettlementType = VALID_SETTLEMENT_TYPES.includes(settlementType as string)
-    ? (settlementType as typeof VALID_SETTLEMENT_TYPES[number])
-    : 'FULL';
+  // Validate settlement type; unrecognised or absent values default to FULL
+  const validatedSettlementType = VALID_SETTLEMENT_TYPES.find((type) => type === settlementType) ?? 'FULL';
 
   // Use settlement service for validation and creation
   const service = new SettlementExecutionService();

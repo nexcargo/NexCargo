@@ -598,7 +598,7 @@ verificationStatus – PENDING / VERIFIED / REJECTED
 
 
 
-adminOverride – optional authorisation for manual completion
+adminOverride – optional authorisation by an Admin for manual completion. Admin is the canonical actor classification (PROMPT 0 v1.3 §USER ROLES — RBAC MODEL); "administrator" is not a role name in the taxonomy. The override corrects a recorded operational fact only — it is not a financial intervention, an escrow instruction, or an approval of a financial outcome (§4.6 business rules; ESS-001F §15.1).
 
 
 
@@ -614,7 +614,7 @@ POD may be captured offline and uploaded automatically when connectivity returns
 
 
 
-Shipment cannot be completed without valid POD unless an administrator authorises an exception.
+Shipment cannot be completed without valid POD unless an Admin authorises an exception. The exception authorises completion of the shipment record only. Settlement that follows is approved separately under MOD-013 §4.3 by the ordinary approval authority, and the exception is not itself a financial approval, an escrow instruction or a substitute for the governed Escrow Intervention Request pathway (ESS-001F §15.1 to §15.3, §15.6, §15.9). Where the purpose of the exception is an exceptional financial outcome, it is not available and the EIR pathway governs. The authorising Admin, the reason and the time are recorded, and the record is subject to the existing audit-log requirements (ESS-006 §8 Audit Logging Requirements; PROMPT 0 v1.3 §Accountability and separation of duties). "Administrator" is not a role name in the canonical taxonomy (HAO decision D-01 Item 3, direction 3-A).
 
 
 
@@ -1086,7 +1086,7 @@ modify contract states – that is MOD‑002's responsibility.
 
 
 
-auto‑confirm delivery without valid POD (except admin override).
+auto‑confirm delivery without valid POD (except an explicit Admin override under §4.6, which authorises the record only and is not a financial approval).
 
 
 
@@ -1310,7 +1310,7 @@ bypass event‑based state modeling.
 
 
 
-auto‑confirm delivery without POD (except explicit admin override).
+auto‑confirm delivery without POD (except an explicit Admin override under §4.6).
 
 
 
@@ -1424,3 +1424,14 @@ delivery is legally validated through mandatory Proof of Delivery.
 
 the platform remains a neutral visibility provider – it does not execute logistics, but it faithfully represents the execution state in a transparent, auditable, and role‑appropriate manner.
 
+
+---
+
+DOCUMENTATION CHANGE HISTORY
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-11-03 | NXC-HOA-AUTH-D01-ITEM-06-STAGE-1 | Change-history block established under the INDEX §7.4 Document Change-History Standard. History in this document commences with this row. Earlier changes to this document are not reconstructed here; the governing record for them is the Development State decision register. The row below records the evidenced change that the register and this document's own inline citation support, dated when the change was actually made. Creating this block altered no tracking rule, POD requirement, permission or authority boundary in this module. | HAO decision D-01 Item 6 Stage 1 (NXC-HOA-AUTH-D01-ITEM-06-STAGE-1); INDEX §7.4 |
+| 2026-11-02 | NXC-HOA-AUTH-D01-ITEM-03-001 | §4.6 aligned to the approved financial authority model: an Admin exception authorising shipment completion without a valid POD authorises completion of the shipment record only; the settlement that follows is approved separately under MOD-013 §4.3 by the ordinary approval authority, and the exception is not itself a financial approval, an escrow instruction or a substitute for the governed Escrow Intervention Request pathway; where the purpose of the exception is an exceptional financial outcome it is not available and the EIR pathway governs; "Administrator" was removed as a role name because it is not in the canonical taxonomy. The authorising Admin, reason and time remain recorded and auditable. POD validity, tracking behaviour, the No Dispatch boundary and every existing role authority are unchanged; no permission, state or field was added or removed. | HAO decision D-01 Item 3, direction 3-A (NXC-HOA-AUTH-D01-ITEM-03-001); Development State register, D-01 Item 3 row; ESS-001F §15.1 to §15.3, §15.6, §15.9 |
+
+Version effect: MOD-003 remains v1.0 — no version increase, no loader change and no INDEX §7.1 change. This block records a change already made and registered under the authorisation cited in it; creating the block changed no rule or boundary in this module.

@@ -226,43 +226,6 @@ export class SettlementExecutionService {
   }
 
   /**
-   * Approve a settlement request (Super Admin only).
-   - Transitions PENDING → APPROVED.
-   - Idempotent: already-approved settlements return without side effects.
-   */
-  async approveRequest(settlementId: string, userId: string, correlationId?: string): Promise<{ success: boolean; message: string; approvalStatus?: string }> {
-    const supabase = await createClient();
-    const { data, error } = await supabase.rpc('approve_settlement', {
-      p_settlement_id: settlementId,
-      p_correlation_id: correlationId || null,
-    });
-
-    if (error) {
-      const errMsg = error.message;
-
-      if (errMsg.includes('UNAUTHORIZED')) {
-        return { success: false, message: 'Unauthorized: no authenticated user in SECDEF context' };
-      }
-
-      if (errMsg.includes('ACCESS_DENIED_APPROVAL')) {
-        return { success: false, message: 'Only SUPER_ADMIN may approve settlement requests' };
-      }
-
-      if (errMsg.includes('SETTLEMENT_NOT_FOUND')) {
-        return { success: false, message: `Settlement request not found: ${settlementId}` };
-      }
-
-      throw new Error(`Settlement approval failed: ${errMsg}`);
-    }
-
-    return {
-      success: true,
-      message: 'Settlement approved successfully',
-      approvalStatus: 'APPROVED',
-    };
-  }
-
-  /**
    * Create a settlement request.
    - Validates escrow state
    - Derives authoritative amount (never trusts client input for final calculation)

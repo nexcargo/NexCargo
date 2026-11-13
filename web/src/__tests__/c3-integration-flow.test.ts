@@ -57,7 +57,8 @@ describe('C3 Integration Tests — Booking → Contract → Escrow Flow', () => 
       const content = fs.readFileSync(migrationPath, 'utf-8');
       
       // Should NOT contain exception swallowing patterns
-      expect(content).not.toMatch(/EXCEPTION\s+WHEN\s+OTHERS.*RAISE\s+WARNING/s);
+      // [\s\S]* rather than the dotAll flag: tsconfig targets ES2017, where /s is unavailable.
+      expect(content).not.toMatch(/EXCEPTION\s+WHEN\s+OTHERS[\s\S]*RAISE\s+WARNING/);
       
       // Should NOT have any RAISE WARNING statements
       expect(content).not.toContain('RAISE WARNING');

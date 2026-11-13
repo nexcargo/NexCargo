@@ -190,6 +190,10 @@ roleType – DRIVER / TRANSPORTER / DISPATCHER
 
 
 
+Driver and Dispatcher mobile sessions presuppose an active Transporter association or delegation (PROMPT 0 v1.3 §ROLE PROVISIONING AND DELEGATION). Mobile provisioning does not create marketplace-participant standing and is not a route to independent registration as a Driver.
+
+
+
 deviceType – ANDROID / IOS
 
 
@@ -1264,3 +1268,19 @@ mobile apps remain stable in rural and cross-border environments
 
 security is maintained at both device and backend levels
 
+
+
+
+
+
+---
+
+
+DOCUMENTATION CHANGE HISTORY (role taxonomy reconciliation — NXC-HOA-AUTH-ROLE-001)
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-10-30 | NXC-HOA-AUTH-ROLE-001 | Session roleType annotated with the Transporter-association precondition for DRIVER and DISPATCHER mobile access. | PROMPT 0 v1.2 §ROLE PROVISIONING AND DELEGATION; HAO decision HD-RT-2 |
+| 2026-10-30 | NXC-HOA-DECISION-HD-RT-8 | Version-pointer maintenance only: the mobile Driver and Dispatcher precondition now cites PROMPT 0 v1.3. No mobile session, role or provisioning rule was altered. | HAO decision HD-RT-8 |
+
+Version metadata of this document is unchanged: this is a documentation-consistency reconciliation of the role taxonomy, not an architectural revision of this layer.

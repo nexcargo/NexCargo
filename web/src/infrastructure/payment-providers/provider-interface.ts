@@ -6,6 +6,18 @@
 /** Valid payment method types matching EscrowState.PaymentMethod enum */
 export type PaymentMethodType = 'MPESA' | 'MKESH' | 'EMOLA' | 'CARD' | 'PAYPAL' | 'BANK_TRANSFER';
 
+/**
+ * Registry keys for future production adapter boundaries. These identify a provider
+ * environment, not a canonical payment method — MOD-005 + MOD-013 define only the six
+ * above. They are reported by list() and can never be resolved through get() or has().
+ */
+export type ProductionProviderKey =
+  | 'MPESA_PROD'
+  | 'EMOLA_PROD'
+  | 'MKESH_PROD'
+  | 'CARD_PROD'
+  | 'BANK_TRANSFER_PROD';
+
 /** Valid payment intent statuses */
 export type PaymentIntentStatus = 'INITIATED' | 'PENDING' | 'CONFIRMED' | 'FAILED' | 'REFUNDED';
 
@@ -160,6 +172,6 @@ export interface PaymentProviderRegistry {
   /** Check if a provider is registered for the given method */
   has(method: PaymentMethodType): boolean;
 
-  /** List all registered providers */
-  list(): { name: string; method: PaymentMethodType; productionReady: boolean }[];
+  /** List all registered providers, including non-resolvable production boundaries */
+  list(): { name: string; method: PaymentMethodType | ProductionProviderKey; productionReady: boolean }[];
 }

@@ -628,7 +628,7 @@ userId
 
 
 
-userRole – SHIPPER / TRANSPORTER / DRIVER / MODERATOR / ADMIN
+userRole – SHIPPER / TRANSPORTER / DRIVER / DISPATCHER / MODERATOR / ADMIN / SUPER_ADMIN
 
 
 
@@ -1384,3 +1384,18 @@ predictive analytics enhance operational decision-making without assuming contro
 
 the AI layer remains a cognitive assistant, not an autonomous executor
 
+
+
+
+
+
+---
+
+
+DOCUMENTATION CHANGE HISTORY (role taxonomy reconciliation — NXC-HOA-AUTH-ROLE-001)
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-10-30 | NXC-HOA-AUTH-ROLE-001 | Context object userRole enumeration extended with DISPATCHER and SUPER_ADMIN to match the canonical taxonomy. AI prohibition list (§ override human or system roles, auto-assign carriers) unchanged. | PROMPT 0 v1.2 §USER ROLES; HAO decisions HD-RT-1, HD-RT-4 |
+
+Version metadata of this document is unchanged: this is a documentation-consistency reconciliation of the role taxonomy, not an architectural revision of this layer.

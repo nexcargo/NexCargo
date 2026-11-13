@@ -168,7 +168,11 @@ export function evaluateRBAC(role: string, resource: string, action: string): RB
   // - offers: read=TRANSPORTER(own)+SHIPPER(listing-owner)+ADMIN+MODERATOR(governance)+SUPER_ADMIN; create=TRANSPORTER+ADMIN+SUPER_ADMIN
   // - matching: execute=SHIPPER+ADMIN+MODERATOR(governance)+SUPER_ADMIN, read+execute=DISPATCHER(operational)
   // - quotes: read=SHIPPER(listing-owner)+ADMIN+MODERATOR(governance)+SUPER_ADMIN
-  
+  //
+  // A resource absent from this table denies EVERY role, because the lookup below falls back to an empty
+  // list. That fail-closed default is safe but silent, so a resource is listed here when a route calls the
+  // guard for it — see the I-2 ITEM 6 citations beside each new entry.
+
   const allowedRoles: Record<string, string[]> = {
     bookings: ['SHIPPER', 'TRANSPORTER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
     booking_read: ['SHIPPER', 'TRANSPORTER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
@@ -180,11 +184,27 @@ export function evaluateRBAC(role: string, resource: string, action: string): RB
     matching: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR', 'DISPATCHER'],
     quotes: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR'],
     tracking: ['ADMIN', 'SUPER_ADMIN'],
+    // MOD-003 §7.3:995 "Visibility MUST be role-dependent (shipper, transporter, driver, admin)" and §4.4:411.
+    // Dispatcher is absent: their read comes from an explicit delegation, which assertApiAuthorization checks
+    // before this table. Driver is absent because a Driver account resolves to no marketplace role at all
+    // (I-2 Part A; Driver provisioning is outside I-2), so there is nothing to authorize against yet.
+    tracking_read: ['SHIPPER', 'TRANSPORTER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
     tracking_status: ['TRANSPORTER', 'DISPATCHER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
     pod: ['ADMIN', 'SUPER_ADMIN', 'MODERATOR'],
     documents: ['SHIPPER', 'TRANSPORTER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
+    // MOD-014 fleet registry. PROMPT 0 v1.3:935 makes a Transporter the actor "that manages its transport
+    // operations, fleet, Drivers, and delegated operational personnel", and :959 keeps FLEET_OWNER as a
+    // Transporter-domain capability rather than a role. Governance read is MOD-010 §4.1 moduleAccessList
+    // oversight, matching how bookings/listings/quotes already treat MODERATOR. Dispatcher access is
+    // delegation-only (role-authority), never a row-wide grant, so DISPATCHER is deliberately absent.
+    fleet: ['TRANSPORTER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
+    fleet_vehicles: ['TRANSPORTER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
+    fleet_assignments: ['TRANSPORTER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
+    // MOD-015 §4.1:291 "Support must be role-aware (shipper, transporter, driver)": a participant files for
+    // themselves; §6.x escalation is exercised by users holding canonical governance roles (MOD-015:143,521).
+    support_tickets: ['SHIPPER', 'TRANSPORTER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
   };
-  
+
   const allowedActions: Record<string, string[]> = {
     create: ['SHIPPER', 'TRANSPORTER', 'ADMIN', 'SUPER_ADMIN'],
     read: ['SHIPPER', 'TRANSPORTER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR', 'DISPATCHER'],

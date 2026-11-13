@@ -97,6 +97,12 @@ export async function PATCH(
     // Map action to target status
     let targetStatus: BookingStatus;
     switch (targetAction) {
+      // I-5 §3G: the state machine permits REQUESTED → ALIGNMENT_CHECKED, but no action exposed it, so a
+      // booking created by POST /api/booking could never reach the predecessor the confirm route requires.
+      // This is the existing transition, not a new one: same state machine, same shipper-only ownership check.
+      case 'align':
+        targetStatus = BookingStatus.ALIGNMENT_CHECKED;
+        break;
       case 'confirm':
         targetStatus = BookingStatus.CONFIRMED;
         break;
@@ -107,7 +113,7 @@ export async function PATCH(
         targetStatus = BookingStatus.FAILED;
         break;
       default:
-        throw new ValidationError(`Invalid action: ${targetAction}. Allowed: confirm, cancel, fail`);
+        throw new ValidationError(`Invalid action: ${targetAction}. Allowed: align, confirm, cancel, fail`);
     }
 
     // State machine validation — prevents bypass of required predecessor states

@@ -2,27 +2,25 @@
 // C5 Increment 1 — Authorized per HAO-C5-001 (2026-09-09)
 // GET /api/notifications/[notificationId]
 // Retrieves a notification record with correlation tracking.
+//
+// I-2 PART C item 6: this read used the service-role key, so the comment claiming RLS would gate it was
+// false and any anonymous caller could read any user's notification by id. It now runs on the caller's own
+// session, which is what makes the live policy notification_counterparty_read (recipient_id = auth.uid())
+// the boundary. Governance does not get a bypass here: no live policy ever gave one (the 008/010 admin policy
+// tested a JWT claim that is never true), so this is a narrowing, not a redesign of who may read messaging.
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import type { NextRequest } from 'next/server';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Supabase URL and Service Role Key must be configured');
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { createClient as createSessionClient } from '@/lib/supabase/server';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ notificationId: string }> },
 ) {
   const requestCorrelationId = crypto.randomUUID();
-  
+
   try {
+    const supabase = await createSessionClient();
     // Resolve params promise (Next.js App Router pattern for dynamic routes)
     const { notificationId } = await params;
 

@@ -96,7 +96,7 @@ role scope isolation rules
 
 
 
-roles: Shipper, Transporter, Driver, Moderator, Admin, System (API/internal services)
+roles: Shipper, Transporter, Driver, Dispatcher, Moderator, Admin, SUPER_ADMIN, System (non-human actor; AI System Agent is its AI designation, not a human-accessible role)
 
 
 
@@ -240,11 +240,15 @@ roleId
 
 
 
-roleName – SHIPPER / TRANSPORTER / DRIVER / MODERATOR / ADMIN / SYSTEM
+roleName – SHIPPER / TRANSPORTER / DRIVER / DISPATCHER / MODERATOR / ADMIN / SUPER_ADMIN / SYSTEM
 
 
 
 roleCategory – OPERATIONAL / GOVERNANCE / SYSTEM
+
+
+
+OPERATIONAL covers SHIPPER, TRANSPORTER, DRIVER and DISPATCHER; GOVERNANCE covers MODERATOR, ADMIN and SUPER_ADMIN; SYSTEM covers non-human actors only.
 
 
 
@@ -782,7 +786,11 @@ AI hallucination detection mechanisms are enforced.
 
 5.1 Authority Order (Structural Priority)
 
-ESS Layer (Execution Safety Specifications — highest enforcement authority)
+PROMPT 0 v1.3 (Master System Prompt — governing authority; §DOCUMENT PRECEDENCE — SOURCE OF TRUTH)
+
+
+
+ESS Layer (Execution Safety Specifications — highest enforcement authority below PROMPT 0)
 
 
 
@@ -972,7 +980,15 @@ Roles MUST remain strictly separated.
 
 
 
+The canonical role set is closed: Shipper, Transporter, Driver, Dispatcher, Moderator, Admin, SUPER_ADMIN, System. "Support Agent" and "Supervisor" are functional assignments inside a canonical role and must not be provisioned as separate roles.
+
+
+
 No role may inherit undefined cross-domain privileges.
+
+
+
+SUPER_ADMIN's broader authority is an explicitly defined permission superset of the approved Moderator and Admin permissions recorded in PROMPT 0 v1.3 §PERMISSION RULES. It is not implicit inheritance: this rule remains in force for every role, including SUPER_ADMIN. Under HD-RT-8 that set is further supplemented by the five explicitly documented SUPER_ADMIN executive authority domains recorded in PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS; no permission-matrix row, isolation rule or audit control in this module is extended by that decision, and procedure-level elaboration remains subject to separate LA authorisation.
 
 
 
@@ -1494,3 +1510,23 @@ data privacy is enforced through encryption and access controls
 
 security events are monitored and alerted in real time
 
+
+
+
+
+
+---
+
+
+DOCUMENTATION CHANGE HISTORY (role taxonomy reconciliation — NXC-HOA-AUTH-ROLE-001)
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-10-30 | NXC-HOA-AUTH-ROLE-001 | §3.1 role list, §4.1 roleName enumeration and §7.2 Role Isolation Rule reconciled with the canonical eight-classification taxonomy (DISPATCHER, SUPER_ADMIN added; System restated as the non-human classification). §4.1 roleCategory mapping made explicit. | PROMPT 0 v1.2 §USER ROLES, §PERMISSION RULES, §ROLE PROVISIONING AND DELEGATION; HAO decisions HD-RT-1, HD-RT-3, HD-RT-4 |
+| 2026-10-30 | NXC-HOA-DECISION-HD-RT-8 | §7.2 SUPER_ADMIN citation rebased on PROMPT 0 v1.3, which additionally records the five HD-RT-8 executive authority domains. No role enumeration, permission-matrix row, isolation rule or audit control in this module was extended by that decision; procedure-level elaboration remains subject to separate HAO authorisation. | HAO decision HD-RT-8 (PROMPT 0 v1.3) |
+| 2026-11-02 | NXC-HOA-AUTH-D01-ITEM-03-001 | §5.1 Authority Order now begins with PROMPT 0 v1.3, so that the structural priority list cannot be read as placing the ESS layer above the governing specification; the ESS entry is qualified as the highest enforcement authority below PROMPT 0. The layer ordering beneath it, and every rule, enumeration, permission matrix and audit control in this module, is unchanged. | HAO decision D-01 Item 3, direction 3-D (NXC-HOA-AUTH-D01-ITEM-03-001); PROMPT 0 v1.3 §DOCUMENT PRECEDENCE — SOURCE OF TRUTH |
+| 2026-11-03 | NXC-HOA-AUTH-D01-ITEM-06-STAGE-2 | §7.2 Role Isolation Rule: procedure-level elaboration of the HD-RT-8 executive authority domains in MOD-005, MOD-013 and MOD-015 now remains subject to separate LA authorisation, matching PROMPT 0 v1.3 as transitioned. Not changed: the HAO authority citations in this table and in the §7.2 citation chain, the explicit-superset rule, the no-implicit-inheritance rule, the §5.1 authority order, and every permission-matrix row, isolation rule and audit control in this module. No authority was created, extended, transferred or weakened. | LA authorisation NXC-HOA-AUTH-D01-ITEM-06-STAGE-2 (2026-11-03); PROMPT 0 v1.3 §11 Designation Successor |
+
+Version metadata of this document is unchanged: this is a documentation-consistency reconciliation of the role taxonomy, not an architectural revision of this layer.
+
+Version effect (2026-11-03 Stage 2 row above): MOD-010's recorded version is unchanged — the designation transition alters no permission, isolation rule, audit control or authority boundary. The statement above continues to govern only its own rows.

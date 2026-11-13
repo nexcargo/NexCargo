@@ -2,26 +2,18 @@
 // C5 Increment 1 — Authorized per HAO-C5-001 (2026-09-09)
 // POST /api/notifications
 // Creates a notification record with validation, persistence, and delivery event tracking.
+//
+// I-2 PART C item 6: this route writes with the service-role key, so RLS cannot gate it and the handler is
+// the only authority boundary. It used to build that client at module load and answer any anonymous caller;
+// a request now needs a session, and only a governance tier may queue a notification for someone else.
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import type { NextRequest } from 'next/server';
 import { ValidationError } from '@/shared/errors/app-errors';
+import { createAdminClient } from '@/infrastructure/database/supabase';
+import { assertApiAuth } from '@/lib/supabase/api-auth';
 import { validateNotificationCreation, applyNotificationDefaults, normalizePriorityLevel, normalizeChannelType } from '@/modules/mod-016-notifications/domain/services/notification-validation';
 import { PriorityLevel } from '@/modules/mod-016-notifications/domain/enums';
-
-// ============================================================
-// Environment & Client Setup
-// ============================================================
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Supabase URL and Service Role Key must be configured');
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // ============================================================
 // Request Body Type (string-based for JSON parsing)
@@ -79,6 +71,17 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body: CreateNotificationRequest = await request.json();
+
+    // I-2 item 6: a notification addressed to another user is a platform action, not a participant one —
+    // MOD-016 composes audience-segmented messaging, and an open endpoint lets anyone mail any account.
+    const ctx = await assertApiAuth(request);
+    if (!ctx.platformRole) {
+      throw new Error(
+        `FORBIDDEN: role '${ctx.role ?? 'unresolved'}' may not create a notification for another recipient.`,
+      );
+    }
+
+    const supabase = createAdminClient();
 
     // Validate input structure and business rules (MOD-016 §4.1, §7.2)
     validateNotificationCreation(body);
@@ -169,7 +172,15 @@ export async function POST(request: NextRequest) {
     if (err instanceof ValidationError) {
       return buildErrorResponse(err.code, err.message, err.details, requestCorrelationId);
     }
-    
+
+    // The guard above signals a denied request by message, like the other MOD-016 route handlers.
+    if (err instanceof Error && err.message.includes('UNAUTHORIZED')) {
+      return buildErrorResponse('ERR_1003', 'Authentication required', undefined, requestCorrelationId, 401);
+    }
+    if (err instanceof Error && err.message.startsWith('FORBIDDEN')) {
+      return buildErrorResponse('ERR_1004', err.message.replace(/^FORBIDDEN: /, ''), undefined, requestCorrelationId, 403);
+    }
+
     console.error('[MOD-016 POST /api/notifications] Unexpected error:', err);
     return buildErrorResponse(
       'ERR_1000',
@@ -189,6 +200,7 @@ function buildErrorResponse(
   message: string,
   details: Record<string, unknown> | undefined,
   correlationId: string,
+  status = 400,
 ): NextResponse<ApiResponse> {
   return NextResponse.json(
     {
@@ -199,6 +211,6 @@ function buildErrorResponse(
         correlationId,
       },
     } satisfies ApiResponse,
-    { status: 400 },
+    { status },
   );
 }

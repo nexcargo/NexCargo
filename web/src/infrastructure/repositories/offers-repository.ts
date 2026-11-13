@@ -93,6 +93,26 @@ export class OffersRepository {
     return (result.data as OfferRow[]).map(row => this.toApiShape(row));
   }
 
+  /**
+   * The quotations a Transporter has submitted. RLS already limits `offers` reads to
+   * `transporter_id = auth.uid()`; the filter is the same explicit scoping listByListing uses.
+   */
+  async listByTransporter(transporterId: string): Promise<OfferApiShape[]> {
+    const supabase = await createClient();
+    const result = await supabase
+      .schema(this.schema).from(this.table)
+      .select('*')
+      .eq('transporter_id', transporterId)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false });
+
+    if (result.error) {
+      throw new Error(`Failed to list offers by transporter: ${result.error.message}`);
+    }
+
+    return (result.data as OfferRow[]).map(row => this.toApiShape(row));
+  }
+
   async getById(id: string): Promise<OfferApiShape | null> {
     const supabase = await createClient();
     const result = await supabase

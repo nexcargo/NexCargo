@@ -1,22 +1,23 @@
-// NexCargo MOD-016 — Channel Executor Abstraction (C5-II)
-// C5 Increment 2 — Authorized per HAO-C5-002
-// Purpose: Defines the ChannelExecutor interface and provides a registry for channel resolution
+// NexCargo MOD-016 — Channel Executor Abstraction
+// Originally C5-II (HAO-C5-002). Recipient-target fabrication removed under I-3 §4C/§9.
+// Defines the ChannelExecutor registry and honest recipient-target resolution.
 
 import { NotificationChannel } from '@/shared/types/enums';
-import type { ChannelExecutor, ClaimedNotification, ChannelExecutionResult } from '../../domain/types/delivery-pipeline';
+import type { ChannelExecutor } from '../../domain/types/delivery-pipeline';
+import { StubInAppChannelExecutor } from './channel-executors/stub-in-app-channel-executor';
+import { StubChannelExecutor, UNCONFIGURED_CHANNELS } from './channel-executors/stub-channel-executor';
 
 // ============================================================
 // Channel Executor Registry
 // ============================================================
 
 /**
- * Registry that maps channel types to their executor implementations.
- * 
- * The delivery processor uses this registry to select the appropriate
- * ChannelExecutor based on notification.channel_type.
- * 
- * C5-II: Only IN_APP is registered by default. Additional channels
- * (EMAIL, SMS, PUSH, WHATSAPP) are registered as they are implemented.
+ * Maps channel types to their executor implementations. The delivery processor
+ * selects an executor by notification.channel_type.
+ *
+ * IN_APP is genuinely deliverable: the persisted notification row IS the inbox
+ * entry. EMAIL/SMS/PUSH/WHATSAPP have no authorized provider and are registered
+ * with an executor that reports a terminal PROVIDER_NOT_CONFIGURED failure.
  */
 export class ChannelExecutorRegistry {
   private static instance: ChannelExecutorRegistry;
@@ -24,7 +25,6 @@ export class ChannelExecutorRegistry {
 
   private constructor() {}
 
-  /** Get singleton instance */
   static getInstance(): ChannelExecutorRegistry {
     if (!ChannelExecutorRegistry.instance) {
       ChannelExecutorRegistry.instance = new ChannelExecutorRegistry();
@@ -32,24 +32,25 @@ export class ChannelExecutorRegistry {
     return ChannelExecutorRegistry.instance;
   }
 
-  /** Register a channel executor for a specific channel type */
   register(executor: ChannelExecutor): void {
     this.executors.set(executor.channelType, executor);
   }
 
-  /** Get the executor for a given channel type */
   getExecutor(channelType: NotificationChannel): ChannelExecutor | undefined {
     return this.executors.get(channelType);
   }
 
-  /** Check if an executor is registered for a channel type */
   hasExecutor(channelType: NotificationChannel): boolean {
     return this.executors.has(channelType);
   }
 
-  /** Get all registered channel types */
   getRegisteredChannels(): NotificationChannel[] {
     return Array.from(this.executors.keys());
+  }
+
+  /** Test-only: empties the singleton without replacing the instance. */
+  clear(): void {
+    this.executors.clear();
   }
 }
 
@@ -57,66 +58,46 @@ export class ChannelExecutorRegistry {
 // Channel Executor Factory
 // ============================================================
 
-/**
- * Factory for creating channel executors.
- * Used during application initialization to set up the registry.
- */
 export class ChannelExecutorFactory {
-  /**
-   * Creates and registers all default channel executors.
-   * Call this once during application initialization.
-   */
+  /** Registers every channel the platform can currently answer for. Idempotent. */
   static createAndRegisterDefaults(registry: ChannelExecutorRegistry): void {
-    // Import lazily to avoid circular dependencies
-    const { StubInAppChannelExecutor } = require('./channel-executors/stub-in-app-channel-executor');
-    
-    const inAppExecutor = new StubInAppChannelExecutor();
-    registry.register(inAppExecutor);
+    if (!registry.hasExecutor(NotificationChannel.IN_APP)) {
+      registry.register(new StubInAppChannelExecutor());
+    }
+    for (const channel of UNCONFIGURED_CHANNELS) {
+      if (!registry.hasExecutor(channel)) {
+        registry.register(new StubChannelExecutor(channel));
+      }
+    }
   }
 }
 
 // ============================================================
-// Utility: Resolve recipient target for a channel
+// Recipient target resolution
 // ============================================================
 
 /**
- * Resolves the actual delivery target string for a given channel type.
- * 
- * In production, this would look up the recipient's contact information
- * from the user profile or a separate contacts table.
- * 
- * C5-II: Returns a deterministic stub value since real recipient
- * contact data lookup is deferred to future increments.
- * 
- * @param recipientId — The auth.users UUID of the recipient
- * @param channelType — The channel to resolve target for
- * @returns Delivery target string (email, phone, device token, etc.)
+ * Resolves the delivery target for a channel.
+ *
+ * IN_APP needs no contact lookup: the recipient_id is the inbox key.
+ * Every other channel returns null because no authorized contact source or
+ * provider exists. The previous implementation fabricated addresses such as
+ * `<uuid>@nexcargo.stub` and `+2589<uuid prefix>`, which made an unimplemented
+ * channel look deliverable. Returning null forces an explicit failure instead.
  */
 export function resolveRecipientTarget(
   recipientId: string,
   channelType: NotificationChannel,
-): string {
+): string | null {
   switch (channelType) {
     case NotificationChannel.IN_APP:
-      // For IN_APP, the recipientId itself is sufficient
-      // (notification is visible in the user's inbox)
       return recipientId;
 
     case NotificationChannel.EMAIL:
-      // Stub: In production, fetch from user.email or contacts table
-      return `${recipientId}@nexcargo.stub`;
-
     case NotificationChannel.SMS:
-      // Stub: In production, fetch from user.phone or contacts table
-      return `+2589${recipientId.slice(0, 8)}`;
-
     case NotificationChannel.PUSH:
-      // Stub: In production, fetch from user.device_tokens
-      return `device-token-${recipientId.slice(0, 16)}`;
-
     case NotificationChannel.WHATSAPP:
-      // Stub: In production, fetch from user.whatsapp_number
-      return `+2588${recipientId.slice(0, 8)}`;
+      return null;
 
     default:
       throw new Error(`Unknown channel type: ${channelType}`);

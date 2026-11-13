@@ -31,7 +31,8 @@ export async function GET(
     const client = (await import('@/infrastructure/database/supabase')).createAdminClient();
 
     const result = await client
-      .from(`${LOGISTICS_SCHEMA}.dispute_cases`)
+      .schema(LOGISTICS_SCHEMA)
+      .from('dispute_cases')
       .select('*')
       .eq('id', id)
       .eq('is_deleted', false)

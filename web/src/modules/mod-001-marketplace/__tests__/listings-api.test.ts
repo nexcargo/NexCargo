@@ -5,8 +5,23 @@ import * as serverModule from '@/lib/supabase/server';
 const mockUser = {
   id: 'test-user-001',
   email: 'test@example.com',
-  user_metadata: { role: 'SHIPPER' },
+  // I-1 §3.6: user_metadata carries no authority. Only tenantId-style context is read from it.
+  user_metadata: { tenantId: 'tenant-001' },
 };
+
+// I-1 §3.3/§3.4: the resolvers are the only role inputs —
+//   effective_user_role() -> platform tier, effective_marketplace_role() -> SHIPPER/TRANSPORTER.
+function resolvers(marketplace: string | null = 'SHIPPER', platform: string | null = null) {
+  return vi.fn(async (fn: string) =>
+    fn === 'effective_marketplace_role'
+      ? { data: marketplace, error: null }
+      : { data: platform, error: null },
+  );
+}
+
+function noResolver() {
+  return vi.fn(async () => ({ data: null, error: null }));
+}
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(() => ({
@@ -56,7 +71,7 @@ beforeEach(async () => {
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: mockUser }, error: null }),
     },
-    rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable') })),
+    rpc: resolvers('SHIPPER'),
   };
   vi.mocked(serverModule.createClient).mockReturnValue(baseClient as any);
   const mod = await import('@/app/api/marketplace/listings/route');
@@ -98,13 +113,23 @@ describe('MOD-001 Listings API — C1 Hardened Authentication', () => {
 
     it('returns 403 when authenticated user lacks RBAC permission', async () => {
       vi.mocked(serverModule.createClient).mockReturnValue({
+        auth: { getUser: vi.fn().mockResolvedValue({ data: { user: mockUser }, error: null }) },
+        rpc: resolvers('TRANSPORTER'),
+      } as any);
+
+      const request = new NextRequest('http://localhost:3000/api/marketplace/listings');
+      const response = await listingsGET(request);
+      expect(response.status).toBe(403);
+    });
+    it('returns 403 when the resolvers give no role, whatever user_metadata claims', async () => {
+      vi.mocked(serverModule.createClient).mockReturnValue({
         auth: {
           getUser: vi.fn().mockResolvedValue({
-            data: { user: { ...mockUser, user_metadata: { role: 'TRANSPORTER' } } },
+            data: { user: { ...mockUser, user_metadata: { role: 'SUPER_ADMIN' } } },
             error: null,
           }),
         },
-        rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable') })),
+        rpc: noResolver(),
       } as any);
 
       const request = new NextRequest('http://localhost:3000/api/marketplace/listings');
@@ -139,15 +164,10 @@ describe('MOD-001 Listings API — C1 Hardened Authentication', () => {
       expect(response.status).toBe(401);
     });
 
-    it('returns 401 when header role differs from session identity', async () => {
+    it('ignores a header role that differs from the session-resolved identity', async () => {
       vi.mocked(serverModule.createClient).mockReturnValue({
-        auth: {
-          getUser: vi.fn().mockResolvedValue({
-            data: { user: { ...mockUser, user_metadata: { role: 'SHIPPER' } } },
-            error: null,
-          }),
-        },
-        rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable') })),
+        auth: { getUser: vi.fn().mockResolvedValue({ data: { user: mockUser }, error: null }) },
+        rpc: resolvers('SHIPPER'),
       } as any);
 
       const request = new NextRequest('http://localhost:3000/api/marketplace/listings', {
@@ -202,13 +222,8 @@ describe('MOD-001 Listings API — C1 Hardened Authentication', () => {
 
     it('returns 403 when authenticated TRANSPORTER tries to create listing', async () => {
       vi.mocked(serverModule.createClient).mockReturnValue({
-        auth: {
-          getUser: vi.fn().mockResolvedValue({
-            data: { user: { ...mockUser, user_metadata: { role: 'TRANSPORTER' } } },
-            error: null,
-          }),
-        },
-        rpc: vi.fn(async () => ({ data: null, error: new Error('RPC unavailable') })),
+        auth: { getUser: vi.fn().mockResolvedValue({ data: { user: mockUser }, error: null }) },
+        rpc: resolvers('TRANSPORTER'),
       } as any);
 
       const request = new NextRequest('http://localhost:3000/api/marketplace/listings', {

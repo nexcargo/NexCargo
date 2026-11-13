@@ -5,10 +5,26 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/infrastructure/database/supabase';
-import type { EscrowState } from '@/shared/types/enums';
 
-/** Valid escrow states per EscrowState enum */
-export const VALID_ESCROW_STATES: EscrowState[] = [
+/**
+ * C4 financial-execution escrow states, mirroring the chk_escrow_valid_state CHECK
+ * constraint in migration 030. Deliberately not the shared MOD-005 EscrowState enum:
+ * that enum models the seven-state business lifecycle ending in FINAL_RELEASE, while
+ * the execution layer distinguishes FUNDS_CONFIRMED, RELEASE_ELIGIBLE and RELEASED.
+ */
+export type FinancialEscrowState =
+  | 'PENDING_CREATION'
+  | 'FUNDS_INITIATED'
+  | 'FUNDS_CONFIRMED'
+  | 'FUNDS_LOCKED'
+  | 'RELEASE_ELIGIBLE'
+  | 'RELEASED'
+  | 'PARTIAL_RELEASE'
+  | 'DISPUTE_HOLD'
+  | 'ESCROW_CLOSED';
+
+/** Valid escrow states accepted by advance_escrow_state() */
+export const VALID_ESCROW_STATES: FinancialEscrowState[] = [
   'PENDING_CREATION',
   'FUNDS_INITIATED',
   'FUNDS_CONFIRMED',
@@ -21,7 +37,7 @@ export const VALID_ESCROW_STATES: EscrowState[] = [
 ];
 
 /** Terminal states that cannot be transitioned from */
-const TERMINAL_STATES: Set<EscrowState> = new Set(['RELEASED', 'ESCROW_CLOSED']);
+const TERMINAL_STATES = new Set<FinancialEscrowState>(['RELEASED', 'ESCROW_CLOSED']);
 
 /**
  * Legal state transitions per ESS-001F §5.5 Financial Flow State Machine.
@@ -58,7 +74,7 @@ export class EscrowService {
     correlationId?: string,
   ): Promise<EscrowStateTransitionResult> {
     // Validate target state
-    if (!VALID_ESCROW_STATES.includes(targetState as EscrowState)) {
+    if (!VALID_ESCROW_STATES.includes(targetState as FinancialEscrowState)) {
       throw new Error(`Invalid escrow state: ${targetState}`);
     }
 
@@ -77,7 +93,7 @@ export class EscrowService {
     }
 
     // Check terminal state
-    if (TERMINAL_STATES.has(escrow.state as EscrowState)) {
+    if (TERMINAL_STATES.has(escrow.state as FinancialEscrowState)) {
       throw new Error(`Cannot transition from terminal state: ${escrow.state}`);
     }
 

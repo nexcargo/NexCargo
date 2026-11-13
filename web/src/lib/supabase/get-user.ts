@@ -2,11 +2,15 @@
 // Per HAO PE-H04: role = null indicates unassigned/onboarding state, not a valid application role.
 
 import { createClient } from '@/lib/supabase/server';
+import { resolveEffectiveRoles } from '@/lib/auth/role-authority';
 
 /**
  * Extract authenticated user from Supabase session.
  * Returns null if no valid session exists.
  * This is the authoritative source of user identity — not request headers.
+ *
+ * The role is resolved from the database (app.platform_roles / app.marketplace_memberships).
+ * auth.users.user_metadata is not consulted for role: it is client-writable.
  * Per HAO PE-H04: role = null means unassigned / pending onboarding.
  */
 export async function getAuthenticatedUser() {
@@ -20,11 +24,15 @@ export async function getAuthenticatedUser() {
     return null;
   }
 
+  const roles = await resolveEffectiveRoles(supabase);
+
   return {
     id: user.id,
     email: user.email ?? '',
-    /** Application role per approved taxonomy. Null when user has not completed role assignment. */
-    role: user.user_metadata?.role ?? null,
+    /** Effective authorization role (platform tier, else marketplace membership). Null when unresolved. */
+    role: roles.effective,
+    marketplaceRole: roles.marketplace,
+    platformRole: roles.platform,
     tenantId: user.user_metadata?.tenantId,
   };
 }

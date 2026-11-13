@@ -75,7 +75,8 @@ export async function PATCH(
 
     // Verify dispute exists
     const disputeResult = await client
-      .from(`${LOGISTICS_SCHEMA}.dispute_cases`)
+      .schema(LOGISTICS_SCHEMA)
+      .from('dispute_cases')
       .select('id, case_number, status')
       .eq('id', id)
       .eq('is_deleted', false)
@@ -101,7 +102,8 @@ export async function PATCH(
 
     // Create a NEW row in escalations table
     const escalationResult = await client
-      .from(`${LOGISTICS_SCHEMA}.escalations`)
+      .schema(LOGISTICS_SCHEMA)
+      .from('escalations')
       .insert({
         escalation_id: escalationId,
         source_case_id: caseNumber,

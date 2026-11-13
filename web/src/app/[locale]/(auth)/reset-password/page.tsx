@@ -1,24 +1,32 @@
 // NexCargo — Reset Password Page (Server Component for Build Compatibility)
 // C6-I Public Web + Authentication Implementation
-// Handles password reset via token from email link
+// Sets a new password on the recovery session established by /api/auth/callback — the form
+// carries no token, because a token supplied by the client is not one we can validate.
 // C6-Brand: Integrated NexCargoSymbol logo in header
 
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { SkipNav, NexCargoSymbol } from '@/shared/ui';
 import { Suspense } from 'react';
+import { AuthNotice } from '../auth-notice';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ResetPasswordPage() {
+export default async function ResetPasswordPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; status?: string }>;
+}) {
+  const { error, status } = await searchParams;
+
   return (
     <Suspense fallback={<ResetPasswordForm />} key="reset">
-      <ResetPasswordForm />
+      <ResetPasswordForm error={error} status={status} />
     </Suspense>
   );
 }
 
-async function ResetPasswordForm() {
+async function ResetPasswordForm({ error, status }: { error?: string; status?: string }) {
   const t = await getTranslations('ResetPassword');
 
   return (
@@ -47,6 +55,11 @@ async function ResetPasswordForm() {
             <h2 className="mt-4 text-2xl font-semibold text-[#0A1628] dark:text-white">{t('title')}</h2>
           </div>
 
+          <div className="space-y-2">
+            <AuthNotice code={error} kind="error" />
+            <AuthNotice code={status} kind="status" />
+          </div>
+
           {/* Form */}
           <form action="/api/auth/reset-password" method="POST" className="space-y-6">
             <div className="space-y-4">
@@ -54,7 +67,7 @@ async function ResetPasswordForm() {
               <div>
                 <label htmlFor="newPassword" className="block text-sm font-medium text-[#0A1628] dark:text-white mb-1">{t('new_password_label')}</label>
                 <input
-                  id="newPassword" name="newPassword" type="password" autoComplete="new-password" required minLength={6}
+                  id="newPassword" name="newPassword" type="password" autoComplete="new-password" required minLength={8}
                   placeholder={t('new_password_placeholder')}
                   className="block w-full rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-[#0A1628] placeholder-zinc-500 shadow-sm transition-colors focus:border-[#1A5C9E] focus:outline-none focus:ring-2 focus:ring-[#1A5C9E]/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:placeholder-zinc-500"
                 />

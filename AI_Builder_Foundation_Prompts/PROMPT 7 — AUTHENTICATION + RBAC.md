@@ -172,7 +172,7 @@ You are operating under:
 
 
 
-\- PROMPT 0 — NEXCARGO MASTER SYSTEM_v1.1.md
+\- PROMPT 0 — NEXCARGO MASTER SYSTEM_v1.3.md
 
 \- PROMPT 1 — Architecture Bootstrap
 
@@ -424,7 +424,7 @@ languagePreference (for localization)
 
 RBAC SYSTEM (CRITICAL CORE)
 
-USER ROLES (FROM AI-EPRS)
+USER ROLES (CANONICAL — PROMPT 0 v1.3 §USER ROLES)
 
 
 
@@ -440,10 +440,6 @@ Driver
 
 
 
-Fleet Owner
-
-
-
 Dispatcher
 
 
@@ -456,7 +452,11 @@ Admin
 
 
 
-AI System Agent (restricted)
+SUPER_ADMIN
+
+
+
+System (non-human actor; AI System Agent is its AI designation and is restricted)
 
 
 
@@ -538,11 +538,11 @@ ROLE PERMISSION PRINCIPLES
 
 
 
-Drivers → only assigned trips
+Drivers → only assigned trips. DRIVER is never selectable through public registration: it is onboarded and assigned exclusively by an authorised Transporter (PROMPT 0 v1.3 §ROLE PROVISIONING AND DELEGATION)
 
 
 
-Dispatchers → operational control only
+Dispatchers → delegated operational control only, bounded by the explicit delegation granted by a specific Transporter
 
 
 
@@ -554,7 +554,11 @@ Admin → system configuration + escrow intervention authority (via governed Esc
 
 
 
-AI → read-only + recommendation only (No Execution)
+AI → read-only + recommendation only (No Execution). The AI actor is designated AI System Agent inside the System classification and is not a human-accessible role.
+
+
+
+SUPER_ADMIN → explicit superset of the approved Moderator and Admin permissions plus the SUPER_ADMIN-exclusive actions recorded in PROMPT 0 v1.3 §PERMISSION RULES; no permission accrues from hierarchy position alone and no role gains financial authority from the hierarchy. Under HD-RT-8 the set is further supplemented by the five SUPER_ADMIN executive authority domains recorded in PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS; they are documented at authority level only, and no session claim, token scope, RLS policy, middleware rule or permission-matrix entry for them is specified or authorised by this document.
 
 
 
@@ -900,3 +904,25 @@ a frontend auth helper
 
 a token wrapper
 
+
+---
+
+DOCUMENTATION CHANGE HISTORY (role taxonomy reconciliation — NXC-GOV-ROLE-RECON-001 / NXC-HOA-AUTH-ROLE-001)
+
+| Date | Assignment | Change | Authority basis | Version / status effect |
+|-|-|-|-|-|
+| 2026-10-30 | NXC-GOV-ROLE-RECON-001 | USER ROLES: removed the stale "Fleet Owner" entry. The list now reads Shipper, Transporter, Driver, Dispatcher, Moderator, Admin, AI System Agent (restricted). | HAO-R-001 and HAO-RRL-001 (Development State Registry): FLEET_OWNER is not an application role; fleet ownership is a Transporter-domain concept. PROMPT 0 v1.1 USER ROLES likewise contains no Fleet Owner role. | Version remains v1.0. Status, authority and approval state unchanged — documentation-consistency correction, not an architectural revision. |
+| 2026-10-30 | NXC-HOA-AUTH-ROLE-001 | USER ROLES heading re-based on PROMPT 0 v1.2 §USER ROLES; SUPER_ADMIN added and System added as the non-human classification with AI System Agent as its designation. Role permission principles updated for Driver provisioning, Dispatcher delegation bounds, SUPER_ADMIN superset, and the AI/System classification. Loader reference now resolves to PROMPT 0 v1.2. | PROMPT 0 v1.2 §USER ROLES, §PERMISSION RULES, §ROLE PROVISIONING AND DELEGATION; HAO decisions HD-RT-1, HD-RT-2, HD-RT-3, HD-RT-4 | Version remains v1.0; status and authority unchanged. |
+| 2026-10-30 | NXC-HOA-DECISION-HD-RT-8 | Loader pointer raised to the PROMPT 0 v1.3 file. USER ROLES heading, Driver provisioning rule and SUPER_ADMIN permission line rebased on v1.3, which additionally documents the five HD-RT-8 executive authority domains. Authority-level documentation only: no session claim, token scope, RLS policy, middleware rule or permission-matrix entry is specified or authorised by this pass. | HAO decision HD-RT-8 | PROMPT 7 version unchanged; no runtime authentication or RBAC change authorised |
+
+RESOLUTION NOTE — SUPER_ADMIN
+
+The blocking condition recorded below under NXC-GOV-ROLE-RECON-001 has been resolved by HAO authorization NXC-HOA-AUTH-ROLE-001, decision HD-RT-1: PROMPT 0 v1.2 has been promulgated as the current authoritative version and carries SUPER_ADMIN in §USER ROLES and §PERMISSION RULES. PROMPT 0 v1.1 is retained unchanged as superseded historical authority, recorded in INDEX §7.2. Second pass, 2026-10-30: PROMPT 0 v1.3 has since been promulgated under HAO decision HD-RT-8 and supersedes v1.2, which is likewise retained unchanged as historical authority; the resolution recorded above stands.
+
+PRIOR NOTE (retained for traceability): SUPER_ADMIN was absent from this document and from PROMPT 0 v1.1 (USER ROLES), while the Development State Registry records it as an authoritative platform role under HAO-RRL-001 and HAO-R-003. Correcting the governing role list required an explicit HAO revision of PROMPT 0 v1.1, which carries status=FROZEN; it was therefore not amended in that pass, and no subordinate document was changed in a way that contradicted it.
+
+
+
+RECONCILIATION NOTE — SUPER_ADMIN
+
+SUPER_ADMIN is absent from this document and from PROMPT 0 v1.1 (USER ROLES), while the Development State Registry records it as an authoritative platform role under HAO-RRL-001 and HAO-R-003. Correcting the governing role list requires an explicit HAO revision of PROMPT 0 v1.1, which carries status=FROZEN. It has therefore not been amended in this pass, and no subordinate document has been changed in a way that contradicts it.

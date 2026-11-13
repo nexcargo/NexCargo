@@ -1,26 +1,30 @@
 // NexCargo — User Session Utility
 // C6-II Authenticated Shell Infrastructure
-// Extracts user role from Supabase user_metadata for display purposes.
-// Authorization uses the authoritative effective_user_role() resolver via assertApiAuthorization().
-// Platform-assigned roles (DISPATCHER/MODERATOR/ADMIN/SUPER_ADMIN) must be resolved from app.platform_roles.
+// Resolves the signed-in user's role for the dashboard shell (badge + navigation branch).
+//
+// The value comes from the database resolvers, not from user_metadata. The metadata role is
+// client-writable, and the shell decides which dashboard a user is shown, so it cannot trust it.
+// API authorization is enforced separately by assertApiAuthorization().
 
 import type { User } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
+import { resolveEffectiveRoles } from '@/lib/auth/role-authority';
 
 /**
- * Extract and validate user role from Supabase session metadata.
- * Returns a valid self-selected UserRole string or null.
- * Platform-assigned roles are NOT validated here — they must come from app.platform_roles.
+ * Effective role for the authenticated session, or null.
+ * Null means unresolved (unassigned / onboarding) and callers must not show a role-bound view.
  */
 export async function getUserRoleFromSession(user: User): Promise<string | null> {
-  const role = user.user_metadata?.role;
-  
-  // Only self-selected roles are valid in metadata; platform roles require app.platform_roles
-  const validSelfSelectedRoles = ['SHIPPER', 'TRANSPORTER', 'DRIVER'];
-  
-  if (role && validSelfSelectedRoles.includes(role)) {
-    return role;
+  if (!user) {
+    return null;
   }
-  
-  // Fail-closed: null role → denied access, never default to a privileged role
-  return null;
+
+  try {
+    const supabase = await createClient();
+    const roles = await resolveEffectiveRoles(supabase);
+    return roles.effective;
+  } catch {
+    // Fail-closed: no resolved role, never a default to a privileged role.
+    return null;
+  }
 }

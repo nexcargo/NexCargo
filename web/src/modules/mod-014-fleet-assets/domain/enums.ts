@@ -30,6 +30,14 @@ export enum DriverCertificationStatus {
   SUSPENDED = 'SUSPENDED',
 }
 
+/** Driver availability per MOD-014 §4.3:277 — the vocabulary the live drivers_availability_state_check accepts. */
+export enum DriverAvailabilityState {
+  AVAILABLE = 'AVAILABLE',
+  ASSIGNED = 'ASSIGNED',
+  OFF_DUTY = 'OFF_DUTY',
+  UNAVAILABLE = 'UNAVAILABLE',
+}
+
 /** Asset assignment status per MOD-014 §4.4 */
 export enum AssignmentStatus {
   PLANNED = 'PLANNED',

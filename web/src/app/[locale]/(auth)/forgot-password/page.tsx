@@ -5,11 +5,17 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { SkipNav, NexCargoSymbol } from '@/shared/ui';
+import { AuthNotice } from '../auth-notice';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ForgotPasswordPage() {
+export default async function ForgotPasswordPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; status?: string }>;
+}) {
   const t = await getTranslations('ForgotPassword');
+  const { error, status } = await searchParams;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F8F6F3] dark:bg-[#0A1628]">
@@ -36,6 +42,11 @@ export default async function ForgotPasswordPage() {
           <div className="text-center">
             <h2 className="mt-4 text-2xl font-semibold text-[#0A1628] dark:text-white">{t('title')}</h2>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{t('subtitle')}</p>
+          </div>
+
+          <div className="space-y-2">
+            <AuthNotice code={error} kind="error" />
+            <AuthNotice code={status} kind="status" />
           </div>
 
           {/* Form */}

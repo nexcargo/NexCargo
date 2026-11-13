@@ -58,6 +58,12 @@ Create a scalable platform capable of supporting domestic Mozambique logistics a
 
 NexCargo supports multiple participants within the logistics ecosystem.
 
+This section describes ecosystem participants in business terms. The canonical actor taxonomy is defined in PROMPT 0 v1.3 §USER ROLES and comprises exactly eight classifications: Shipper, Transporter, Driver, Dispatcher, Moderator, Admin, SUPER_ADMIN, System.
+
+Mapping: 4.1 Cargo Owners = Shipper. 4.2 Transport Service Providers = Transporter. 4.3 Drivers = Driver. 4.4 Dispatchers = Dispatcher. 4.5 Platform Operations = Moderator, Admin and SUPER_ADMIN. System is the non-human actor classification and has no participant profile in this section.
+
+Participant descriptions in this section do not create, rename or grant platform roles.
+
 4.1 Cargo Owners
 
 Businesses, organisations or individuals requiring transportation services.
@@ -88,6 +94,8 @@ Transport providers use NexCargo to:
 
 Operational users responsible for shipment execution.
 
+A Driver is onboarded, associated with and assigned exclusively through an authorised Transporter and cannot independently register as a marketplace participant or select the Driver role through public registration (PROMPT 0 v1.3 §ROLE PROVISIONING AND DELEGATION).
+
 Drivers use NexCargo to:
 •	Receive assigned shipments 
 •	Share operational updates 
@@ -97,7 +105,7 @@ Drivers use NexCargo to:
 
 4.4 Dispatchers
 
-Operational coordinators managing transport activities on behalf of fleets or logistics companies.
+Operational coordinators managing transport activities on behalf of fleets or logistics companies. Dispatcher authority exists only as an explicit, bounded and revocable delegation from a specific Transporter (PROMPT 0 v1.3 §USER ROLES and §ROLE PROVISIONING AND DELEGATION).
 
 Dispatchers use NexCargo to:
 •	Allocate shipments 
@@ -108,6 +116,8 @@ Dispatchers use NexCargo to:
 4.5 Platform Operations
 
 Internal users responsible for maintaining marketplace quality and operational integrity.
+
+Platform Operations spans three distinct canonical classifications — Moderator, Admin and SUPER_ADMIN — under the hierarchy Moderator → Admin → SUPER_ADMIN defined in PROMPT 0 v1.3 §PERMISSION RULES. Operational team labels are functional assignments inside those classifications, not additional roles.
 
 Platform teams support:
 •	User verification 
@@ -330,7 +340,7 @@ Key capabilities
 •	Performance insights 
 
 Strategic enhancement
-Fleet Dispatcher Role
+Dispatcher Coordination Capability
 
 Support for dedicated operational users managing drivers, vehicles and shipment assignments on behalf of transport organisations.
 
@@ -1078,7 +1088,7 @@ Expected value
 •	Improved platform confidence 
 •	Stronger operational governance 
 
-7. Fleet Dispatcher Role
+7. Dispatcher Coordination Capability
 
 Objective
 
@@ -1087,7 +1097,7 @@ Support professional transport operations with dedicated coordination workflows.
 Description
 
 Many transport organisations operate through dispatch teams responsible for assigning vehicles, coordinating drivers and managing daily activities.
-The Fleet Dispatcher role provides appropriate tools for these operational users.
+The Dispatcher classification is already established as a platform role; this enhancement provides additional coordination tooling for those operational users.
 
 Potential capabilities
 •	Driver assignment 
@@ -1283,3 +1293,14 @@ By connecting cargo owners, transport providers, drivers and logistics partners 
 Through mobile-first design, secure transaction workflows, operational visibility and intelligent automation, NexCargo provides the foundation for a scalable regional logistics platform.
 The combination of strong product principles and disciplined engineering specifications enables NexCargo to evolve while maintaining clarity, consistency and architectural integrity.
 
+
+---
+
+DOCUMENTATION CHANGE HISTORY (role taxonomy reconciliation — NXC-GOV-ROLE-RECON-001 / NXC-HOA-AUTH-ROLE-001)
+
+| Date | Assignment | Change | Authority basis | Version / status effect |
+|-|-|-|-|-|
+| 2026-10-30 | NXC-GOV-ROLE-RECON-001 | Part VI item 7 and its Capability-summary entry renamed from "Fleet Dispatcher Role" to "Dispatcher Coordination Capability"; the description now states that the Dispatcher classification is already established and that this roadmap item concerns additional tooling only. Section 4.4 Dispatchers is unchanged. | PROMPT 0 v1.1 (USER ROLES) and ESS-006 (4.1) already list Dispatcher as a current platform role, and section 4.4 of this document already describes Dispatchers as a present ecosystem participant. The previous wording framed the role itself as a future addition, contradicting both. "Fleet Dispatcher" was also a role name outside the canonical taxonomy. | Version remains v1.0. Status, authority and approval state unchanged — documentation-consistency correction, not an architectural revision. |
+| 2026-10-30 | NXC-HOA-AUTH-ROLE-001 | §4 given an explicit mapping between its business-language participant descriptions and the canonical eight-classification taxonomy, plus the statement that participant descriptions create no roles; §4.3 Drivers annotated with Transporter-exclusive onboarding; §4.4 Dispatchers annotated with the bounded-delegation rule; §4.5 Platform Operations annotated with the Moderator / Admin / SUPER_ADMIN distinction. No participant section was renamed, added or removed. | PROMPT 0 v1.2 §USER ROLES, §PERMISSION RULES, §ROLE PROVISIONING AND DELEGATION; HAO decisions HD-RT-1, HD-RT-2, HD-RT-3 | Version remains v1.0. Status, authority and approval state unchanged — documentation-consistency reconciliation of the role taxonomy, not an architectural revision of this layer. No implementation authorization was granted. |
+| 2026-10-30 | NXC-HOA-DECISION-HD-RT-8 | §4 participant-to-canonical-classification mapping, the Driver onboarding boundary, the Dispatcher delegation boundary and the governance-hierarchy citation rebased on PROMPT 0 v1.3. | HAO decision HD-RT-8 | No ecosystem participant added; canonical taxonomy unchanged; version pointer only |
+| 2026-10-30 | NXC-HOA-AUTH-ROLE-003 | Change-history row for NXC-HOA-AUTH-ROLE-001 completed to this table's five-column structure by supplying its missing "Version / status effect" cell; its date, assignment, change and authority-basis cells are unchanged. | HAO authorization NXC-HOA-AUTH-ROLE-003 §2 (permitted repair); the Version 1.0 header of this document; the "Implementation authorization: NOT GRANTED" terms of NXC-HOA-AUTH-ROLE-001 and NXC-HOA-AUTH-ROLE-003 | Table-structure repair only. No AI-EPRS requirement, participant description or version metadata altered; version remains v1.0 and no implementation authorization is granted. |

@@ -7,15 +7,42 @@ import { PriorityLevel, DeliveryStatus } from '../domain/enums';
 import type { NexCargoEvent } from '@/shared/events/event-types';
 import { EventClassification, EventCriticality } from '@/shared/types/enums';
 
-// Mock Supabase client before importing the handler
-const mockInsert = vi.fn().mockResolvedValue({
-  data: { id: 'notif-test-id', status: 'QUEUED' },
-  error: null,
+// vi.hoisted: the handler now value-imports getEventBus, so these factories run
+// during module import — before any plain top-level const would be initialized.
+const {
+  mockInsert,
+  mockSelect,
+  mockPublish,
+  mockPublishBatch,
+  mockSubscribe,
+  mockUnsubscribe,
+  mockGetEventBus,
+} = vi.hoisted(() => {
+  const mockInsert = vi.fn().mockResolvedValue({
+    data: { id: 'notif-test-id', status: 'QUEUED' },
+    error: null,
+  });
+  const mockSelect = vi.fn(() => ({ single: mockInsert }));
+  const mockPublish = vi.fn().mockResolvedValue(undefined);
+  const mockPublishBatch = vi.fn().mockResolvedValue(undefined);
+  const mockSubscribe = vi.fn();
+  const mockUnsubscribe = vi.fn();
+  const mockGetEventBus = vi.fn(() => ({
+    publish: mockPublish,
+    publishBatch: mockPublishBatch,
+    subscribe: mockSubscribe,
+    unsubscribe: mockUnsubscribe,
+  }));
+  return {
+    mockInsert,
+    mockSelect,
+    mockPublish,
+    mockPublishBatch,
+    mockSubscribe,
+    mockUnsubscribe,
+    mockGetEventBus,
+  };
 });
-
-const mockSelect = vi.fn(() => ({
-  single: mockInsert,
-}));
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: () => ({
@@ -26,14 +53,6 @@ vi.mock('@supabase/supabase-js', () => ({
       }),
     }),
   }),
-}));
-
-// Mock EventBus to capture published events
-const mockPublish = vi.fn().mockResolvedValue(undefined);
-const mockPublishBatch = vi.fn().mockResolvedValue(undefined);
-const mockGetEventBus = vi.fn(() => ({
-  publish: mockPublish,
-  publishBatch: mockPublishBatch,
 }));
 
 vi.mock('@/shared/events/handler-registry', () => ({

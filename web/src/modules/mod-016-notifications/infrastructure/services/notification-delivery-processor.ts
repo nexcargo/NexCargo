@@ -1,12 +1,19 @@
-// NexCargo MOD-016 — Notification Delivery Processor (C5-II)
-// C5 Increment 2 — Authorized per HAO-C5-002
-// Purpose: Core orchestration of notification delivery pipeline
+// NexCargo MOD-016 — Notification Delivery Processor
+// Originally C5-II (HAO-C5-002). Corrected under I-3 §4B/§4C/§5.
 //
-// Pipeline flow:
-//   discover → claim → validate → select channel → execute → persist attempt → update state → release
+// Pipeline: claim → validate → select channel → execute → persist attempt → release
 //
-// Uses PostgreSQL RPC functions for atomic claiming and result persistence.
-// Channel executors handle the actual delivery mechanism.
+// I-3 corrections applied here:
+//   * RPCs are addressed to communication_schema. The previous client had no
+//     schema option, so .rpc() resolved against public and every call failed
+//     PGRST202 (the SB-3A schema-resolution defect).
+//   * claim_one_queued_notification RETURNS TABLE, so PostgREST returns an array.
+//   * The SUCCESS branch now persists the attempt. Previously it returned without
+//     calling record_delivery_attempt, leaving claimed rows stuck in PROCESSING.
+//   * failureReason is assigned before it is passed to the retry RPC.
+//   * IN_APP is registered; unconfigured channels report PROVIDER_NOT_CONFIGURED.
+//   * The phantom `version` column is gone; correlation_ref/source_event_id map instead.
+//   * durationMs is a duration, not a timestamp.
 
 import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -14,8 +21,8 @@ import type { ClaimedNotification, DeliveryProcessingResult, BatchProcessingResu
 import { MAX_RETRY_COUNT, ChannelExecutionStatus, RETRY_BASE_DELAY_MS } from '../../domain/types/delivery-pipeline';
 import { DeliveryEventStatus, DeliveryStatus } from '../../domain/enums';
 import { NotificationChannel } from '@/shared/types/enums';
-import { ChannelExecutorRegistry, resolveRecipientTarget } from '@/modules/mod-016-notifications/infrastructure/adapters/channel-executor-registry';
-import { StubChannelExecutor } from '@/modules/mod-016-notifications/infrastructure/adapters/channel-executors/stub-channel-executor';
+import { ChannelExecutorRegistry, ChannelExecutorFactory, resolveRecipientTarget } from '@/modules/mod-016-notifications/infrastructure/adapters/channel-executor-registry';
+import { providerNotConfiguredReason } from '@/modules/mod-016-notifications/infrastructure/adapters/channel-executors/stub-channel-executor';
 
 // ============================================================
 // Environment & Client Setup
@@ -32,44 +39,31 @@ function getSupabase(): SupabaseClient {
       throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured for delivery processing');
     }
 
-    supabaseInstance = createClient(url, key);
+    // Every RPC this processor calls lives in communication_schema, so each call
+    // is addressed explicitly through comm() below. That is the SB-3A
+    // schema-resolution fix: the previous bare .rpc() resolved against public and
+    // failed PGRST202. service_role is the only role granted EXECUTE (059 Part 6).
+    supabaseInstance = createClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
   }
   return supabaseInstance;
 }
 
-// ============================================================
-// Lazy channel executor initialization
-// ============================================================
+/** Addresses the communication_schema PostgREST profile (056 exposes it). */
+function comm(db: SupabaseClient) {
+  return db.schema('communication_schema');
+}
 
-/**
- * Ensures all default channel executors are registered.
- * Called once on first processor invocation.
- */
-function ensureChannelExecutorsRegistered(registry: ChannelExecutorRegistry): void {
-  // Register stub executors for channels without real implementations
-  const channelsToRegister: NotificationChannel[] = [
-    NotificationChannel.EMAIL,
-    NotificationChannel.SMS,
-    NotificationChannel.PUSH,
-    NotificationChannel.WHATSAPP,
-  ];
-
-  for (const channel of channelsToRegister) {
-    if (!registry.hasExecutor(channel)) {
-      registry.register(new StubChannelExecutor(channel));
-    }
-  }
+/** RPC errors must not be swallowed: a lost attempt record strands the row. */
+function assertRpcOk(error: { message: string } | null, fn: string): void {
+  if (error) throw new Error(`${fn} failed: ${error.message}`);
 }
 
 // ============================================================
 // Delivery Processor Service
 // ============================================================
 
-/**
- * NotificationDeliveryProcessor — Orchestrates the full delivery pipeline.
- * 
- * Thread-safe singleton pattern for use in serverless environments.
- */
 export class NotificationDeliveryProcessor {
   private static instance: NotificationDeliveryProcessor;
   private registry: ChannelExecutorRegistry;
@@ -79,7 +73,6 @@ export class NotificationDeliveryProcessor {
     this.registry = ChannelExecutorRegistry.getInstance();
   }
 
-  /** Get singleton instance */
   static getInstance(): NotificationDeliveryProcessor {
     if (!NotificationDeliveryProcessor.instance) {
       NotificationDeliveryProcessor.instance = new NotificationDeliveryProcessor();
@@ -87,105 +80,76 @@ export class NotificationDeliveryProcessor {
     return NotificationDeliveryProcessor.instance;
   }
 
-  /** Initialize the processor (register default channel executors) */
+  /** Registers IN_APP plus honest failure executors for unconfigured channels. */
   async initialize(): Promise<void> {
     if (this.initialized) return;
-
-    ensureChannelExecutorsRegistered(this.registry);
+    ChannelExecutorFactory.createAndRegisterDefaults(this.registry);
     this.initialized = true;
   }
 
-  /**
-   * Processes a single queued notification through the full delivery pipeline.
-   * 
-   * @returns Processing result with status, delivery event info, and retry state
-   */
+  /** Processes one queued notification. Returns null when the queue is empty. */
   async processOne(): Promise<DeliveryProcessingResult | null> {
     await this.initialize();
-
     const db = getSupabase();
 
-    // Step 1: Claim one QUEUED notification atomically
     const claimed = await this.claimNotification(db);
-    if (!claimed) {
-      return null; // No notifications to process
-    }
-
-    const startTime = Date.now();
+    if (!claimed) return null;
 
     try {
-      // Step 2: Validate the claimed notification
       this.validateClaimedNotification(claimed);
-
-      // Step 3: Select and execute the appropriate channel
-      const executionResult = await this.executeChannel(db, claimed);
-
-      // Step 4: Persist the delivery attempt result
+      const executionResult = await this.executeChannel(claimed);
       const finalStatus = await this.persistDeliveryResult(db, claimed, executionResult);
 
       return {
         notificationId: claimed.id,
-        success: finalStatus.success,
-        deliveryEventStatus: finalStatus.deliveryEventStatus,
-        finalDeliveryStatus: finalStatus.finalDeliveryStatus,
-        channelUsed: claimed.channelType,
-        retryCount: finalStatus.retryCount,
-        failureReason: finalStatus.failureReason,
-        correlationId: claimed.eventCorrelationId,
+        ...finalStatus,
+        correlationId: claimed.correlationRef ?? claimed.eventCorrelationId,
         processedAt: new Date(),
       };
     } catch (error) {
-      // On unexpected error, record failure and re-queue for retry
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`[DeliveryProcessor] Unexpected error processing notification ${claimed.id}:`, errorMessage);
+      console.error(`[DeliveryProcessor] Error processing notification ${claimed.id}:`, errorMessage);
 
-      await this.recordFailureAndRequeue(db, claimed, errorMessage);
+      const requeue = await this.recordFailureAndRequeue(db, claimed, errorMessage);
 
       return {
         notificationId: claimed.id,
         success: false,
-        deliveryEventStatus: DeliveryEventStatus.FAILED,
-        finalDeliveryStatus: DeliveryStatus.FAILED,
+        deliveryEventStatus: requeue.terminal ? DeliveryEventStatus.FAILED : DeliveryEventStatus.RETRY_SCHEDULED,
+        finalDeliveryStatus: requeue.terminal ? DeliveryStatus.FAILED : DeliveryStatus.QUEUED,
         channelUsed: claimed.channelType,
-        retryCount: claimed.retryCount + 1,
+        retryCount: requeue.retryCount,
         failureReason: `Processing error: ${errorMessage}`,
-        correlationId: claimed.eventCorrelationId,
+        correlationId: claimed.correlationRef ?? claimed.eventCorrelationId,
         processedAt: new Date(),
       };
     }
   }
 
   /**
-   * Processes up to batch_size queued notifications.
-   * Useful for cron/scheduled invocations.
-   * 
-   * @param batchSize — Maximum notifications to process (default 10)
-   * @returns Batch processing result with aggregate statistics
+   * Executor-driven batch for the on-demand governance endpoint. The automatic
+   * path is pg_cron → communication_schema.drain_notification_queue (059 Part 7),
+   * which carries the ESS-001C §5.2 circuit breaker. Both share the same atomic
+   * claim and record RPCs, so they cannot deliver the same row twice.
    */
   async processBatch(batchSize: number = 10): Promise<BatchProcessingResult> {
     await this.initialize();
+    const startedAt = Date.now();
+    const bounded = Math.min(Math.max(batchSize, 1), 100);
 
     const results: DeliveryProcessingResult[] = [];
     let successCount = 0;
     let failedCount = 0;
     let requeuedCount = 0;
 
-    for (let i = 0; i < batchSize; i++) {
+    for (let i = 0; i < bounded; i++) {
       const result = await this.processOne();
-
-      if (!result) {
-        break; // No more queued notifications
-      }
+      if (!result) break;
 
       results.push(result);
-
-      if (result.success) {
-        successCount++;
-      } else if (result.finalDeliveryStatus === DeliveryStatus.FAILED) {
-        failedCount++;
-      } else {
-        requeuedCount++;
-      }
+      if (result.success) successCount++;
+      else if (result.finalDeliveryStatus === DeliveryStatus.FAILED) failedCount++;
+      else requeuedCount++;
     }
 
     return {
@@ -194,51 +158,62 @@ export class NotificationDeliveryProcessor {
       failedCount,
       requeuedCount,
       results,
-      durationMs: Date.now(), // Will be updated by caller
+      durationMs: Date.now() - startedAt,
     };
+  }
+
+  /** Recovers rows stranded in PROCESSING by a crashed worker (059 Part 5.5). */
+  async recoverStalledProcessing(stallTimeoutSeconds: number = 300): Promise<number> {
+    const db = getSupabase();
+    const { data, error } = await comm(db).rpc('recover_stalled_processing', {
+      p_stall_timeout_seconds: stallTimeoutSeconds,
+    });
+    assertRpcOk(error, 'recover_stalled_processing');
+    return typeof data === 'number' ? data : 0;
   }
 
   // ============================================================
   // Private Pipeline Steps
   // ============================================================
 
-  /** Step 1: Atomically claim one QUEUED notification via SQL RPC */
   private async claimNotification(db: SupabaseClient): Promise<ClaimedNotification | null> {
-    const { data, error } = await db.rpc('claim_one_queued_notification');
+    const { data, error } = await comm(db).rpc('claim_one_queued_notification', {
+      p_channel_type: null,
+      p_max_retry_count: MAX_RETRY_COUNT,
+    });
 
     if (error) {
       console.error('[DeliveryProcessor] Failed to claim notification:', error.message);
       return null;
     }
 
-    if (!data) {
-      return null; // No notifications available
-    }
+    // RETURNS TABLE => PostgREST yields an array, empty when nothing is eligible.
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) return null;
 
-    // Map SQL composite type to TypeScript interface
     return {
-      id: data.id,
-      recipientId: data.recipient_id,
-      sourceModule: data.source_module,
-      eventType: data.event_type,
-      title: data.title,
-      body: data.body,
-      priorityLevel: data.priority_level as any,
-      channelType: data.channel_type as any,
-      locale: data.locale,
-      templateId: data.template_id,
-      eventCorrelationId: data.event_correlation_id,
-      deliveryStatus: data.delivery_status as any,
-      retryCount: data.retry_count,
-      providerChannel: data.provider_channel,
-      nextRetryAt: data.next_retry_at ? new Date(data.next_retry_at) : null,
-      createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at),
-      version: data.version,
+      id: row.id,
+      recipientId: row.recipient_id,
+      sourceModule: row.source_module,
+      eventType: row.event_type,
+      title: row.title,
+      body: row.body,
+      priorityLevel: row.priority_level,
+      channelType: row.channel_type,
+      locale: row.locale,
+      templateId: row.template_id ?? null,
+      eventCorrelationId: row.event_correlation_id ?? null,
+      correlationRef: row.correlation_ref ?? null,
+      sourceEventId: row.source_event_id ?? null,
+      deliveryStatus: row.delivery_status,
+      retryCount: row.retry_count,
+      providerChannel: row.provider_channel ?? null,
+      nextRetryAt: row.next_retry_at ? new Date(row.next_retry_at) : null,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
     };
   }
 
-  /** Step 2: Validate the claimed notification has required fields */
   private validateClaimedNotification(notification: ClaimedNotification): void {
     if (!notification.id) {
       throw new Error('Claimed notification missing ID');
@@ -254,78 +229,72 @@ export class NotificationDeliveryProcessor {
     }
   }
 
-  /** Step 3: Execute the appropriate channel for this notification */
-  private async executeChannel(
-    db: SupabaseClient,
-    notification: ClaimedNotification,
-  ): Promise<ChannelExecutionResult> {
+  private async executeChannel(notification: ClaimedNotification): Promise<ChannelExecutionResult> {
     const executor = this.registry.getExecutor(notification.channelType);
-
     if (!executor) {
       throw new Error(`No channel executor registered for: ${notification.channelType}`);
     }
 
-    // Resolve the actual delivery target for this channel
     const recipientTarget = resolveRecipientTarget(notification.recipientId, notification.channelType);
 
-    // Execute delivery through the channel
+    // No contact source exists for this channel. Fail honestly rather than
+    // inventing an address (I-3 §9).
+    if (recipientTarget === null) {
+      return {
+        status: ChannelExecutionStatus.FAILED,
+        errorMessage: providerNotConfiguredReason(notification.channelType),
+        isRetryable: false,
+        timestamp: new Date(),
+      };
+    }
+
     return executor.execute(notification, recipientTarget);
   }
 
-  /** Step 4: Persist delivery attempt result and update notification state */
   private async persistDeliveryResult(
     db: SupabaseClient,
     notification: ClaimedNotification,
     executionResult: ChannelExecutionResult,
   ): Promise<Omit<DeliveryProcessingResult, 'notificationId' | 'correlationId' | 'processedAt'>> {
-    const newRetryCount = executionResult.status === ChannelExecutionStatus.FAILED
-      ? notification.retryCount + 1
-      : notification.retryCount;
+    const succeeded = executionResult.status === ChannelExecutionStatus.SUCCESS;
+    const newRetryCount = succeeded ? notification.retryCount : notification.retryCount + 1;
+    const failureReason = succeeded ? undefined : (executionResult.errorMessage || 'Delivery failed');
 
     let deliveryEventStatus: DeliveryEventStatus;
     let finalDeliveryStatus: DeliveryStatus;
-    let failureReason: string | undefined;
+    let isRetryable = false;
 
-    if (executionResult.status === ChannelExecutionStatus.SUCCESS) {
+    if (succeeded) {
       deliveryEventStatus = DeliveryEventStatus.SUCCEEDED;
+      // IN_APP delivery is the persisted inbox row itself. Any other channel
+      // reaching SUCCESS means a real provider acknowledged it, hence SENT.
       finalDeliveryStatus = notification.channelType === NotificationChannel.IN_APP
         ? DeliveryStatus.DELIVERED
         : DeliveryStatus.SENT;
     } else if (executionResult.isRetryable && newRetryCount < MAX_RETRY_COUNT) {
       deliveryEventStatus = DeliveryEventStatus.RETRY_SCHEDULED;
-      finalDeliveryStatus = DeliveryStatus.QUEUED; // Re-queue for retry
-
-      // Record delivery attempt with retryable flag and backoff delay
-      await db.rpc('record_delivery_attempt', {
-        p_notification_id: notification.id,
-        p_status: deliveryEventStatus,
-        p_channel_used: notification.channelType,
-        p_retry_count: newRetryCount,
-        p_failure_reason: failureReason || null,
-        p_new_delivery_status: finalDeliveryStatus,
-        p_is_retryable: true,
-        p_base_delay_ms: RETRY_BASE_DELAY_MS,
-      });
+      finalDeliveryStatus = DeliveryStatus.QUEUED;
+      isRetryable = true;
     } else {
       deliveryEventStatus = DeliveryEventStatus.FAILED;
       finalDeliveryStatus = DeliveryStatus.FAILED;
-      failureReason = executionResult.errorMessage || 'Delivery failed';
-
-      // Record terminal failure (not retryable)
-      await db.rpc('record_delivery_attempt', {
-        p_notification_id: notification.id,
-        p_status: deliveryEventStatus,
-        p_channel_used: notification.channelType,
-        p_retry_count: newRetryCount,
-        p_failure_reason: failureReason,
-        p_new_delivery_status: finalDeliveryStatus,
-        p_is_retryable: false,
-        p_base_delay_ms: RETRY_BASE_DELAY_MS,
-      });
     }
 
+    const { error } = await comm(db).rpc('record_delivery_attempt', {
+      p_notification_id: notification.id,
+      p_status: deliveryEventStatus,
+      p_channel_used: notification.channelType,
+      p_retry_count: newRetryCount,
+      p_failure_reason: failureReason ?? null,
+      p_new_delivery_status: finalDeliveryStatus,
+      p_is_retryable: isRetryable,
+      p_base_delay_ms: RETRY_BASE_DELAY_MS,
+      p_auto_reset_to_queued: false,
+    });
+    assertRpcOk(error, 'record_delivery_attempt');
+
     return {
-      success: executionResult.status === ChannelExecutionStatus.SUCCESS,
+      success: succeeded,
       deliveryEventStatus,
       finalDeliveryStatus,
       channelUsed: notification.channelType,
@@ -334,52 +303,40 @@ export class NotificationDeliveryProcessor {
     };
   }
 
-  /** Handle unexpected errors: record failure and re-queue */
+  /**
+   * Records an unexpected processing error and releases the claim atomically.
+   * p_auto_reset_to_queued keeps the event insert and the PROCESSING→QUEUED
+   * transition in one SQL transaction (C5-III), so a failed second call cannot
+   * strand the row.
+   */
   private async recordFailureAndRequeue(
     db: SupabaseClient,
     notification: ClaimedNotification,
     errorMessage: string,
-  ): Promise<void> {
+  ): Promise<{ terminal: boolean; retryCount: number }> {
     const newRetryCount = notification.retryCount + 1;
+    const terminal = newRetryCount >= MAX_RETRY_COUNT;
 
-    if (newRetryCount >= MAX_RETRY_COUNT) {
-      // Terminal failure — mark as FAILED permanently
-      await db.rpc('record_delivery_attempt', {
-        p_notification_id: notification.id,
-        p_status: DeliveryEventStatus.FAILED,
-        p_channel_used: notification.channelType,
-        p_retry_count: newRetryCount,
-        p_failure_reason: errorMessage,
-        p_new_delivery_status: DeliveryStatus.FAILED,
-        p_is_retryable: false,
-        p_base_delay_ms: RETRY_BASE_DELAY_MS,
-      });
-    } else {
-      // Retryable — increment count and re-queue with backoff
-      await db.rpc('record_delivery_attempt', {
-        p_notification_id: notification.id,
-        p_status: DeliveryEventStatus.RETRY_SCHEDULED,
-        p_channel_used: notification.channelType,
-        p_retry_count: newRetryCount,
-        p_failure_reason: errorMessage,
-        p_new_delivery_status: null, // Don't change delivery_status yet
-        p_is_retryable: true,
-        p_base_delay_ms: RETRY_BASE_DELAY_MS,
-      });
+    const { error } = await comm(db).rpc('record_delivery_attempt', {
+      p_notification_id: notification.id,
+      p_status: terminal ? DeliveryEventStatus.FAILED : DeliveryEventStatus.RETRY_SCHEDULED,
+      p_channel_used: notification.channelType,
+      p_retry_count: newRetryCount,
+      p_failure_reason: errorMessage,
+      p_new_delivery_status: terminal ? DeliveryStatus.FAILED : null,
+      p_is_retryable: !terminal,
+      p_base_delay_ms: RETRY_BASE_DELAY_MS,
+      p_auto_reset_to_queued: !terminal,
+    });
 
-      // Re-queue with backoff enforcement
-      await db.rpc('requeue_notification', {
-        p_notification_id: notification.id,
-        p_is_retryable: true,
-        p_base_delay_ms: RETRY_BASE_DELAY_MS,
-      });
+    if (error) {
+      // The row stays PROCESSING; recover_stalled_processing will release it.
+      console.error('[DeliveryProcessor] Failed to record processing error:', error.message);
     }
+
+    return { terminal, retryCount: newRetryCount };
   }
 }
-
-// ============================================================
-// Export singleton accessor for direct use
-// ============================================================
 
 /** Get the shared delivery processor instance */
 export function getDeliveryProcessor(): NotificationDeliveryProcessor {

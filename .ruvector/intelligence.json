@@ -1,0 +1,27 @@
+{
+  "patterns": {},
+  "memories": [],
+  "trajectories": [],
+  "errors": {},
+  "file_sequences": [],
+  "agents": {},
+  "edges": [],
+  "stats": {
+    "total_patterns": 0,
+    "total_memories": 0,
+    "total_trajectories": 0,
+    "total_errors": 0,
+    "session_count": 0,
+    "last_session": 0
+  },
+  "activeTrajectories": {
+    "traj_1790081338832_6ujp4btyz": {
+      "id": "traj_1790081338832_6ujp4btyz",
+      "context": "test-root-redirect: Test root / redirect behavior - should redirect to /pt (Portuguese default) with no loop",
+      "agent": "browser-session",
+      "file": null,
+      "steps": [],
+      "startTime": 1790081338832
+    }
+  }
+}

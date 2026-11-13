@@ -3,6 +3,7 @@
 // Paginated event history with role-based visibility
 
 import { NextRequest, NextResponse } from 'next/server';
+import { assertApiAuthorization, authDenialResponse } from '@/lib/supabase/api-auth';
 import { TrackingEventRepository } from '@/modules/mod-003-tracking/infrastructure/repositories/tracking-event-repository';
 
 /**
@@ -13,12 +14,17 @@ import { TrackingEventRepository } from '@/modules/mod-003-tracking/infrastructu
  * Query params:
  * - limit: number of events to return (default 50, max 200)
  * - offset: page offset (default 0)
+ *
+ * I-2 PART C item 6: gated like the tracking detail route (MOD-010 §4.2 requires the role check; the event
+ * rows stay scoped by RLS).
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ trackingId: string }> }
 ) {
   try {
+    await assertApiAuthorization(request, 'tracking_read', 'read');
+
     const { trackingId } = await params;
     if (!trackingId || typeof trackingId !== 'string') {
       return NextResponse.json(
@@ -49,6 +55,8 @@ export async function GET(
       hasMore: events.length === limit,
     });
   } catch (error) {
+    const denial = authDenialResponse(error);
+    if (denial) return denial;
     console.error('[TrackingEvents] Error:', error);
     return NextResponse.json(
       { error: 'internal_error', message: 'Failed to fetch tracking events' },

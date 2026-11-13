@@ -3,6 +3,7 @@
 // Returns GPS location updates for a tracking record with pagination
 
 import { NextRequest, NextResponse } from 'next/server';
+import { assertApiAuthorization, authDenialResponse } from '@/lib/supabase/api-auth';
 import { GpsUpdateRepository } from '@/modules/mod-003-tracking/infrastructure/repositories/gps-update-repository';
 
 /**
@@ -12,12 +13,17 @@ import { GpsUpdateRepository } from '@/modules/mod-003-tracking/infrastructure/r
  * 
  * Query params:
  * - limit: number of points to return (default 200)
+ *
+ * I-2 PART C item 6: GPS traces are the most sensitive thing MOD-003 §7.3:999 protects, and this route used
+ * to answer anonymous callers. Same 'tracking_read' authority as the detail route; the rows remain RLS-scoped.
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ trackingId: string }> }
 ) {
   try {
+    await assertApiAuthorization(request, 'tracking_read', 'read');
+
     const { trackingId } = await params;
     if (!trackingId || typeof trackingId !== 'string') {
       return NextResponse.json(
@@ -49,6 +55,8 @@ export async function GET(
       total: locations.length,
     });
   } catch (error) {
+    const denial = authDenialResponse(error);
+    if (denial) return denial;
     console.error('[LocationHistory] Error:', error);
     return NextResponse.json(
       { error: 'internal_error', message: 'Failed to fetch location history' },

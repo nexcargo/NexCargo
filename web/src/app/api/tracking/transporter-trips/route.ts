@@ -2,16 +2,22 @@
 // GET /api/tracking/transporter-trips
 // Minimal read-only endpoint for transporter active-trips view
 // Uses existing Phase 1 TrackingRecordRepository; no new business logic
+//
+// I-2 PART C item 6: authorized as a tracking read (MOD-010 §4.2 requires the role check on every request);
+// the rows a caller receives are the ones their own RLS scope admits.
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { assertApiAuthorization, authDenialResponse } from '@/lib/supabase/api-auth';
 import { TrackingRecordRepository } from '@/modules/mod-003-tracking/infrastructure/repositories/tracking-record-repository';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const ctx = await assertApiAuthorization(request, 'tracking_read', 'read');
+
     const repo = new TrackingRecordRepository();
 
     // Fetch all non-completed, non-cancelled tracking records as "active trips"
-    const records = await repo.listByTransporter('all', 50, 0);
+    const records = await repo.listByTransporter(ctx.userId, 50, 0);
 
     if (!records || records.length === 0) {
       return NextResponse.json([]);
@@ -33,6 +39,8 @@ export async function GET() {
 
     return NextResponse.json(result);
   } catch (error) {
+    const denial = authDenialResponse(error);
+    if (denial) return denial;
     console.error('[TransporterTrips] Error:', error);
     return NextResponse.json(
       { error: 'internal_error', message: 'Failed to fetch transporter trips' },

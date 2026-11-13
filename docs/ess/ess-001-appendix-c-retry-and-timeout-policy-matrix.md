@@ -409,6 +409,10 @@
 
 
 
+_Payment Hold Mode is a financial-flow control. It is distinct from a transaction-specific hold or escrow intervention (MOD-005 §4.1, §4.4; ESS-001F §15.9), from Safe Mode (ESS-005 §5), and from platform-wide lockdown, emergency maintenance or an executive kill-switch (PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS Domain 4). This appendix defines the behaviour of the mode and no entry or exit mechanism beyond it, and none may be inferred: pause and resume are separate permissions, an automated reaction confers no human resume authority, and a pause must not cancel, alter or reverse an instruction already received by a bank or payment provider (ESS-001F §15.2 suspension boundary, §15.4; MOD-013 §5.4; HAO decision D-01 Item 3, direction 3-B)._
+
+
+
 **9.3 AI Fallback Mode**
 
 
@@ -627,3 +631,14 @@
 
 **controlled, observable, recoverable state**
 
+
+---
+
+DOCUMENTATION CHANGE HISTORY
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-11-03 | NXC-HOA-AUTH-D01-ITEM-06-STAGE-1 | Change-history block established under the INDEX §7.4 Document Change-History Standard. History in this document commences with this row. Earlier changes to this document are not reconstructed here; the governing record for them is the Development State decision register. The row below records the evidenced change that the register and this document's own inline boundary note support, dated when the change was actually made. Creating this block altered no retry policy, timeout tier, backoff rule or circuit-breaker definition in this appendix. | HAO decision D-01 Item 6 Stage 1 (NXC-HOA-AUTH-D01-ITEM-06-STAGE-1); INDEX §7.4 |
+| 2026-11-02 | NXC-HOA-AUTH-D01-ITEM-03-001 | §9.2 records Payment Hold Mode as a financial-flow control held distinct from a transaction-specific hold or escrow intervention (MOD-005 §4.1, §4.4; ESS-001F §15.9), from Safe Mode (ESS-005 §5) and from platform-wide lockdown, emergency maintenance or an executive kill-switch (PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS Domain 4), so that the four suspension constructs may not be conflated in implementation. No hold mode was created, redefined or given an exit mechanism here; the Payment Hold Mode exit mechanism remains an open item awaiting its own HAO decision, and every timeout tier, retry budget and DLQ rule in this matrix is unchanged. | HAO decision D-01 Item 3, direction 3-B (NXC-HOA-AUTH-D01-ITEM-03-001); Development State register, D-01 Item 3 row; ESS-001F §15.2, §15.4 |
+
+Version effect: ESS-001C remains v1.0 — no version increase, no loader change and no INDEX §7.1 change. This block records a change already made and registered under the authorisation cited in it; creating the block changed no policy in this appendix.

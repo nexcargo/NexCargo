@@ -414,7 +414,11 @@ Settlement must respect currency rules (MOD-009).
 
 
 
-Fraud flags (MOD-010) can pause settlement.
+Fraud flags (MOD-010) can pause settlement. The pause is an automated protective reaction: it confers no human authority to resume, and resumption is a separate permission decided under the ordinary approval authority below (ESS-001F §15.2 suspension boundary; HAO decision D-01 Item 3, direction 3-B). A pause must not cancel, alter or reverse an instruction already received by a bank or payment provider (§5.4).
+
+
+
+Settlement approval (approvalStatus = APPROVED) is recorded by Admin within delegated authority, or by SUPER_ADMIN where the settlement sits inside an Escrow Intervention Request classified Tier 2 under ESS-001F §15.9 (HAO decision D-01 Item 3, direction 3-A). A Moderator may investigate, record findings and recommend, and may not approve a settlement or decide a financial outcome (PROMPT 0 v1.3 §PERMISSION RULES; ESS-001F §15.6). No AI actor may approve a settlement (§7.1; ESS-001F §10). Approval is internal and is never execution: the bank or authorised payment provider executes (§5.4, §7.2).
 
 
 
@@ -596,7 +600,7 @@ resolutionOutcome
 
 
 
-approvedBy – moderator/admin reference
+approvedBy – reference to the approving Admin (within delegated authority) or SUPER_ADMIN (where ESS-001F §15.9 Tier 2 applies). A Moderator is not an approver of a refund (PROMPT 0 v1.3 §PERMISSION RULES; ESS-001F §15.6).
 
 
 
@@ -620,7 +624,7 @@ Funds remain locked during disputes.
 
 
 
-Moderator decisions (MOD-010) determine release direction.
+The release direction of a dispute is decided by Admin within delegated authority, or by SUPER_ADMIN where ESS-001F §15.9 Tier 2 applies. Moderator findings and recommendations (MOD-010, MOD-015 §5.2) inform the decision and do not determine it (PROMPT 0 v1.3 §PERMISSION RULES; ESS-001F §15.6; HAO decision D-01 Item 3, direction 3-A).
 
 
 
@@ -678,7 +682,7 @@ Business rules:
 
 
 
-Fee structure is configurable by admin (MOD-007 \& MOD-010).
+Fee structure is configured by Admin as routine configuration within already-approved policy and existing limits (ESS-001F §15.2). The fee model itself, and any negotiated or exceptional commercial arrangement outside approved policy, is SUPER_ADMIN commercial authorisation (ESS-001F §15.1; PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS Domain 5). Dashboard surfaces are defined in MOD-007 §5.6 and §5.7; MOD-018 remains advisory-only (MOD-018 §7.1). MOD-010 defines no fee provision and is not a fee-configuration source. A configuration change has no retroactive effect on signed contracts, existing bookings or in-flight settlements (ESS-001F §15.2; HAO decision D-01 Item 3, direction 3-C).
 
 
 
@@ -1004,7 +1008,7 @@ BANK FREEZE (hold instruction)
 
 &#x20;      ↓
 
-RESOLUTION (moderator decision)
+RESOLUTION (Admin decision within delegated authority, or SUPER_ADMIN where ESS-001F §15.9 Tier 2 applies; Moderator investigates and recommends)
 
 &#x20;      ↓
 
@@ -1261,6 +1265,24 @@ directly manage external ledger systems
 
 
 bypass ESS-001F constraints
+
+
+
+7.9 Escrow Intervention Eligibility Reference
+
+The closed list of circumstances in which a human Admin or SUPER_ADMIN may initiate an escrow-related intervention is defined once, authoritatively, in ESS-001F §15.6 (HAO decisions D-01 and D-01 Item 1). MOD-013 adds no trigger and grants no authority from this rule.
+
+
+
+Eligibility does not modify §7.1 No Execution Rule, §7.3 Escrow Immutability Rule, or §7.8 Neutrality Rule. A permitted trigger authorises an Escrow Intervention Request only.
+
+
+
+Eligibility alone confers no settlement approval, no payment initiation, no external state modification, and no ledger correction. The bank or authorised payment provider remains the sole execution authority (§7.2).
+
+
+
+The Escrow Intervention Request logical object, its lifecycle and its decision tiers are defined once, authoritatively, in ESS-001F §15.7 to §15.10 (HAO decision D-01 Item 2). MOD-013 adds no field, no state, no transition and no threshold to that definition. An approved request authorises NexCargo to raise an instruction through the existing pathway only; implementation tracking reuses the status vocabularies and bank execution references already recorded in §4.3 and §4.6, and grants MOD-013 no approval or execution role beyond §7.1 and §7.2.
 
 
 
@@ -1674,3 +1696,16 @@ financial audits can be executed without discrepancies
 
 the platform operates as a financially compliant logistics marketplace with bank-grade escrow infrastructure
 
+
+---
+
+DOCUMENTATION CHANGE HISTORY
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-11-03 | NXC-HOA-AUTH-D01-ITEM-06-STAGE-1 | Change-history block established under the INDEX §7.4 Document Change-History Standard. History in this document commences with this row. Earlier changes to this document are not reconstructed here; the governing record for them is the Development State decision register. The rows below record the evidenced changes that the register and this document's own inline citations support, each dated when the change was actually made. Creating this block altered no settlement rule, ledger structure, record field, permission or authority boundary in this module. | HAO decision D-01 Item 6 Stage 1 (NXC-HOA-AUTH-D01-ITEM-06-STAGE-1); INDEX §7.4 |
+| 2026-11-02 | NXC-HOA-AUTH-D01-001 | §7.9 added as a cross-reference to the closed escrow-intervention eligibility trigger list, defined once, authoritatively, in ESS-001F §15.6; MOD-013 adds no trigger and grants no authority from the rule. The No Custody invariant, ledger immutability and every existing role boundary are unchanged. | HAO decision D-01 Item 1 (NXC-HOA-AUTH-D01-001); Development State register, D-01 row |
+| 2026-11-02 | NXC-HOA-DECISION-D01-ITEM-02 | §7.9 extended to point at the Escrow Intervention Request logical object, lifecycle and decision tiers defined in ESS-001F §15.7 to §15.10, recording that MOD-013 adds no field, state, transition or threshold to that definition and that an approved request authorises NexCargo only to raise an instruction through the §15.3 pathway. No settlement state, instruction or execution capability was created. | HAO decision D-01 Item 2 (NXC-HOA-DECISION-D01-ITEM-02); Development State register, D-01 Item 2 row |
+| 2026-11-02 | NXC-HOA-AUTH-D01-ITEM-03-001 | §4.3, §4.6 and §5.5 aligned: settlement approval and the release direction of a dispute are recorded by Admin within delegated authority, or by SUPER_ADMIN where ESS-001F §15.9 classifies the matter Tier 2; a Moderator may investigate, record findings and recommend but does not decide a financial outcome; a fraud-flag or automated pause is a protective reaction that confers no human authority to resume, resumption being a separate permission, and Admin may not impose or reverse a platform-wide executive restriction (§15.2 suspension boundary). §4.7 fee attribution corrected: fee structure configuration is Admin routine configuration inside already-approved policy and existing limits, while the fee model and any negotiated or exceptional commercial arrangement outside approved policy is SUPER_ADMIN commercial authorisation; the earlier attribution of fee configuration to MOD-010 was removed because MOD-010 states no fee provision. No field, state, queue, instrument or threshold was added, renamed or removed and no execution authority moved. | HAO decision D-01 Item 3, directions 3-A, 3-B and 3-C (NXC-HOA-AUTH-D01-ITEM-03-001); Development State register, D-01 Item 3 row; ESS-001F §15.1 to §15.5 |
+
+Version effect: MOD-013 remains v1.0 — no version increase, no loader change and no INDEX §7.1 change. This block records changes already made and registered under the authorisations cited in it; creating the block changed no rule, record, ledger structure or authority boundary in this module.

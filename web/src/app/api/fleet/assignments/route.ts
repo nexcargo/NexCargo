@@ -4,7 +4,7 @@
 // Separate from MOD-002 driver_assignments (ODD-7 decision).
 
 import { NextRequest, NextResponse } from 'next/server';
-import { assertApiAuth, assertApiAuthorization } from '@/lib/supabase/api-auth';
+import { assertApiAuthorization } from '@/lib/supabase/api-auth';
 import { FleetRepository } from '@/modules/mod-014-fleet-assets/infrastructure/repositories/fleet-repository';
 import { applyAssignmentTransition, validateAssignmentTimeWindow } from '@/modules/mod-014-fleet-assets/domain/services/asset-state-machine';
 import { AssignmentStatus } from '@/modules/mod-014-fleet-assets/domain/enums';
@@ -15,7 +15,9 @@ import { AssignmentStatus } from '@/modules/mod-014-fleet-assets/domain/enums';
  */
 export async function GET(request: NextRequest) {
   try {
-    await assertApiAuth(request);
+    // I-2 item 6: authentication alone is not authorization. The rows are already RLS-scoped; this is the
+    // backend role check MOD-010 §4.2 requires on every request.
+    await assertApiAuthorization(request, 'fleet_assignments', 'read');
 
     const params = Object.fromEntries(new URL(request.url).searchParams.entries());
     const repo = new FleetRepository();

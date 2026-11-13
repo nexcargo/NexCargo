@@ -9,7 +9,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ValidationError } from '@/shared/errors/app-errors';
 import { createCorrelationContext, resolveCorrelationId } from '@/shared/standards/correlation-id-propagation';
 import { wrapInContractFramework, recordMarketplaceMetric } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
+import { assertAlignment } from '@/modules/mod-002-booking/domain/services/offer-listing-alignment';
 import { BookingsRepository } from '@/infrastructure/repositories/bookings-repository';
+import { ListingsRepository } from '@/infrastructure/repositories/listings-repository';
+import { OffersRepository } from '@/infrastructure/repositories/offers-repository';
 import { assertApiAuthorization } from '@/lib/supabase/api-auth';
 
 export async function POST(request: NextRequest) {
@@ -27,7 +30,6 @@ export async function POST(request: NextRequest) {
     if (!body.listingId) throw new ValidationError('listingId is required');
     if (!body.selectedOfferId) throw new ValidationError('selectedOfferId is required');
     if (!body.shipperId) throw new ValidationError('shipperId is required');
-    if (!body.transporterId) throw new ValidationError('transporterId is required');
     if (!body.originAddress) throw new ValidationError('originAddress is required');
     if (!body.destinationAddress) throw new ValidationError('destinationAddress is required');
     if (!body.cargoDescription) throw new ValidationError('cargoDescription is required');
@@ -38,20 +40,59 @@ export async function POST(request: NextRequest) {
     if (typeof body.offerPrice !== 'number' || body.offerPrice <= 0) {
       throw new ValidationError('offerPrice must be a positive number');
     }
-    if (!body.vehicleType) throw new ValidationError('vehicleType is required');
 
     // Session user must be shipper (business rule)
     if (ctx.userId !== body.shipperId) {
       throw new ValidationError('Shipper ID must match authenticated user');
     }
 
+    // DEC-001 integrity controls — MOD-002 §3.1, §7.4.
+    // The referenced listing and offer must exist, belong to this shipper's listing, be linked to
+    // each other, and pass alignment. transporterId and price come from the stored offer, never
+    // from the request body, so a shipper cannot book a counterparty or price that was not offered.
+    const listingsRepository = new ListingsRepository();
+    const storedListing = await listingsRepository.getById(String(body.listingId));
+    if (!storedListing) {
+      throw new ValidationError(`Listing ${body.listingId} does not exist`);
+    }
+    if (storedListing.shipperId !== ctx.userId) {
+      throw new Error('FORBIDDEN: listing belongs to another shipper');
+    }
+
+    const offersRepository = new OffersRepository();
+    const storedOffer = await offersRepository.getById(String(body.selectedOfferId));
+    if (!storedOffer) {
+      throw new ValidationError(`Offer ${body.selectedOfferId} does not exist`);
+    }
+    if (storedOffer.listingId !== storedListing.listingId) {
+      throw new ValidationError('Selected offer was not made against this listing');
+    }
+    if (storedOffer.status !== 'SUBMITTED') {
+      throw new ValidationError(`Offer ${storedOffer.offerId} is not selectable in status "${storedOffer.status}"`);
+    }
+
+    assertAlignment(
+      {
+        requiredWeightKg: Number(storedListing.weightKg ?? 0),
+        requiredVolumeM3: storedListing.volumeM3 == null ? undefined : Number(storedListing.volumeM3),
+        acceptedVehicleTypes: storedListing.acceptedVehicleTypes ?? [],
+      },
+      {
+        declaredWeightKg: Number(storedOffer.declaredCapacity?.maxWeightKg ?? 0),
+        declaredVolumeM3: storedOffer.declaredCapacity?.maxVolumeM3 == null
+          ? undefined
+          : Number(storedOffer.declaredCapacity.maxVolumeM3),
+        vehicleType: String(storedOffer.vehicleType ?? ''),
+      },
+    );
+
     const repo = new BookingsRepository();
     const result = await repo.create({
       bookingId: body.bookingId,
-      listingId: body.listingId,
-      selectedOfferId: body.selectedOfferId,
-      shipperId: body.shipperId,
-      transporterId: body.transporterId,
+      listingId: storedListing.listingId,
+      selectedOfferId: storedOffer.offerId,
+      shipperId: ctx.userId,
+      transporterId: storedOffer.transporterId,
       status: 'REQUESTED',
       originAddress: body.originAddress,
       originLatitude: body.originLatitude,
@@ -64,10 +105,12 @@ export async function POST(request: NextRequest) {
       weightKg: body.weightKg,
       volumeM3: body.volumeM3,
       specialHandling: body.specialHandling,
-      offerPrice: body.offerPrice,
-      vehicleType: body.vehicleType,
-      declaredWeightKg: body.declaredWeightKg,
-      declaredVolumeM3: body.declaredVolumeM3,
+      offerPrice: Number(storedOffer.priceProposal),
+      vehicleType: storedOffer.vehicleType,
+      declaredWeightKg: Number(storedOffer.declaredCapacity?.maxWeightKg ?? body.declaredWeightKg ?? 0),
+      declaredVolumeM3: storedOffer.declaredCapacity?.maxVolumeM3 == null
+        ? body.declaredVolumeM3
+        : Number(storedOffer.declaredCapacity.maxVolumeM3),
       currency: body.currency ?? 'MZN',
       availabilityWindowStart: body.availabilityWindowStart,
       availabilityWindowEnd: body.availabilityWindowEnd,

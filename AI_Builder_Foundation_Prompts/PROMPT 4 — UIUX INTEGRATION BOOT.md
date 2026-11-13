@@ -140,7 +140,7 @@ You are operating under:
 
 
 
-\- PROMPT 0 — NEXCARGO MASTER SYSTEM_v1.1.md
+\- PROMPT 0 — NEXCARGO MASTER SYSTEM_v1.3.md
 
 \- PROMPT 1 — Architecture Bootstrap
 
@@ -300,8 +300,6 @@ You MUST generate:
 
 /(admin)
 
-/(fleet-owner)
-
 /(dispatcher)
 
 
@@ -392,6 +390,8 @@ Maps to:
 
 /history
 
+\*\*Provisioning note:\*\* The Driver workspace is reachable only by a Driver onboarded and assigned by an authorised Transporter. DRIVER is not selectable through public registration, and the workspace grants no marketplace-participant standing (PROMPT 0 v1.3 §ROLE PROVISIONING AND DELEGATION).
+
 
 
 Maps to:
@@ -404,9 +404,9 @@ Maps to:
 
 
 
-\*\*4. Fleet Owner UI\*\*
+\*\*4. Transporter Fleet View\*\* — not a separate role UI
 
-/fleet-owner
+/transporter/fleet
 
 /fleet-overview
 
@@ -419,6 +419,10 @@ Maps to:
 /performance
 
 
+
+Role note:
+
+FLEET_OWNER is not an application role. Fleet ownership is a Transporter-domain capability, so this view belongs to the Transporter role surface defined above (2. Transporter UI), not to a separate workspace or route group.
 
 
 
@@ -435,6 +439,10 @@ Maps to:
 
 
 \*\*5. Dispatcher UI\*\*
+
+
+
+\*\*Delegation note:\*\* Dispatcher access exists only while an explicit, bounded delegation from a specific Transporter is active. Delegation must not automatically include Driver onboarding, personnel management, financial authority or administrative privileges.
 
 /dispatcher
 
@@ -469,6 +477,14 @@ Maps to:
 
 
 \*\*Admin Constraint:\*\* Escrow intervention is governed via Escrow Intervention Request — auditable and traceable. No direct ledger modification.
+
+
+
+\*\*Admin dashboard:\*\* The /admin surface above is the Admin role surface recognised in the dashboard taxonomy (MOD-007 §5.6). Its capabilities reflect the approved Admin permissions.
+
+
+
+\*\*Role-surface note — SUPER_ADMIN:\*\* Admin and SUPER_ADMIN are distinct governance roles (PROMPT 0 v1.3 §PERMISSION RULES). The /admin surface must NOT expose SUPER_ADMIN-exclusive controls: granting, changing or revoking Moderator or Admin platform authority, issuing SUPER_ADMIN accounts, or enacting an LA-approved role-taxonomy or permission-boundary change. The dedicated SUPER_ADMIN surface (MOD-007 §5.7) requires a route and permission matrix that no governing specification has yet defined; it is not invented here and remains TODO under PROMPT 0's STOP → TODO convention. Under HD-RT-8 the SUPER_ADMIN surface additionally holds the five executive authority domains recorded in PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS; they are SUPER_ADMIN-exclusive and MUST NOT appear on /admin.
 
 
 
@@ -846,3 +862,15 @@ a business decision layer
 
 a workflow engine
 
+
+---
+
+DOCUMENTATION CHANGE HISTORY (role taxonomy reconciliation — NXC-GOV-ROLE-RECON-001 / NXC-HOA-AUTH-ROLE-001)
+
+| Date | Assignment | Change | Authority basis | Version / status effect |
+|-|-|-|-|-|
+| 2026-10-30 | NXC-GOV-ROLE-RECON-001 | Route-group list: removed the /\(fleet-owner\) entry. Role-based UI architecture: item 4 re-labelled from "Fleet Owner UI" to "Transporter Fleet View", its first path changed from /fleet-owner to /transporter/fleet, and a role note added recording fleet ownership as a Transporter-domain capability rather than a separate role surface. Item numbering, remaining paths and the MOD-014 read-only constraint are unchanged. | HAO-R-001 and HAO-RRL-001 (Development State Registry): FLEET_OWNER is not an application role; fleet ownership is preserved as a Transporter-domain concept in MOD-014. PROMPT 0 v1.1 USER ROLES contains no Fleet Owner role. | Version remains v1.0. Status, authority and approval state unchanged — documentation-consistency correction, not an architectural revision. |
+| 2026-10-30 | NXC-HOA-AUTH-ROLE-001 | Driver UI annotated with the Transporter-onboarding precondition; Dispatcher UI annotated with the bounded-delegation rule; Admin UI recorded as the Admin role surface recognised in the dashboard taxonomy, with a SUPER_ADMIN role-surface note that separates SUPER_ADMIN-exclusive controls and marks the undefined SUPER_ADMIN route surface as TODO. Loader reference now resolves to PROMPT 0 v1.2. No route was created, renamed or removed. | PROMPT 0 v1.2 §USER ROLES, §PERMISSION RULES, §ROLE PROVISIONING AND DELEGATION; HAO decisions HD-RT-1, HD-RT-2, HD-RT-3 | Version remains v1.0; status and authority unchanged. |
+| 2026-10-30 | NXC-HOA-DECISION-HD-RT-8 | Loader pointer raised to the PROMPT 0 v1.3 file. The Driver provisioning note and the SUPER_ADMIN role-surface note rebased on v1.3; the note records that the five HD-RT-8 executive authority domains are SUPER_ADMIN-exclusive and must not appear on /admin. The SUPER_ADMIN route and permission matrix remain TODO. | HAO decision HD-RT-8 | No route, screen, component or design token added; PROMPT 4 version unchanged |
+
+| 2026-11-03 | NXC-HOA-AUTH-D01-ITEM-06-STAGE-2 | Role-based UI architecture item 6 (Admin UI): the SUPER_ADMIN role-surface note now describes the excluded role-taxonomy and permission-boundary change as LA-approved, matching PROMPT 0 v1.3 §PERMISSION RULES as transitioned. Not changed: the rows above and their HAO authority citations, the Admin Constraint and Admin dashboard notes, the TODO status of the SUPER_ADMIN route and permission matrix, and the /admin route group. | LA authorisation NXC-HOA-AUTH-D01-ITEM-06-STAGE-2 (2026-11-03); PROMPT 0 v1.3 §11 Designation Successor | PROMPT 4 version remains v1.0; no route, screen, component or design token added, renamed or removed; no authority or permission boundary altered |

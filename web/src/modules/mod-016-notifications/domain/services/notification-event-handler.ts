@@ -23,16 +23,18 @@
 //   - preserves the event correlation ID;
 //   - preserves the canonical event type.
 //
-// FAILURE BEHAVIOR:
-// The current EventBus is awaited but non-durable. If notification creation fails:
-//   - preserve the already-completed business operation;
-//   - make the failure observable through error logging;
-//   - do not retry inside the event handler;
-//   - do not compensate or roll back the completed business operation.
+// FAILURE BEHAVIOR (I-3 §4B):
+// The EventBus appends the event durably before dispatch and records this
+// consumer's terminal state in analytics_schema.event_consumer_state. If
+// notification creation fails this handler throws, the consumer is recorded
+// FAILED, and the bounded replay pass (migration 060) re-runs it. The handler
+// never retries inline (ESS-001C §10) and never compensates or rolls back the
+// already-completed business operation.
 
 import { createClient } from '@supabase/supabase-js';
-import type { NexCargoEvent, EventHandler, EventSubscription, EventBus } from '@/shared/events/event-types';
-import { EventClassification, EventCriticality } from '@/shared/types/enums';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { NexCargoEvent, EventSubscription } from '@/shared/events/event-types';
+import { getEventBus } from '@/shared/events/handler-registry';
 import { validateNotificationCreation, applyNotificationDefaults } from './notification-validation';
 import { PriorityLevel } from '../enums';
 
@@ -40,13 +42,13 @@ import { PriorityLevel } from '../enums';
 // Environment & Client Setup
 // ============================================================
 
-let supabaseInstance: ReturnType<typeof createClient> | null = null;
+let supabaseInstance: SupabaseClient | null = null;
 
 /**
  * Gets a lazily-initialized Supabase client instance.
  * Returns null if environment variables are not configured (test mode).
  */
-function getSupabase(): ReturnType<typeof createClient> | null {
+function getSupabase(): SupabaseClient | null {
   if (!supabaseInstance) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -173,180 +175,200 @@ interface RecipientMapping {
 }
 
 /**
- * Resolves the recipient for a given canonical event.
- * Uses aggregate_id + payload data from the event to trace FK chains.
+ * Resolves every recipient for a given canonical event. Pure: no writes, no side
+ * effects. The caller creates one notification per returned mapping.
  */
-export function resolveRecipient<T>(event: NexCargoEvent<T>): RecipientMapping | null {
+export function resolveRecipients<T>(event: NexCargoEvent<T>): RecipientMapping[] {
   const eventType = event.event_type;
   const payload = event.payload as Record<string, unknown>;
 
+  const pick = (key: string): string | undefined => {
+    const value = payload?.[key];
+    return typeof value === 'string' && value.trim() !== '' ? value : undefined;
+  };
+
+  const pair = (sourceModule: string): RecipientMapping[] => {
+    const shipperId = pick('shipper_id');
+    const transporterId = pick('transporter_id');
+    const recipients: RecipientMapping[] = [];
+    // A party that is both shipper and transporter must be notified once, not twice.
+    if (shipperId) recipients.push({ recipientId: shipperId, sourceModule });
+    if (transporterId && transporterId !== shipperId) {
+      recipients.push({ recipientId: transporterId, sourceModule });
+    }
+    if (recipients.length === 0) {
+      console.error(`[NotificationEventHandler] ${eventType}: missing shipper_id and transporter_id in payload`);
+    }
+    return recipients;
+  };
+
+  const single = (key: string, sourceModule: string): RecipientMapping[] => {
+    const id = pick(key);
+    if (!id) {
+      console.error(`[NotificationEventHandler] ${eventType}: missing ${key} in payload`);
+      return [];
+    }
+    return [{ recipientId: id, sourceModule }];
+  };
+
   switch (eventType) {
-    case 'bookingConfirmed': {
-      const transporterId = payload?.transporter_id as string | undefined;
-      if (!transporterId) {
-        console.error(`[NotificationEventHandler] bookingConfirmed: missing transporter_id in payload`);
-        return null;
-      }
-      return {
-        recipientId: transporterId,
-        sourceModule: 'MOD-002',
-      };
-    }
-
-    case 'contractSigned': {
-      const shipperId = payload?.shipper_id as string | undefined;
-      if (!shipperId) {
-        console.error(`[NotificationEventHandler] contractSigned: missing shipper_id in payload`);
-        return null;
-      }
-      return {
-        recipientId: shipperId,
-        sourceModule: 'MOD-002',
-      };
-    }
-
-    case 'escrowLockConfirmed': {
-      const shipperId = payload?.shipper_id as string | undefined;
-      const transporterId = payload?.transporter_id as string | undefined;
-
-      const recipients: RecipientMapping[] = [];
-
-      if (shipperId) {
-        recipients.push({
-          recipientId: shipperId,
-          sourceModule: 'MOD-005',
-        });
-      }
-
-      if (transporterId) {
-        recipients.push({
-          recipientId: transporterId,
-          sourceModule: 'MOD-005',
-        });
-      }
-
-      if (recipients.length === 0) {
-        console.error(`[NotificationEventHandler] escrowLockConfirmed: missing shipper_id and transporter_id in payload`);
-        return null;
-      }
-
-      void Promise.all(recipients.map((r) => {
-        return createNotificationFromEvent(event, r);
-      })).catch((err) => {
-        console.error('[NotificationEventHandler] escrowLockConfirmation batch error:', err);
-      });
-
-      return recipients[0];
-    }
-
-    case 'paymentConfirmed': {
-      const shipperId = payload?.shipper_id as string | undefined;
-      const transporterId = payload?.transporter_id as string | undefined;
-
-      const recipients: RecipientMapping[] = [];
-
-      if (shipperId) {
-        recipients.push({
-          recipientId: shipperId,
-          sourceModule: 'MOD-005',
-        });
-      }
-
-      if (transporterId) {
-        recipients.push({
-          recipientId: transporterId,
-          sourceModule: 'MOD-005',
-        });
-      }
-
-      if (recipients.length === 0) {
-        console.error(`[NotificationEventHandler] paymentConfirmed: missing shipper_id and transporter_id in payload`);
-        return null;
-      }
-
-      void Promise.all(recipients.map((r) => {
-        return createNotificationFromEvent(event, r);
-      })).catch((err) => {
-        console.error('[NotificationEventHandler] paymentConfirmed batch error:', err);
-      });
-
-      return recipients[0];
-    }
-
-    case 'paymentFailed': {
-      const shipperId = payload?.shipper_id as string | undefined;
-      if (!shipperId) {
-        console.error(`[NotificationEventHandler] paymentFailed: missing shipper_id in payload`);
-        return null;
-      }
-      return {
-        recipientId: shipperId,
-        sourceModule: 'MOD-005',
-      };
-    }
-
-    case 'settlementCompleted': {
-      const shipperId = payload?.shipper_id as string | undefined;
-      if (!shipperId) {
-        console.error(`[NotificationEventHandler] settlementCompleted: missing shipper_id in payload`);
-        return null;
-      }
-      return {
-        recipientId: shipperId,
-        sourceModule: 'MOD-013',
-      };
-    }
-
+    case 'bookingConfirmed':
+      return single('transporter_id', 'MOD-002');
+    case 'contractSigned':
+      return single('shipper_id', 'MOD-002');
+    case 'escrowLockConfirmed':
+    case 'paymentConfirmed':
+      return pair('MOD-005');
+    case 'paymentFailed':
+      return single('shipper_id', 'MOD-005');
+    case 'settlementCompleted':
+      return single('shipper_id', 'MOD-013');
     default:
-      return null;
+      return [];
   }
+}
+
+/**
+ * First recipient for a canonical event, or null. Kept for callers that only
+ * need the primary party; notification creation uses resolveRecipients().
+ */
+export function resolveRecipient<T>(event: NexCargoEvent<T>): RecipientMapping | null {
+  return resolveRecipients(event)[0] ?? null;
 }
 
 // ============================================================
 // Notification Creation
 // ============================================================
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Stable consumer identity recorded in analytics_schema.event_consumer_state. */
+export const NOTIFICATION_CONSUMER_NAME = 'MOD-016.notifications';
+
+interface PersistedTemplate {
+  id: string;
+  channelType: string;
+  defaultContent: string;
+  localizedContent: Record<string, { title?: string; body?: string }>;
+}
+
 /**
- * Creates a notification record in communication_schema.notifications.
- * Uses direct Supabase insert — the canonical C5 path.
+ * Loads the ACTIVE persisted template for a canonical event (MOD-016 §4.3).
+ * Returns null when unavailable so the caller can fall back to resolveTemplate().
+ */
+async function loadPersistedTemplate(
+  db: SupabaseClient,
+  eventType: string,
+): Promise<PersistedTemplate | null> {
+  const { data, error } = await db
+    .schema('communication_schema')
+    .from('notification_templates')
+    .select('id, channel_type, default_content, localized_content')
+    .eq('template_key', eventType)
+    .eq('status', 'ACTIVE')
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const row = data as Record<string, unknown>;
+  return {
+    id: String(row.id),
+    channelType: String(row.channel_type),
+    defaultContent: String(row.default_content ?? ''),
+    localizedContent: (row.localized_content ?? {}) as PersistedTemplate['localizedContent'],
+  };
+}
+
+/** Resolves the recipient's locale via the narrow SECDEF lookup (MOD-016 §7.9). */
+async function resolveRecipientLocale(
+  db: SupabaseClient,
+  recipientId: string,
+): Promise<string> {
+  if (!UUID_PATTERN.test(recipientId)) return 'pt';
+  const { data, error } = await db
+    .schema('communication_schema')
+    .rpc('resolve_recipient_locale', { p_recipient_id: recipientId });
+  if (error || typeof data !== 'string' || !/^[a-z]{2}$/.test(data)) return 'pt';
+  return data;
+}
+
+/**
+ * Creates one notification record in communication_schema.notifications.
+ *
+ * Idempotency (I-3 §4B, deviation D1 in migration 059): keyed on
+ * (source_event_id, recipient_id), NOT on correlation_id. escrowLockConfirmed and
+ * paymentConfirmed are published in one batch sharing a correlation_id and a
+ * shipper recipient, so a correlation-keyed index would silently discard the
+ * second notification. The partial unique index
+ * uq_notifications_source_event_recipient is the authority; the SELECT below is
+ * only an optimization and 23505 is treated as an idempotent no-op.
  */
 async function createNotificationFromEvent<T>(
   event: NexCargoEvent<T>,
   recipientInfo: RecipientMapping,
 ): Promise<boolean> {
-  const template = resolveTemplate(event.event_type);
-  if (!template) {
+  const fallback = resolveTemplate(event.event_type);
+  if (!fallback) {
     console.log(`[NotificationEventHandler] No template for event type: ${event.event_type}`);
     return false;
   }
 
   try {
+    const db = getSupabase();
+    if (!db) {
+      console.log('[NotificationEventHandler] Supabase not configured — notification creation skipped (test mode)');
+      return true;
+    }
+
+    const persisted = await loadPersistedTemplate(db, event.event_type);
+    const locale = await resolveRecipientLocale(db, recipientInfo.recipientId);
+    const localized = persisted?.localizedContent?.[locale];
+
+    const title = localized?.title || fallback.subject;
+    const body = localized?.body || persisted?.defaultContent || fallback.body;
+    const channelType = persisted?.channelType || fallback.channelType;
+    const sourceEventId = UUID_PATTERN.test(event.event_id) ? event.event_id : null;
+    const correlationUuid = UUID_PATTERN.test(event.correlation_id) ? event.correlation_id : null;
+
     const input = {
       recipientId: recipientInfo.recipientId,
       sourceModule: recipientInfo.sourceModule,
       eventType: event.event_type,
-      title: template.subject,
-      body: template.body,
-      priorityLevel: template.priorityLevel,
-      channelType: template.channelType,
-      locale: template.locale,
+      title,
+      body,
+      priorityLevel: fallback.priorityLevel,
+      channelType,
+      locale,
       correlationId: event.correlation_id,
-      templateId: template.templateKey,
+      templateId: persisted?.id,
     };
 
-    // Validate before creating
     validateNotificationCreation(input);
-
     const validated = applyNotificationDefaults(input);
 
-    // Get Supabase client (may be null in test mode)
-    const db = getSupabase();
-    if (!db) {
-      console.log('[NotificationEventHandler] Supabase not configured — notification creation skipped (test mode)');
-      return true; // In test mode, consider it successful
+    if (sourceEventId) {
+      const existing = await db
+        .schema('communication_schema')
+        .from('notifications')
+        .select('id')
+        .eq('source_event_id', sourceEventId)
+        .eq('recipient_id', validated.recipientId)
+        .maybeSingle();
+
+      if (existing.data) {
+        console.log(
+          `[NotificationEventHandler] Idempotent skip: source_event_id=${sourceEventId}, ` +
+          `recipient_id=${validated.recipientId}`,
+        );
+        return true;
+      }
+    } else {
+      console.warn(
+        `[NotificationEventHandler] event_id is not a UUID (${event.event_id}); ` +
+        'database idempotency index cannot apply to this notification',
+      );
     }
 
-    // Insert into communication_schema.notifications
     const { data, error } = await db
       .schema('communication_schema')
       .from('notifications')
@@ -359,28 +381,32 @@ async function createNotificationFromEvent<T>(
         priority_level: validated.priorityLevel,
         channel_type: validated.channelType,
         locale: validated.locale,
-        event_correlation_id: validated.correlationId,
+        event_correlation_id: correlationUuid,
+        correlation_ref: event.correlation_id,
+        source_event_id: sourceEventId,
         template_id: validated.templateId || null,
         delivery_status: 'QUEUED',
         retry_count: 0,
       })
-      .select('id, status')
+      .select('id')
       .single();
 
     if (error) {
+      if (error.code === '23505') {
+        console.log(
+          `[NotificationEventHandler] Idempotent duplicate: source_event_id=${sourceEventId}, ` +
+          `recipient_id=${validated.recipientId}`,
+        );
+        return true;
+      }
       console.error(`[NotificationEventHandler] Database insert error for ${event.event_type}:`, error.message);
       return false;
     }
 
-    if (!data?.id) {
-      console.error(`[NotificationEventHandler] Unexpected: no notification ID returned for ${event.event_type}`);
+    if (!data) {
+      console.error(`[NotificationEventHandler] No notification ID returned for ${event.event_type}`);
       return false;
     }
-
-    console.log(
-      `[NotificationEventHandler] Created notification ${data.id} for event ${event.event_type} ` +
-      `(recipient: ${recipientInfo.recipientId}, correlation: ${event.correlation_id})`,
-    );
 
     return true;
   } catch (err: unknown) {
@@ -391,17 +417,29 @@ async function createNotificationFromEvent<T>(
 }
 
 /**
- * Generic event handler that processes any canonical event through the notification pipeline.
+ * Consumer entry point. Creates one notification per resolved recipient and
+ * throws when any creation failed, so the EventBus records a FAILED consumer
+ * state that the bounded replay pass (migration 060) can recover.
  */
-async function handleCanonicalEvent<T>(event: NexCargoEvent<T>): Promise<void> {
-  const recipientInfo = resolveRecipient(event);
+export async function handleCanonicalEvent<T>(event: NexCargoEvent<T>): Promise<void> {
+  const recipients = resolveRecipients(event);
 
-  if (!recipientInfo) {
+  if (recipients.length === 0) {
     console.log(`[NotificationEventHandler] Skipping event (no recipient mapping): ${event.event_type}`);
     return;
   }
 
-  await createNotificationFromEvent(event, recipientInfo);
+  const failures: string[] = [];
+  for (const recipient of recipients) {
+    const created = await createNotificationFromEvent(event, recipient);
+    if (!created) failures.push(recipient.recipientId);
+  }
+
+  if (failures.length > 0) {
+    throw new Error(
+      `Notification creation failed for ${event.event_type} ${event.event_id}; recipients: ${failures.join(', ')}`,
+    );
+  }
 }
 
 // ============================================================
@@ -409,26 +447,15 @@ async function handleCanonicalEvent<T>(event: NexCargoEvent<T>): Promise<void> {
 // ============================================================
 
 /**
- * Registers notification event handlers on the EventBus.
- * Call this once during application initialization.
- *
- * IMPORTANT: This is additive — it does NOT modify any business operation,
- * state machine, transaction semantics, authorization logic, RLS, or
- * existing C1-C4 financial behavior.
+ * Subscribes MOD-016 to the canonical events on the shared EventBus.
+ * Idempotent: the registry rejects a duplicate (handler, consumerName) pair, so
+ * repeated bootstrap calls cannot produce duplicate notifications.
  */
 export function registerNotificationEventHandlers(): void {
-  // Handlers are registered lazily — the actual subscription happens
-  // when the first event is emitted. This avoids circular dependency issues
-  // at module load time.
-
+  const bus = getEventBus();
   for (const eventType of INCREMENT_1_EVENTS) {
-    const handler: EventHandler = async (event: NexCargoEvent) => {
-      await handleCanonicalEvent(event);
-    };
-
-    // Store the handler reference for potential unsubscription
-    // In production this would use the EventBus subscribe method
-    void handler; // Handler is used by the wiring layer which calls emit()
+    const subscription = createEventSubscription(eventType);
+    if (subscription) bus.subscribe(subscription);
   }
 }
 
@@ -445,6 +472,7 @@ export function createEventSubscription(eventType: string): EventSubscription | 
     eventTypes: [eventType],
     handler: handleCanonicalEvent,
     priority: 0,
-    maxRetries: 0, // No retries in Increment 1 — failures are logged only
+    maxRetries: 0, // No inline retry (ESS-001C §10); recovery is the bounded replay pass.
+    consumerName: NOTIFICATION_CONSUMER_NAME,
   };
 }

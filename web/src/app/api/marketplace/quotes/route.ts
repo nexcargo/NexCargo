@@ -10,7 +10,7 @@ import { CargoType } from '@/modules/mod-001-marketplace/domain/enums';
 import { ValidationError } from '@/shared/errors/app-errors';
 import { createCorrelationContext, resolveCorrelationId } from '@/shared/standards/correlation-id-propagation';
 import { wrapInContractFramework, recordMarketplaceMetric } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
-import { validateRBAC } from '../rbac-middleware';
+import { assertApiAuthorization } from '@/lib/supabase/api-auth';
 import {
   createAdvisoryQuote,
 } from '@/modules/mod-001-marketplace/application/use-cases/marketplace-use-cases';
@@ -24,16 +24,8 @@ export async function GET(request: NextRequest) {
   const context = createCorrelationContext({ correlationId });
 
   try {
-    const role = request.headers.get('x-user-role') || 'SHIPPER';
-    
-    // Validate RBAC permission
-    const rbacResult = await validateRBAC(role, 'quotes', 'read');
-    if (!rbacResult.permitted) {
-      return NextResponse.json(
-        wrapInContractFramework(null, correlationId),
-        { status: 403, headers: { 'x-correlation-id': correlationId } },
-      );
-    }
+    // F-I2-01: the role comes from the session plus the database resolvers, never from a header.
+    await assertApiAuthorization(request, 'quotes', 'read');
 
     // Extract listingId from query params
     const url = new URL(request.url);
@@ -64,6 +56,18 @@ export async function GET(request: NextRequest) {
         { status: 400, headers: { 'x-correlation-id': correlationId } },
       );
     }
+    if (error instanceof Error && error.message === 'UNAUTHORIZED') {
+      return NextResponse.json(
+        wrapInContractFramework({ error: 'Unauthorized: valid session required' }, correlationId),
+        { status: 401, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+    if (error instanceof Error && error.message.startsWith('FORBIDDEN')) {
+      return NextResponse.json(
+        wrapInContractFramework({ error: error.message }, correlationId),
+        { status: 403, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
     return NextResponse.json(
       wrapInContractFramework(null, correlationId),
       { status: 500, headers: { 'x-correlation-id': correlationId } },
@@ -82,17 +86,11 @@ export async function POST(request: NextRequest) {
   const context = createCorrelationContext({ correlationId });
 
   try {
+    // F-I2-01: identity and role come from the session and the database resolvers. The guard runs
+    // before the body is read, so an unauthorized caller learns nothing from request processing.
+    await assertApiAuthorization(request, 'quotes', 'create');
+
     const body = await request.json();
-    const role = request.headers.get('x-user-role') || 'SHIPPER';
-    
-    // Validate RBAC permission
-    const rbacResult = await validateRBAC(role, 'quotes', 'create');
-    if (!rbacResult.permitted) {
-      return NextResponse.json(
-        wrapInContractFramework(null, correlationId),
-        { status: 403, headers: { 'x-correlation-id': correlationId } },
-      );
-    }
 
     // Required fields per MOD-001 §5.4
     if (!body.listingId) {
@@ -139,6 +137,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         wrapInContractFramework({ error: error.message }, correlationId),
         { status: 400, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+    if (error instanceof Error && error.message === 'UNAUTHORIZED') {
+      return NextResponse.json(
+        wrapInContractFramework({ error: 'Unauthorized: valid session required' }, correlationId),
+        { status: 401, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+    if (error instanceof Error && error.message.startsWith('FORBIDDEN')) {
+      return NextResponse.json(
+        wrapInContractFramework({ error: error.message }, correlationId),
+        { status: 403, headers: { 'x-correlation-id': correlationId } },
       );
     }
     return NextResponse.json(

@@ -68,6 +68,7 @@ export class ListingsRepository {
     volumeM3: number | null;
     timeWindow: Record<string, unknown>;
     pricingModel: string;
+    acceptedVehicleTypes?: string[];
     correlationId?: string;
   }): Promise<ListingApiShape> {
     const supabase = await createClient();
@@ -87,7 +88,7 @@ export class ListingsRepository {
         time_window: params.timeWindow,
         pricing_model: params.pricingModel,
         status: 'DRAFT',
-        accepted_vehicle_types: [],
+        accepted_vehicle_types: params.acceptedVehicleTypes ?? [],
         created_by: params.shipperId,
         correlation_id: params.correlationId ?? null,
       })
@@ -116,6 +117,26 @@ export class ListingsRepository {
     return (result.data as ListingRow[]).map(row => this.toApiShape(row));
   }
 
+  /**
+   * Every listing owned by one shipper, across all lifecycle states.
+   * MOD-001 §5.1 requires the shipper to see DRAFT and terminal listings, not only PUBLISHED ones.
+   */
+  async listByShipper(shipperId: string): Promise<ListingApiShape[]> {
+    const supabase = await createClient();
+    const result = await supabase
+      .schema(this.schema).from(this.table)
+      .select('*')
+      .eq('shipper_id', shipperId)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false });
+
+    if (result.error) {
+      throw new Error(`Failed to list shipper listings: ${result.error.message}`);
+    }
+
+    return (result.data as ListingRow[]).map(row => this.toApiShape(row));
+  }
+
   async getById(id: string): Promise<ListingApiShape | null> {
     const supabase = await createClient();
     const result = await supabase
@@ -135,18 +156,74 @@ export class ListingsRepository {
 
   async updateStatus(id: string, targetStatus: string): Promise<void> {
     const supabase = await createClient();
+    // published_at is a canonical MOD-001 §5.1 field. PUBLISHED is entered only from DRAFT
+    // (listing-state-machine), so stamping it here cannot overwrite an earlier publication.
+    const payload: Record<string, unknown> = {
+      status: targetStatus,
+      updated_at: new Date().toISOString(),
+    };
+    if (targetStatus === 'PUBLISHED') {
+      payload.published_at = new Date().toISOString();
+    }
     const result = await supabase
       .schema(this.schema).from(this.table)
-      .update({
-        status: targetStatus,
-        updated_at: new Date().toISOString(),
-      })
+      .update(payload)
       .eq('id', id)
       .eq('is_deleted', false);
 
     if (result.error) {
       throw new Error(`Failed to update listing status: ${result.error.message}`);
     }
+  }
+
+  /**
+   * Field-level edit of a DRAFT listing (I-4 §3C: "edit where lifecycle permits").
+   * The caller must have already established ownership and that the stored status is DRAFT;
+   * this method deliberately does not accept a status change.
+   */
+  async updateDraft(id: string, params: {
+    title: string;
+    description: string;
+    originGeo: Record<string, unknown>;
+    destinationGeo: Record<string, unknown>;
+    originAddress: string;
+    destinationAddress: string;
+    cargoType: string;
+    weightKg: number;
+    volumeM3: number | null;
+    timeWindow: Record<string, unknown>;
+    pricingModel: string;
+    acceptedVehicleTypes: string[];
+  }): Promise<ListingApiShape> {
+    const supabase = await createClient();
+    const result = await supabase
+      .schema(this.schema).from(this.table)
+      .update({
+        title: params.title,
+        description: params.description,
+        origin_geo: params.originGeo,
+        destination_geo: params.destinationGeo,
+        origin_address: params.originAddress,
+        destination_address: params.destinationAddress,
+        cargo_type: params.cargoType,
+        weight_kg: params.weightKg,
+        volume_m3: params.volumeM3,
+        time_window: params.timeWindow,
+        pricing_model: params.pricingModel,
+        accepted_vehicle_types: params.acceptedVehicleTypes,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('status', 'DRAFT')
+      .eq('is_deleted', false)
+      .select()
+      .single();
+
+    if (result.error) {
+      throw new Error(`Failed to update listing: ${result.error.message}`);
+    }
+
+    return this.toApiShape(result.data as ListingRow);
   }
 
   private toApiShape(row: ListingRow): ListingApiShape {

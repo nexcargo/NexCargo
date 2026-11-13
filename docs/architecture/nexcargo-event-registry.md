@@ -417,6 +417,38 @@ It SHALL NOT trigger automatic booking.
 - disputeHoldPlaced
 - disputeEvidenceSubmitted
 
+## MOD-005 Owned Events
+
+- escrowInterventionRequested
+- escrowInterventionDecided
+
+Metadata, in the §4 structure:
+
+| Event | Owner | Produced By | Consumers | Classification | Criticality | Immutable | Description |
+|-|-|-|-|-|-|-|-|
+| escrowInterventionRequested | MOD-005 | MOD-005 | MOD-013, MOD-015, MOD-010 | Compliance | High | Yes | A governed Escrow Intervention Request has been initiated within an ESS-001F §15.6 trigger by a named Admin or SUPER_ADMIN. |
+| escrowInterventionDecided | MOD-005 | MOD-005 | MOD-013, MOD-015, MOD-010 | Compliance | Critical | Yes | A decision has been recorded on an Escrow Intervention Request by the authority tier applicable under ESS-001F §15.9. |
+
+Classification is Compliance rather than Financial because each event records an internal governed human act, not an externally confirmed financial state; the No Custody Principle below requires Financial events to reference external financial confirmation, which these events do not and MUST NOT imply.
+
+Constraint:
+
+Both events record the governed Escrow Intervention Request defined in ESS-001F §15.7 and its lifecycle in ESS-001F §15.8. They are registered under the architecture approval recorded in ESS-001F §15.10 and are the events that section's registry gap awaited.
+
+Ownership follows ESS-001F §15.10: the Escrow Intervention Request belongs to the Admin financial oversight layer and escrow orchestration remains MOD-005. Registering these events transfers no ownership of any dispute or case record, which remains MOD-015, or of any settlement or reconciliation record, which remains MOD-013.
+
+escrowInterventionRequested identifies, using the business references already defined in ESS-001F §15.7 and stating no schema: the Escrow Intervention Request reference, the related booking and contract references, the related escrow and dispute references where present, the initiating actor, the applicable eligibility trigger from the closed list in ESS-001F §15.6, and the request's lifecycle context at initiation.
+
+escrowInterventionDecided identifies, from the same existing references: the Escrow Intervention Request reference, the deciding actor, the decision authority tier applied under ESS-001F §15.9, and the resulting lifecycle context. The deciding actor and the assigned reviewer are recorded separately from the initiating actor; neither may be the initiator (ESS-001F §15.9 independence rule).
+
+Neither event authorises, executes, confirms or reverses any bank or payment-provider transaction. Custody and financial execution remain exclusively with the bank or authorised payment provider (ESS-001F §2.1, §2.2, §15.5; MOD-013 §7.1, §7.2), and the bank confirmation — not either event — remains the only thing that changes a financial state.
+
+Neither event is an eligibility trigger and neither grants authority. Eligibility remains the closed trigger list in ESS-001F §15.6 and decision authority remains the tiers in ESS-001F §15.9; an event name confers neither.
+
+No further transition in the ESS-001F §15.8 lifecycle is registered as canonical business vocabulary by this entry. Routing, evidence submission, withdrawal, cancellation and implementation outcome continue to be recorded through the append-only history defined in ESS-001F §15.10 rather than through additional event names.
+
+This entry registers only the two Escrow Intervention Request events authorised by HAO decision D-01 Item 5. It is not a complete MOD-005 catalogue: the escrow orchestration events declared in MOD-005 §8 are not registered here, and their registration, their canonical camelCase naming under §7, and their reconciliation with the §4 illustrative rows and with the MOD-015 owned list remain a separate registry decision.
+
 ---
 
 # 14. Implementation Independence
@@ -554,6 +586,23 @@ Invalid examples:
 - vehicleDispatched
 - shipmentAssigned
 
+## No Dispatch Authority — Interpretation
+
+(HAO decision HD-RT-5, authorization NXC-HOA-AUTH-ROLE-001, 2026-10-30.)
+
+The prohibition above is directed at the platform and its automated processes.
+
+It prohibits autonomous dispatch decisions or dispatch execution performed by NexCargo, including AI-driven dispatch without an authorised human action. It does not prohibit, and must not be read as prohibiting, legitimate human operational activity performed by an authorised Dispatcher acting under explicit delegation from a specific Transporter (PROMPT 0 v1.3 §USER ROLES and §ROLE PROVISIONING AND DELEGATION).
+
+Boundaries that remain in force:
+
+- Dispatchers operate under a specific Transporter.
+- Their authority is delegated and bounded.
+- Human dispatch actions must remain attributable to the authorised actor and to the Transporter context.
+- AI and automated platform processes must not independently exercise dispatch authority.
+
+This interpretation changes no event name, no event ownership and no restriction recorded in this registry. The invalid examples above remain invalid: a human Dispatcher action is not represented by a platform dispatch-authority event, and any event needed to record such an action must enter the registry through its normal governance route rather than by reusing, renaming or removing an existing entry.
+
 ---
 
 ## No Intervention Principle
@@ -596,6 +645,35 @@ Signed contracts are immutable business records.
 Invalid example:
 
 - contractOverridden
+
+---
+
+## Escrow Intervention Request Events
+
+Applies to:
+
+- MOD-005
+- MOD-013
+- MOD-015
+- MOD-010
+
+escrowInterventionRequested and escrowInterventionDecided (§13) record a governed human request and the decision taken on it, under ESS-001F §15.6 to §15.10.
+
+They SHALL represent actor attribution, trigger reference and lifecycle facts only, and SHALL remain attributable to an identified human Admin or SUPER_ADMIN acting under the authority already recorded for that role.
+
+They SHALL NOT:
+
+- freeze, release, refund, credit or move funds
+- authorise, execute or confirm a bank or payment-provider transaction, or imply that one has been confirmed
+- substitute for, or rename, an ordinary dispute lifecycle transition in MOD-015 §5.2
+- grant any role an authority it does not already hold, or imply a decision by MOD-015, which remains subject to the No Decision Authority constraint above
+- alter No Custody or No Execution, or make an approved request self-executing: an approved Escrow Intervention Request authorises NexCargo only to raise an instruction through the ESS-001F §15.3 pathway
+
+Invalid examples:
+
+- escrowFundsFrozen
+- escrowInterventionExecuted
+- settlementReleasedByIntervention
 
 ---
 
@@ -681,3 +759,18 @@ The Event Registry enables consistent communication between modules while preser
 The Event Registry defines what NexCargo events mean.
 
 It does not define how NexCargo implements them.
+
+
+---
+
+DOCUMENTATION CHANGE HISTORY (role taxonomy reconciliation — NXC-HOA-AUTH-ROLE-001)
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-10-30 | NXC-HOA-AUTH-ROLE-001 | "No Dispatch Authority" supplemented by an Interpretation subsection distinguishing platform/AI autonomous dispatch from authorised human Dispatcher action under explicit Transporter delegation. Event names, ownership and existing restrictions unchanged. | HAO decision HD-RT-5; PROMPT 0 v1.2 §USER ROLES, §PERMISSION RULES, §ROLE PROVISIONING AND DELEGATION |
+| 2026-10-30 | NXC-HOA-DECISION-HD-RT-8 | The No Dispatch Authority interpretation now cites PROMPT 0 v1.3. The invariant is unchanged; no event name, payload or restriction was added, removed or altered. | HAO decision HD-RT-8 |
+| 2026-11-03 | NXC-HOA-AUTH-D01-ITEM-05-001 | §13 gained a MOD-005 Owned Events subsection registering escrowInterventionRequested and escrowInterventionDecided as canonical business event names, each with its §4 metadata row (owner and producer MOD-005; consumers MOD-013, MOD-015, MOD-010; Compliance classification; High and Critical criticality; Immutable Yes) and the business references it identifies from ESS-001F §15.7, with no schema, payload, transport, storage or runtime definition. §17 gained an Escrow Intervention Request Events constraint subsection: neither event authorises, executes, confirms or reverses a bank or provider transaction, and neither alters the No Custody or No Execution principles. Existing event names, ownership rules and naming conventions are unchanged; §16 is unchanged; the four remaining ESS-001F §15.8 lifecycle transitions stay unregistered, and the new subsection states that it is not a complete MOD-005 catalogue. | HAO decision D-01 Item 5 (NXC-HOA-AUTH-D01-ITEM-05-001; NXC-HOA-AUTH-D01-ITEM-05-R1); ESS-001F §15.6 to §15.10; MOD-013 §7.1 and §7.2 |
+
+Document version metadata is unchanged: this is a documentation-consistency reconciliation of the role taxonomy, not an architectural revision of this layer.
+
+Version effect (2026-11-03 row above): Event Registry remains v1.0 — no version increase, no loader change, no INDEX §7.1 change. The two event names added under NXC-HOA-AUTH-D01-ITEM-05-001 are additive registrations of the events ESS-001F §15.6 to §15.10 already required; §4 metadata structure, §7 naming convention, §16 ownership summary and §14 implementation independence are unchanged. The statement immediately above remains the version record for the two 2026-10-30 role-taxonomy rows it was written for.

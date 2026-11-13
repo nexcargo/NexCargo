@@ -38,7 +38,7 @@ system data from all modules (MOD-001 → MOD-018) is presented, interacted with
 
 
 
-role-based dashboards are structured for shippers, transporters, drivers, moderators, and administrators
+role-based dashboards are structured for Shippers, Transporters, Drivers, Dispatchers, Moderators, Admins and SUPER_ADMINs
 
 
 
@@ -70,7 +70,7 @@ MOD-007 governs:
 
 
 
-role-based dashboards (Shipper, Transporter, Driver, Moderator, Super Admin)
+role-based dashboards (Shipper, Transporter, Driver, Dispatcher, Moderator, Admin, Super Admin)
 
 
 
@@ -226,7 +226,7 @@ dashboardId
 
 
 
-roleContext – SHIPPER / TRANSPORTER / DRIVER / MODERATOR / ADMIN
+roleContext – SHIPPER / TRANSPORTER / DRIVER / DISPATCHER / MODERATOR / ADMIN / SUPER_ADMIN
 
 
 
@@ -702,7 +702,7 @@ POD required before trip completion.
 
 
 
-5.4 Moderator Dashboard
+5.4 Dispatcher Dashboard
 
 
 
@@ -710,7 +710,55 @@ Features:
 
 
 
-Review and resolve disputes
+Live operations overview for the shipments of the delegating Transporter
+
+
+
+Assignment allocation to Drivers within the delegated scope
+
+
+
+Trip and fleet visibility within the delegated scope (MOD-003, MOD-014 read surfaces)
+
+
+
+Exception review and escalation into MOD-015
+
+
+
+Delegation visibility: which Transporter granted which bounded authority, and its status
+
+
+
+Business rules:
+
+
+
+Access exists only while an explicit delegation from a specific Transporter is active; revocation removes access.
+
+
+
+Delegation is bounded and must not automatically include Driver onboarding, personnel management, financial authority or administrative privileges.
+
+
+
+A Dispatcher is not a marketplace participant and has no global platform authority.
+
+
+
+Every Dispatcher action is attributable to the Dispatcher and to the authorising Transporter context.
+
+
+
+5.5 Moderator Dashboard
+
+
+
+Features:
+
+
+
+Review disputes, record findings and recommend a resolution. A resolution that produces a financial outcome is decided by Admin within delegated authority, or by SUPER_ADMIN where ESS-001F §15.9 Tier 2 applies; ordinary non-financial case handling remains a Moderator responsibility (PROMPT 0 v1.3 §PERMISSION RULES; ESS-001F §15.6; HAO decision D-01 Item 3, direction 3-A)
 
 
 
@@ -726,7 +774,7 @@ Manage user reports
 
 
 
-Oversee transaction holds
+Monitor transaction holds and their status. Requesting a hold or lifting one follows the governed pathway (MOD-005 §4.4; ESS-001F §15.3, §15.9) and is not Moderator authority; monitoring confers no decision or resume authority (ESS-001F §15.2 suspension boundary).
 
 
 
@@ -742,7 +790,7 @@ Business rules:
 
 
 
-Moderators cannot alter financial ledger directly.
+Moderators cannot alter financial ledger directly, cannot approve a financial intervention, and cannot decide a financial outcome (PROMPT 0 v1.3 §PERMISSION RULES; ESS-001F §15.6).
 
 
 
@@ -754,7 +802,63 @@ Fraud alerts are AI-generated (MOD-006).
 
 
 
-5.5 Super Admin Dashboard
+5.6 Admin Dashboard
+
+
+
+Features:
+
+
+
+User and organisation administration within platform scope
+
+
+
+System configuration (corridors, service settings, feature toggles that are not HD-RT-8 executive controls, and routine financial configuration inside already-approved policy — fee and commission parameter maintenance under ESS-001F §15.2)
+
+
+
+Payment integration monitoring
+
+
+
+Escrow bank integration monitoring and governed Escrow Intervention Request handling
+
+
+
+Audit logs access
+
+
+
+AI system oversight surfaces (advisory display only)
+
+
+
+Business rules:
+
+
+
+Reflects the approved Admin permission set defined in PROMPT 0 v1.3 §PERMISSION RULES. The five HD-RT-8 executive authority domains are SUPER_ADMIN-exclusive (PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS) and MUST NOT be exposed on this surface.
+
+
+
+Excludes SUPER_ADMIN-exclusive controls: granting, changing or revoking Moderator or Admin platform authority, issuing SUPER_ADMIN accounts, and enacting an LA-approved role-taxonomy or permission-boundary change.
+
+
+
+Escrow intervention remains governed by the Escrow Intervention Request process; no direct ledger modification. This surface may carry Tier 1 decisions under ESS-001F §15.9 and MUST NOT expose a Tier 2 decision, an exceptional commercial authorisation (PROMPT 0 v1.3 Domain 1 or Domain 5), or any platform-wide restriction, lockdown or kill-switch control (Domain 4). Admin may not use this surface to impose, reverse or bypass a restriction entered by SUPER_ADMIN, and pause and resume remain separate permissions (ESS-001F §15.2 suspension boundary; HAO decision D-01 Item 3, directions 3-A and 3-B).
+
+
+
+No financial execution authority: the bank remains the financial execution authority.
+
+
+
+All actions are fully logged.
+
+
+
+5.7 Super Admin Dashboard
 
 
 
@@ -770,7 +874,7 @@ User management (all roles)
 
 
 
-System configuration (corridors, pricing rules, fees)
+System configuration (corridors, pricing rules, fees) — this is the commercial-authorisation surface for pricing and fee policy, negotiated platform-fee arrangements, corridor-specific commercial terms, promotional credits, exceptional discounts and fee waivers under PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS Domain 5. Routine maintenance of an already-approved fee or commission parameter remains Admin routine configuration (ESS-001F §15.1, §15.2; MOD-013 §4.7); the two activities are distinct and neither confers the other (HAO decision D-01 Item 3, direction 3-C).
 
 
 
@@ -806,11 +910,24 @@ Actions are fully logged.
 
 
 
-Financial changes require dual approval.
+Financial changes require dual approval. The requirement is stated here; the mechanism — the second authoriser, the applicable threshold and how independence is enforced — is not established by this document, is governed by PROMPT 0 v1.3 §Accountability and separation of duties, and remains subject to a separate specification decision (ESS-001F §15.9 and §15.10 TODO markers; HAO decision D-01 Item 3 depends on that decision). The deferral does not waive the requirement: a financial change within its scope is not effective on a single approval, and SUPER_ADMIN does not acquire unlimited financial authority by role position (PROMPT 0 v1.3 §Financial boundary; HAO decision D-01 Item 3, direction 3-A).
 
 
 
-5.6 Module-Based Views
+Holds the explicit superset of the approved Moderator and Admin permissions plus the SUPER_ADMIN-exclusive actions listed in PROMPT 0 v1.3 §PERMISSION RULES, together with the five executive authority domains approved under HD-RT-8 and documented in PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS. The dashboard controls, screens and permission matrix for those domains are not specified by this document and require a separate authorised increment.
+
+
+
+SUPER_ADMIN-exclusive controls must not be duplicated in the Admin Dashboard (§5.6).
+
+
+
+Authority derives from explicit definition, never from undefined inheritance.
+
+
+
+
+5.8 Module-Based Views
 
 
 
@@ -842,7 +959,7 @@ MOD-006 → Intelligence UI
 
 
 
-5.7 Internationalization Model
+5.9 Internationalization Model
 
 
 
@@ -1356,7 +1473,15 @@ Driver Mobile App Interface (offline-first)
 
 
 
+Dispatcher Dashboard
+
+
+
 Moderator Dashboard
+
+
+
+Admin Dashboard
 
 
 
@@ -1434,3 +1559,23 @@ AI insights are presented as advisory guidance, never as autonomous commands
 
 the UI remains a faithful reflection of system state, with security and business logic enforced strictly at the backend level
 
+
+
+
+
+
+---
+
+
+DOCUMENTATION CHANGE HISTORY (role taxonomy reconciliation — NXC-HOA-AUTH-ROLE-001)
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-10-30 | NXC-HOA-AUTH-ROLE-001 | §5 dashboard taxonomy extended with 5.4 Dispatcher Dashboard and 5.6 Admin Dashboard. Renumbering map for prior citations: 5.4 Moderator → 5.5; 5.5 Super Admin → 5.7; 5.6 Module-Based Views → 5.8; 5.7 Internationalization Model → 5.9. §2, §3.1 and §4.1 role lists extended to the canonical taxonomy; §5.7 business rules state the SUPER_ADMIN permission superset and the Admin/SUPER_ADMIN non-duplication rule; §12 output expectation lists the new dashboards. | PROMPT 0 v1.2 §USER ROLES, §PERMISSION RULES (Admin and SUPER_ADMIN dashboard surfaces); HAO decisions HD-RT-1, HD-RT-2, HD-RT-3 |
+| 2026-10-30 | NXC-HOA-DECISION-HD-RT-8 | §5.6 and §5.7 citations rebased on PROMPT 0 v1.3 §PERMISSION RULES. §5.7 now records that SUPER_ADMIN additionally holds the five HD-RT-8 executive authority domains and that their dashboard controls are not specified here; §5.6 now records that those domains are SUPER_ADMIN-exclusive and must not be exposed on the Admin surface. No dashboard section was added, removed or renumbered. | HAO decision HD-RT-8 (PROMPT 0 v1.3 §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS) |
+| 2026-11-02 | NXC-HOA-AUTH-D01-ITEM-03-001 | §5.5, §5.6 and §5.7 role-boundary wording aligned to the approved financial authority model: the Moderator surface keeps investigation, findings, recommendation and ordinary case handling but gains no financial-outcome resolution, hold-lifting or resume authority; the Admin surface is limited to routine configuration inside already-approved policy and to Tier 1 Escrow Intervention Requests, and MUST NOT expose Tier 2 decisions, exceptional commercial authorisation, or any platform-wide restriction, lockdown or kill-switch; §5.7 is declared the surface on which SUPER_ADMIN commercial authorisation is exercised, which resolves the earlier fee-configuration split between §5.6 and §5.7. No dashboard, route, component, permission or interaction pattern was added, removed or renumbered. | HAO decision D-01 Item 3 (NXC-HOA-AUTH-D01-ITEM-03-001); PROMPT 0 v1.3 §PERMISSION RULES and §SUPER_ADMIN EXECUTIVE AUTHORITY DOMAINS (Domain 1, 4, 5); ESS-001F §15.2, §15.4, §15.9 |
+| 2026-11-03 | NXC-HOA-AUTH-D01-ITEM-06-STAGE-2 | §5.6 Admin Dashboard: the SUPER_ADMIN-exclusive control list now describes the excluded role-taxonomy and permission-boundary change as LA-approved, matching PROMPT 0 v1.3 §PERMISSION RULES as transitioned. Not changed: the D-01 Item 3 and HD-RT authority citations in this table and in §5.5 to §5.7, the dashboard section numbering, the Moderator, Admin and SUPER_ADMIN boundaries, and every other control in the list. No authority was created, extended, transferred or weakened. | LA authorisation NXC-HOA-AUTH-D01-ITEM-06-STAGE-2 (2026-11-03); PROMPT 0 v1.3 §11 Designation Successor |
+
+Version metadata of this document is unchanged: this is a documentation-consistency reconciliation of the role taxonomy, not an architectural revision of this layer.
+
+Version effect (2026-11-03 Stage 2 row above): MOD-007's recorded version is unchanged — the designation transition alters no surface, control, permission or boundary. The statement above continues to govern only its own rows.

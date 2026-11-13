@@ -60,7 +60,7 @@ NexCargo Data Foundation (PostgreSQL + Event-Driven Architecture)
 
 You are operating under:
 
-- PROMPT 0 — NEXCARGO MASTER SYSTEM_v1.1.md
+- PROMPT 0 — NEXCARGO MASTER SYSTEM_v1.3.md
 - PROMPT 1 — Architecture Bootstrap
 
 All rules, governance constraints, and architectural boundaries are inherited and MUST NOT be violated.
@@ -161,7 +161,7 @@ You MUST create schema separation per domain:
 - settlements (append-only)
 - payout_records (append-only)
 - reconciliation_records
-- escrow_intervention_requests (Admin override — auditable)
+- escrow_intervention_requests (governed Escrow Intervention Request records — auditable; an intervention is requested and decided through the ESS-001F §15.3 pathway, it is not an "Admin override")
 
 **RULES:**
 - ONLY Financial Modules (MOD-005, MOD-013) can write here
@@ -264,9 +264,13 @@ Escrow state is logical only — funds are held by bank
 
 No balance storage in NexCargo (No Custody)
 
-Admin Intervention:
+Financial Intervention:
 
-escrow_intervention_requests table stores Admin override requests
+escrow_intervention_requests table stores governed Escrow Intervention Requests (ESS-001F §15.7)
+
+Requests are initiated within the §15.6 closed trigger list and decided under the §15.9 authority tiers — Admin within delegated authority, or SUPER_ADMIN for Tier 2 matters
+
+An Admin record is not an override: approval of a request is not approval of the underlying financial instrument, and no internal approval executes a bank transaction (ESS-001F §15.3)
 
 All interventions are auditable and traceable
 
@@ -352,7 +356,11 @@ SettlementCompleted
 
 PaymentFailed
 
-EscrowInterventionRequested (Admin)
+Escrow intervention events (governance events — classified Compliance, not Financial, in the Event Registry)
+
+escrowInterventionRequested (initiated by Admin within delegated authority, or by SUPER_ADMIN — ESS-001F §15.6 authority distinction; canonical business event registered in docs/architecture/nexcargo-event-registry.md §13 MOD-005 Owned Events, owner and producer MOD-005, consumers MOD-013, MOD-015, MOD-010; classified Compliance there, not Financial, and constrained by that registry's §17 Escrow Intervention Request Events block; it identifies the Escrow Intervention Request reference, the related booking and contract references, the related escrow and dispute references where present, the initiating actor and the applicable eligibility trigger from the closed list in ESS-001F §15.6, and records an auditable governance fact only — it authorises no financial execution: the bank or authorised payment provider remains the sole execution authority, ESS-001F §2.2, §15.3, §15.5)
+
+escrowInterventionDecided (the decision recorded on an existing Escrow Intervention Request by the authority tier applicable under ESS-001F §15.9; canonical business event registered in the same §13 MOD-005 Owned Events catalogue, owner and producer MOD-005, consumers MOD-013, MOD-015, MOD-010; classified Compliance there, not Financial; it identifies the request reference, the deciding actor, the decision authority tier applied under ESS-001F §15.9 and the resulting lifecycle context, and neither grants authority nor names or confirms an instruction to a bank or provider — only a bank or authorised payment provider confirmation changes a financial state, ESS-001F §2.2, §15.3, §15.5; Event Registry §17 Escrow Intervention Request Events)
 
 AI events
 
@@ -582,3 +590,17 @@ Audit logs = compliance layer
 AI = read-only intelligence layer
 
 Localization = core system layer
+
+---
+
+DOCUMENTATION CHANGE HISTORY
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-11-03 | NXC-HOA-AUTH-D01-ITEM-06-STAGE-1 | Change-history block established under the INDEX §7.4 Document Change-History Standard. History in this document commences with this row. Earlier changes to this document are not reconstructed here; the governing record for them is the Development State decision register. The rows below record the evidenced changes that the register and this document's own inline citations support, each dated when the change was actually made. Creating this block altered no storage rule, schema isolation principle, event-store requirement or module write-boundary in this prompt. | HAO decision D-01 Item 6 Stage 1 (NXC-HOA-AUTH-D01-ITEM-06-STAGE-1); INDEX §7.4 |
+| 2026-11-02 | NXC-HOA-DECISION-D01-ITEM-02 | The financial_schema record list gained escrow_intervention_requests as the governed Escrow Intervention Request record (auditable, and explicitly not an "Admin override"), and the Financial Intervention section records that the record stores the logical object defined in ESS-001F §15.7, is initiated only within the §15.6 closed trigger list, is decided under the §15.9 authority tiers and remains auditable and traceable. No DDL, migration, SQL, column set, index, constraint, RLS policy or storage implementation was written; this document remains a design brief and the append-only, immutable and no-balance-storage rules are unchanged. | HAO decision D-01 Item 2 (NXC-HOA-DECISION-D01-ITEM-02); Development State register, D-01 Item 2 row; ESS-001F §15.6, §15.7, §15.9 |
+| 2026-11-02 | NXC-HOA-AUTH-D01-ITEM-03-001 | The approval-versus-execution boundary was made explicit: an Admin record is not an override, approval of a request is not approval of the underlying financial instrument, and no internal approval executes a bank transaction (ESS-001F §15.3). The event-catalogue entry for an escrow intervention request was annotated as raised under §15.6 and as unregistered in the Event Registry rather than as a registered event. No role gained a permission, no financial module's write boundary changed and the No Custody rules are unchanged. | HAO decision D-01 Item 3, direction 3-A (NXC-HOA-AUTH-D01-ITEM-03-001); Development State register, D-01 Item 3 row; ESS-001F §15.1 to §15.5 |
+| 2026-11-03 | NXC-HOA-AUTH-D01-ITEM-05-R1 | The unregistered annotation was superseded by reconciliation with the registration: the two Escrow Intervention Request events are now named in canonical camelCase as escrowInterventionRequested and escrowInterventionDecided, each pointing to its Event Registry §13 MOD-005 Owned Events entry with owner and producer MOD-005, consumers MOD-013, MOD-015 and MOD-010 and Compliance classification, and restating that neither event authorises, executes or confirms a bank or payment-provider transaction. Event semantics, storage rules and module boundaries are otherwise unchanged; no schema or payload was defined. | HAO decision D-01 Item 5 correction pass (NXC-HOA-AUTH-D01-ITEM-05-001; NXC-HOA-AUTH-D01-ITEM-05-R1); Development State register, D-01 Item 5 row; Event Registry §13 and §17 |
+| 2026-11-03 | NXC-HOA-AUTH-D01-ITEM-05-R2 | The two Escrow Intervention Request events were grouped under their own heading, marked as governance events classified Compliance and not Financial in the Event Registry, so that they are no longer presented inside the financial event list. No other catalogue entry was renamed or moved, the surrounding illustrative event names keep their existing form as this document's own implementation-representation examples, and the escrow_intervention_requests table name remains a storage-level identifier rather than a canonical event name. A Development State register entry was not created for this correction pass because its authorisation expressly excluded creating one; the change is evidenced by the authorisation and by the resulting text. | HAO decision D-01 Item 5 second correction pass (NXC-HOA-AUTH-D01-ITEM-05-R2); Event Registry §5 and §13 |
+
+Version effect: PROMPT 2 remains v1.0 — no version increase, no envelope or loader pointer change (its loads list was not touched by any of these passes) and no INDEX version-registry change. This block records changes already made and, where the register carries them, registered under the authorisations cited in it; creating the block changed no storage or event requirement in this prompt.

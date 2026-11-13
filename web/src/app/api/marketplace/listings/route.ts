@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ListingStatus, CargoType, PricingModel } from '@/modules/mod-001-marketplace/domain/enums';
+import { validateListingRequiredFields, validateTimeWindow } from '@/modules/mod-001-marketplace/domain/services/listing-validation';
+import type { ShipmentListing } from '@/modules/mod-001-marketplace/domain/types/listings';
 import { ValidationError } from '@/shared/errors/app-errors';
 import { createCorrelationContext, resolveCorrelationId } from '@/shared/standards/correlation-id-propagation';
 import { wrapInContractFramework, recordMarketplaceMetric } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
@@ -58,23 +60,26 @@ export async function POST(request: NextRequest) {
     // Parse and validate request body
     const body = await request.json();
 
-    // Required fields per MOD-001 §5.1
-    const requiredFields = ['origin', 'destination', 'cargoType', 'weightKg', 'timeWindow'];
-    for (const field of requiredFields) {
-      if (!(field in body)) {
-        throw new ValidationError(`Missing required field: ${field}`);
-      }
-    }
+    // MOD-001 §5.1 canonical rules, enforced through the domain validators rather than a
+    // route-local approximation, so the API and the domain can never disagree.
+    // weightKg/volumeM3 stay absent when the caller omitted them: coercing to 0 here would make
+    // "at least one of weight or volume" unsatisfiable-by-accident and the validator would pass.
+    const candidate = {
+      listingId: 'pending',
+      shipperId: authCtx.userId,
+      origin: body.origin,
+      destination: body.destination,
+      cargoType: body.cargoType,
+      weightKg: body.weightKg == null ? undefined : Number(body.weightKg),
+      volumeM3: body.volumeM3 == null ? undefined : Number(body.volumeM3),
+      timeWindow: body.timeWindow,
+      pricingModel: body.pricingModel ?? 'FIXED',
+      status: ListingStatus.DRAFT,
+      acceptedVehicleTypes: Array.isArray(body.acceptedVehicleTypes) ? body.acceptedVehicleTypes : [],
+    } as unknown as ShipmentListing;
 
-    if (!body.origin?.latitude || !body.origin?.longitude || !body.origin?.address) {
-      throw new ValidationError('Origin must include latitude, longitude, and address');
-    }
-    if (!body.destination?.latitude || !body.destination?.longitude || !body.destination?.address) {
-      throw new ValidationError('Destination must include latitude, longitude, and address');
-    }
-    if (!body.timeWindow?.earliestPickup || !body.timeWindow?.latestDelivery) {
-      throw new ValidationError('Time window must include earliestPickup and latestDelivery');
-    }
+    validateListingRequiredFields(candidate);
+    validateTimeWindow(candidate);
 
     // C1: Persist using authCtx.userId from Supabase session (authoritative)
     const repository = new ListingsRepository();
@@ -87,10 +92,11 @@ export async function POST(request: NextRequest) {
       originAddress: body.origin.address,
       destinationAddress: body.destination.address,
       cargoType: body.cargoType,
-      weightKg: body.weightKg,
-      volumeM3: body.volumeM3 ?? null,
+      weightKg: candidate.weightKg ?? 0,
+      volumeM3: candidate.volumeM3 ?? null,
       timeWindow: body.timeWindow,
       pricingModel: body.pricingModel ?? 'FIXED',
+      acceptedVehicleTypes: candidate.acceptedVehicleTypes,
       correlationId,
     });
 

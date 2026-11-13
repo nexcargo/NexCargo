@@ -1,0 +1,25 @@
+npm notice run web@0.1.0 npx
+npm notice run tsc --noEmit
+src/__tests__/c3-integration-flow.test.ts(60,79): error TS1501: This regular expression flag is only available when targeting 'es2018' or later.
+src/app/api/settlements/route.ts(140,5): error TS2322: Type 'string' is not assignable to type '"FULL" | "MILESTONE" | "REFUND"'.
+src/infrastructure/payment-providers/provider-registry.ts(135,23): error TS2345: Argument of type '"MPESA_PROD"' is not assignable to parameter of type 'PaymentMethodType'.
+src/infrastructure/payment-providers/provider-registry.ts(136,23): error TS2345: Argument of type '"EMOLA_PROD"' is not assignable to parameter of type 'PaymentMethodType'.
+src/infrastructure/payment-providers/provider-registry.ts(137,23): error TS2345: Argument of type '"MKESH_PROD"' is not assignable to parameter of type 'PaymentMethodType'.
+src/infrastructure/payment-providers/provider-registry.ts(138,23): error TS2345: Argument of type '"CARD_PROD"' is not assignable to parameter of type 'PaymentMethodType'.
+src/infrastructure/payment-providers/provider-registry.ts(139,23): error TS2345: Argument of type '"BANK_TRANSFER_PROD"' is not assignable to parameter of type 'PaymentMethodType'.
+src/infrastructure/services/escrow-service.ts(12,3): error TS2322: Type '"PENDING_CREATION"' is not assignable to type 'EscrowState'.
+src/infrastructure/services/escrow-service.ts(13,3): error TS2322: Type '"FUNDS_INITIATED"' is not assignable to type 'EscrowState'.
+src/infrastructure/services/escrow-service.ts(14,3): error TS2322: Type '"FUNDS_CONFIRMED"' is not assignable to type 'EscrowState'.
+src/infrastructure/services/escrow-service.ts(15,3): error TS2322: Type '"FUNDS_LOCKED"' is not assignable to type 'EscrowState'.
+src/infrastructure/services/escrow-service.ts(16,3): error TS2322: Type '"RELEASE_ELIGIBLE"' is not assignable to type 'EscrowState'.
+src/infrastructure/services/escrow-service.ts(17,3): error TS2322: Type '"RELEASED"' is not assignable to type 'EscrowState'.
+src/infrastructure/services/escrow-service.ts(18,3): error TS2820: Type '"PARTIAL_RELEASE"' is not assignable to type 'EscrowState'. Did you mean 'EscrowState.FINAL_RELEASE'?
+src/infrastructure/services/escrow-service.ts(19,3): error TS2322: Type '"DISPUTE_HOLD"' is not assignable to type 'EscrowState'.
+src/infrastructure/services/escrow-service.ts(20,3): error TS2322: Type '"ESCROW_CLOSED"' is not assignable to type 'EscrowState'.
+src/infrastructure/services/escrow-service.ts(24,7): error TS2322: Type 'Set<"ESCROW_CLOSED" | "RELEASED">' is not assignable to type 'Set<EscrowState>'.
+  Type '"ESCROW_CLOSED" | "RELEASED"' is not assignable to type 'EscrowState'.
+    Type '"ESCROW_CLOSED"' is not assignable to type 'EscrowState'.
+src/infrastructure/services/settlement-execution-service.ts(196,9): error TS2393: Duplicate function implementation.
+src/infrastructure/services/settlement-execution-service.ts(233,9): error TS2393: Duplicate function implementation.
+src/modules/mod-016-notifications/domain/services/notification-event-handler.ts(361,17): error TS2345: Argument of type '"communication_schema"' is not assignable to parameter of type 'never'.
+src/modules/mod-016-notifications/domain/services/notification-event-handler.ts(379,15): error TS2345: Argument of type '"communication_schema"' is not assignable to parameter of type 'never'.

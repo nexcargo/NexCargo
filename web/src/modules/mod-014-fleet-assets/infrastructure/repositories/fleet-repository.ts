@@ -301,7 +301,8 @@ export class FleetRepository {
     return this.toFleetShape(result.data as FleetRow);
   }
 
-  async updateFleet(id: string, updates: { name?: string; region?: string; operationalStatus?: string }): Promise<FleetApiShape> {
+  // region is nullable in logistics_schema.fleets, so an explicit null clears it; undefined leaves it alone.
+  async updateFleet(id: string, updates: { name?: string; region?: string | null; operationalStatus?: string }): Promise<FleetApiShape> {
     const supabase = await createClient();
     const payload: Record<string, unknown> = {};
     if (updates.name !== undefined) payload['name'] = updates.name;

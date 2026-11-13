@@ -90,7 +90,8 @@ export async function POST(request: NextRequest) {
     const client = (await import('@/infrastructure/database/supabase')).createAdminClient();
 
     const result = await client
-      .from(`${LOGISTICS_SCHEMA}.dispute_cases`)
+      .schema(LOGISTICS_SCHEMA)
+      .from('dispute_cases')
       .insert({
         case_number: caseNumber,
         related_shipment_id: body.relatedShipmentId,
@@ -181,7 +182,8 @@ export async function GET(request: NextRequest) {
     const client = (await import('@/infrastructure/database/supabase')).createAdminClient();
 
     let query = client
-      .from(`${LOGISTICS_SCHEMA}.dispute_cases`)
+      .schema(LOGISTICS_SCHEMA)
+      .from('dispute_cases')
       .select(
         'id, case_number, related_shipment_id, related_contract_id, related_escrow_id, dispute_type, initiator_id, respondent_id, status, created_at, updated_at, created_by',
         { count: 'exact' },

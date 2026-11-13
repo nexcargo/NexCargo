@@ -7,7 +7,19 @@ import { ValidationError } from '@/shared/errors/app-errors';
 import { createCorrelationContext, resolveCorrelationId } from '@/shared/standards/correlation-id-propagation';
 import { wrapInContractFramework, recordMarketplaceMetric } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
 import { OffersRepository, OfferApiShape } from '@/infrastructure/repositories/offers-repository';
-import { assertApiAuthorization } from '@/lib/supabase/api-auth';
+import { assertApiAuthorization, authDenialResponse } from '@/lib/supabase/api-auth';
+
+function denialOrServerError(error: unknown, correlationId: string): NextResponse {
+  const denial = authDenialResponse(error);
+  if (denial) return denial;
+  if (error instanceof ValidationError) {
+    return NextResponse.json(wrapInContractFramework({ error: error.message }, correlationId), { status: 400, headers: { 'x-correlation-id': correlationId } });
+  }
+  if (error instanceof Error && error.message.startsWith('FORBIDDEN')) {
+    return NextResponse.json(wrapInContractFramework({ error: error.message }, correlationId), { status: 403, headers: { 'x-correlation-id': correlationId } });
+  }
+  return NextResponse.json(wrapInContractFramework(null, correlationId), { status: 500, headers: { 'x-correlation-id': correlationId } });
+}
 
 /**
  * GET /api/marketplace/offers
@@ -35,8 +47,8 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: { 'x-correlation-id': correlationId, 'x-trace-id': context.traceId ?? '' },
     });
-  } catch (_error) {
-    return NextResponse.json(wrapInContractFramework(null, correlationId), { status: 500, headers: { 'x-correlation-id': correlationId } });
+  } catch (error) {
+    return denialOrServerError(error, correlationId);
   }
 }
 
@@ -78,9 +90,6 @@ export async function POST(request: NextRequest) {
       headers: { 'x-correlation-id': correlationId, 'x-trace-id': context.traceId ?? '' },
     });
   } catch (error) {
-    if (error instanceof ValidationError) {
-      return NextResponse.json(wrapInContractFramework({ error: error.message }, correlationId), { status: 400, headers: { 'x-correlation-id': correlationId } });
-    }
-    return NextResponse.json(wrapInContractFramework(null, correlationId), { status: 500, headers: { 'x-correlation-id': correlationId } });
+    return denialOrServerError(error, correlationId);
   }
 }

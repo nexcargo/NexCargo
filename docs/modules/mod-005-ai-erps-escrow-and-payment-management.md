@@ -382,6 +382,10 @@ Bank confirms execution status.
 
 
 
+Settlement approval (settlementStatus = APPROVED) is recorded by Admin within delegated authority, or by SUPER_ADMIN where the settlement sits inside an Escrow Intervention Request classified Tier 2 under ESS-001F §15.9. No AI actor may approve a settlement (ESS-001F §10). Approval is an internal decision and is not execution; only the bank or authorised payment provider executes (ESS-001F §2.2, §15.3; HAO decision D-01 Item 3, direction 3-A).
+
+
+
 4.4 Dispute Record
 
 
@@ -422,7 +426,7 @@ resolutionOutcome – RELEASE\_TO\_TRANSPORTER / REFUND\_TO\_SHIPPER / SPLIT\_SE
 
 
 
-resolvedBy – moderator / admin
+resolvedBy – the deciding actor for a dispute outcome: Admin within delegated authority, or SUPER_ADMIN where ESS-001F §15.9 classifies the matter Tier 2. Moderator investigation, findings and recommendations remain recorded in the case history (MOD-015 §4.2, §5.2), but a Moderator is not the resolving actor for a financial outcome (ESS-001F §15.6; PROMPT 0 v1.3 §PERMISSION RULES; HAO decision D-01 Item 3, direction 3-A).
 
 
 
@@ -446,7 +450,7 @@ Funds are frozen in bank escrow account.
 
 
 
-Only moderator/admin roles can resolve disputes.
+Only Admin (within delegated authority) or SUPER_ADMIN (where ESS-001F §15.9 Tier 2 applies) may resolve a dispute to a financial outcome. A Moderator investigates, records findings and recommends, and may continue ordinary case handling; a Moderator may not decide a financial outcome, initiate or decide an Escrow Intervention Request, or approve a financial intervention (PROMPT 0 v1.3 §PERMISSION RULES; ESS-001F §15.6; HAO decision D-01 Item 3, direction 3-A).
 
 
 
@@ -898,6 +902,26 @@ override bank ledger states
 
 
 
+7.8 Escrow Intervention Eligibility Reference
+
+
+
+The closed list of circumstances in which a human Admin or SUPER_ADMIN may initiate an escrow-related intervention is defined once, authoritatively, in ESS-001F §15.6 (HAO decisions D-01 and D-01 Item 1). MOD-005 adds no trigger, references no trigger of its own, and grants no authority from this rule.
+
+
+
+Eligibility to initiate an intervention is distinct from MOD-005’s escrow state model and from financial execution authority. A permitted trigger authorises an Escrow Intervention Request only.
+
+
+
+It does not authorise a manual or implicit escrow state transition (§7.3), a release or refund instruction that the bank has not confirmed (§7.4), or any divergence from the bank mirror (§7.2). Escrow state continues to change only through events confirmed by the bank.
+
+
+
+The Escrow Intervention Request logical object, its lifecycle and its decision tiers are defined once, authoritatively, in ESS-001F §15.7 to §15.10 (HAO decision D-01 Item 2). MOD-005 adds no field, no state, no transition, no threshold and no execution path to that definition. Where an approved request produces escrow-side movement, it does so through the structures already defined in §4 and remains subject to §7.2, §7.3 and §7.4.
+
+
+
 8\. EVENT MODEL (SPECIFICATION ONLY)
 
 
@@ -1228,3 +1252,16 @@ reconciliation is continuous, transparent, and flags discrepancies without auto-
 
 the platform serves as a secure financial orchestration layer, not a financial institution
 
+
+---
+
+DOCUMENTATION CHANGE HISTORY
+
+| Date | Assignment | Change | Authority basis |
+|-|-|-|-|
+| 2026-11-03 | NXC-HOA-AUTH-D01-ITEM-06-STAGE-1 | Change-history block established under the INDEX §7.4 Document Change-History Standard. History in this document commences with this row. Earlier changes to this document are not reconstructed here; the governing record for them is the Development State decision register. The rows below record the evidenced changes that the register and this document's own inline citations support, each dated when the change was actually made. Creating this block altered no escrow rule, record field, workflow, permission or authority boundary in this module. | HAO decision D-01 Item 6 Stage 1 (NXC-HOA-AUTH-D01-ITEM-06-STAGE-1); INDEX §7.4 |
+| 2026-11-02 | NXC-HOA-AUTH-D01-001 | §7.8 added as a cross-reference to the closed escrow-intervention eligibility trigger list, which is defined once, authoritatively, in ESS-001F §15.6; MOD-005 adds no trigger, references no trigger of its own and grants no authority from the rule. Escrow state, the No Custody invariant and every existing role boundary are unchanged. | HAO decision D-01 Item 1 (NXC-HOA-AUTH-D01-001); Development State register, D-01 row |
+| 2026-11-02 | NXC-HOA-DECISION-D01-ITEM-02 | §7.8 extended to point at the Escrow Intervention Request logical object, lifecycle and decision tiers defined in ESS-001F §15.7 to §15.10, recording that MOD-005 adds no field, state, transition, threshold or execution path to that definition and that an approved request authorises NexCargo only to raise an instruction through the §15.3 pathway. No instrument, workflow state or execution capability was created. | HAO decision D-01 Item 2 (NXC-HOA-DECISION-D01-ITEM-02); Development State register, D-01 Item 2 row |
+| 2026-11-02 | NXC-HOA-AUTH-D01-ITEM-03-001 | §4.3 and §4.4 aligned to the approved authority model: settlement approval and a dispute resolved to a financial outcome are recorded by Admin within delegated authority, or by SUPER_ADMIN where the matter sits inside an Escrow Intervention Request classified Tier 2 under ESS-001F §15.9; a Moderator investigates, records findings and recommends, may continue ordinary case handling, and is not the resolving or approving actor. No AI actor may approve a settlement. Approval remains an internal decision and never external execution; execution remains with the bank or authorised payment provider. No field, state, queue, permission or financial instrument was added, renamed or removed. | HAO decision D-01 Item 3 (NXC-HOA-AUTH-D01-ITEM-03-001); Development State register, D-01 Item 3 row; ESS-001F §15.1 to §15.5 |
+
+Version effect: MOD-005 remains v1.0 — no version increase, no loader change and no INDEX §7.1 change. This block records changes already made and registered under the authorisations cited in it; creating the block changed no rule, record, workflow or authority boundary in this module.
