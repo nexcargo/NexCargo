@@ -21,6 +21,7 @@ export interface HandoffContext {
   userId: string;
   email: string;
   role: string | null;
+  matchId: string;
   listingId: string;
   offerId: string;
   transporterId: string;
@@ -52,8 +53,8 @@ export interface AlignmentError {
  */
 export async function executeMOD002Handoff(context: HandoffContext): Promise<HandoffResult> {
   // Phase 0: Validate required context
-  if (!context.userId || !context.listingId || !context.offerId) {
-    throw new ValidationError('Handoff context requires userId, listingId, and offerId', {
+  if (!context.userId || !context.matchId || !context.listingId || !context.offerId) {
+    throw new ValidationError('Handoff context requires userId, matchId, listingId, and offerId', {
       missingFields: Object.entries(context).filter(([_, v]) => !v).map(([k]) => k),
     });
   }
@@ -120,8 +121,10 @@ export async function executeMOD002Handoff(context: HandoffContext): Promise<Han
   }
 
   // Phase 3: Atomic database handoff via PostgreSQL stored procedure
+  // WS-02 item 1: the RPC's triad guard looks the match up by its own id; supplying the listing id
+  // here made every accept fail with "Match not found". The match id is the accepted proposal's id.
   const rpcParams = {
-    p_match_id: context.listingId,
+    p_match_id: context.matchId,
     p_listing_id: context.listingId,
     p_offer_id: context.offerId,
     p_shipper_id: context.shipperId,

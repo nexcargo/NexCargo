@@ -191,6 +191,13 @@ export function evaluateRBAC(role: string, resource: string, action: string): RB
     tracking_read: ['SHIPPER', 'TRANSPORTER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
     tracking_status: ['TRANSPORTER', 'DISPATCHER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
     pod: ['ADMIN', 'SUPER_ADMIN', 'MODERATOR'],
+    // F-I5-02: POD submission is a Transporter operational act, distinct from platform-only POD
+    // verification (pod + update above). Migration 063's INSERT policy admits exactly the effective
+    // TRANSPORTER that owns the booking, so submission needs its own fine-grained key
+    // (booking_create precedent): adding TRANSPORTER to `pod` would also grant pod + update, i.e.
+    // self-verification, which MOD-003 §4.6 and the unchanged UPDATE policy forbid. No delegation
+    // scope maps to pod_create, so a Dispatcher cannot reach it. DRIVER is not an account class.
+    pod_create: ['TRANSPORTER'],
     documents: ['SHIPPER', 'TRANSPORTER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'],
     // MOD-014 fleet registry. PROMPT 0 v1.3:935 makes a Transporter the actor "that manages its transport
     // operations, fleet, Drivers, and delegated operational personnel", and :959 keeps FLEET_OWNER as a

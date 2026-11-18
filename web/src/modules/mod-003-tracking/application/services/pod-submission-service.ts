@@ -17,18 +17,19 @@ export class PodSubmissionService {
 
   /**
    * Submit POD evidence with validation against MOD-003 §4.6/§7.5.
-   * 
-   * Business rules enforced:
-   * - POD is mandatory before shipment can reach Completed state
+   *
+   * Business rules enforced here:
    * - Signature reference required
    * - At least one photograph required
    * - GPS coordinates required at delivery location
+   *
+   * Actor authorization, booking ownership and the DELIVERED lifecycle gate are
+   * enforced at the API boundary (POST /api/tracking/[trackingId]/pod, F-I5-02);
+   * completion gating on a VERIFIED POD lives in TrackingOrchestratorService.
    */
   async submitPOD(params: Omit<CreatePodParams, 'submissionMethod'>): Promise<PodApiShape> {
     // Validate required fields
     this.validatePODPayload(params);
-
-    const now = new Date().toISOString();
 
     // Insert POD record with PENDING verification status
     const pod = await this.podRepo.create({
@@ -59,6 +60,14 @@ export class PodSubmissionService {
     const pod = await this.podRepo.getById(podId);
     if (!pod) {
       throw new ValidationError(`POD ${podId} not found`);
+    }
+
+    // F-I5-02: submission is not verification — only a VERIFIED POD authorizes completion.
+    if (pod.verificationStatus !== 'VERIFIED') {
+      throw new ValidationError(
+        `POD ${podId} is ${pod.verificationStatus}, not VERIFIED; completion is not authorized`,
+        { podId, verificationStatus: pod.verificationStatus },
+      );
     }
 
     // Mark tracking as completed

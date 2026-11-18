@@ -7,6 +7,7 @@ import { createCorrelationContext, resolveCorrelationId } from '@/shared/standar
 import { wrapInContractFramework } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
 import { assertApiAuthorization } from '@/lib/supabase/api-auth';
 import { DocumentRepository, type DocumentSummary } from '@/modules/mod-004-documents/infrastructure/repositories/document-repository';
+import { verifyDocumentAccess } from '@/modules/mod-004-documents/infrastructure/authorization/document-access';
 
 /** GET /api/documents — List documents with filtering and pagination */
 export async function GET(request: NextRequest) {
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
   const context = createCorrelationContext({ correlationId });
 
   try {
-    await assertApiAuthorization(request, 'documents', 'read');
+    const authCtx = await assertApiAuthorization(request, 'documents', 'read');
 
     const url = new URL(request.url);
     const linkedEntityType = url.searchParams.get('linkedEntityType') ?? url.searchParams.get('entityType');
@@ -49,6 +50,26 @@ export async function GET(request: NextRequest) {
     } else {
       documents = [];
     }
+
+    // ── Enforce per-document ownership/party access ────────────────────
+    // The repository reads through the service-role client (RLS bypassed), so each summary
+    // must pass the same access gate used by the detail, download and preview routes before
+    // it is exposed. Inaccessible documents are omitted, not reported.
+    const accessFlags = await Promise.all(
+      documents.map(summary =>
+        verifyDocumentAccess(
+          {
+            linked_entity_type: summary.linkedEntityType,
+            linked_entity_id: summary.linkedEntityId,
+            created_by: summary.createdBy,
+          },
+          authCtx.userId,
+          authCtx.role,
+        ),
+      ),
+    );
+    documents = documents.filter((_, index) => accessFlags[index]);
+    total = documents.length;
 
     // Apply pagination at the application layer
     if (offset !== undefined) {

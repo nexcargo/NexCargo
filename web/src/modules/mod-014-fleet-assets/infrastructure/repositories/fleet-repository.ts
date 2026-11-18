@@ -308,6 +308,8 @@ export class FleetRepository {
     if (updates.name !== undefined) payload['name'] = updates.name;
     if (updates.region !== undefined) payload['region'] = updates.region;
     if (updates.operationalStatus !== undefined) payload['operational_status'] = updates.operationalStatus;
+    // WS-03 (F-I5-04 precedent): DEFAULT now() only fires on INSERT and no trigger maintains updated_at.
+    payload['updated_at'] = new Date().toISOString();
 
     const result = await supabase
       .schema(this.schema).from('fleets')
@@ -413,6 +415,9 @@ export class FleetRepository {
     if (updates.availabilityState !== undefined) payload['availability_state'] = updates.availabilityState;
     if (updates.crossBorderPermitStatus !== undefined) payload['cross_border_permit_status'] = updates.crossBorderPermitStatus;
     if (updates.complianceNotes !== undefined) payload['compliance_notes'] = updates.complianceNotes;
+    // F-I5-04: the column DEFAULT now() only fires on INSERT and no trigger maintains it, so a successful
+    // UPDATE must advance updated_at here — the same application-clock convention as the other repositories.
+    payload['updated_at'] = new Date().toISOString();
 
     const result = await supabase
       .schema(this.schema).from('vehicles')
@@ -508,12 +513,16 @@ export class FleetRepository {
     certificationStatus?: string;
     availabilityState?: string;
     licenseExpiryDate?: string | null;
+    platformUserId?: string | null;
   }): Promise<DriverApiShape> {
     const supabase = await createClient();
     const payload: Record<string, unknown> = {};
     if (updates.certificationStatus !== undefined) payload['certification_status'] = updates.certificationStatus;
     if (updates.availabilityState !== undefined) payload['availability_state'] = updates.availabilityState;
     if (updates.licenseExpiryDate !== undefined) payload['license_expiry_date'] = updates.licenseExpiryDate;
+    if (updates.platformUserId !== undefined) payload['platform_user_id'] = updates.platformUserId;
+    // WS-03 (F-I5-04 precedent): DEFAULT now() only fires on INSERT and no trigger maintains updated_at.
+    payload['updated_at'] = new Date().toISOString();
 
     const result = await supabase
       .schema(this.schema).from('drivers')
@@ -626,6 +635,8 @@ export class FleetRepository {
     if (updates.actualStart !== undefined) payload['actual_start'] = updates.actualStart;
     if (updates.actualEnd !== undefined) payload['actual_end'] = updates.actualEnd;
     if (updates.notes !== undefined) payload['notes'] = updates.notes;
+    // WS-03 (F-I5-04 precedent): DEFAULT now() only fires on INSERT and no trigger maintains updated_at.
+    payload['updated_at'] = new Date().toISOString();
 
     const result = await supabase
       .schema(this.schema).from('asset_assignments')
@@ -757,9 +768,10 @@ export class FleetRepository {
 
   async updateBackhaulStatus(id: string, status: string): Promise<BackhaulOpportunityApiShape> {
     const supabase = await createClient();
+    // WS-03 (F-I5-04 precedent): DEFAULT now() only fires on INSERT and no trigger maintains updated_at.
     const result = await supabase
       .schema(this.schema).from('backhaul_opportunities')
-      .update({ status })
+      .update({ status, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single();

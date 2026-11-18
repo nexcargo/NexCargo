@@ -5,10 +5,9 @@
 
 import type { ShipmentListing } from '@/modules/mod-001-marketplace/domain/types/listings';
 import type { TransportOffer } from '@/modules/mod-001-marketplace/domain/types/offers';
-import type { MatchProposal } from '@/modules/mod-001-marketplace/domain/types/matches';
 import type { AdvisoryQuote } from '@/modules/mod-001-marketplace/domain/types/quotes';
 import { generateAdvisoryQuote } from '@/modules/mod-001-marketplace/domain/services/advisory-quote-service';
-import { ListingStatus, OfferStatus, MatchStatus, CargoType, PricingModel } from '@/modules/mod-001-marketplace/domain/enums';
+import { ListingStatus, OfferStatus, CargoType, PricingModel } from '@/modules/mod-001-marketplace/domain/enums';
 import { ValidationError } from '@/shared/errors/app-errors';
 
 // ============================================================
@@ -153,62 +152,8 @@ export function applyOfferAction(params: ApplyOfferActionParams): OfferActionRes
   };
 }
 
-// ============================================================
-// Match Proposal Creation Use Case
-// ============================================================
-
-/**
- * Parameters for creating a match proposal from matching engine results.
- */
-export interface CreateMatchProposalParams {
-  listingId: string;
-  offerId: string;
-  matchScore: number;
-  rankingPosition: number;
-  /** Optional explanation of why this match was selected */
-  reasoningTrace?: string;
-}
-
-/**
- * Orchestrates match proposal creation.
- * Per MOD-001 §5.3 — structured pairing between listing and offer.
- * 
- * Rules:
- * - A match proposal can only be generated for PUBLISHED listings
- * - Shipper explicitly accepts/rejects proposals
- * - Acceptance transitions listing to BOOKED + triggers handoff to MOD-002
- * 
- * Advisory-only: does NOT auto-book or execute selections.
- * 
- * @param params - Match proposal parameters
- * @returns Created MatchProposal data (without BaseEntity persistence fields)
- */
-export function createMatchProposal(params: CreateMatchProposalParams): Omit<MatchProposal, 'id' | 'created_at' | 'updated_at' | 'version' | 'bumpVersion' | 'toJSON'> {
-  const { listingId, offerId, matchScore, rankingPosition, reasoningTrace } = params;
-
-  if (!listingId || listingId.trim() === '') {
-    throw new ValidationError('listingId is required');
-  }
-  if (!offerId || offerId.trim() === '') {
-    throw new ValidationError('offerId is required');
-  }
-  if (matchScore < 0 || matchScore > 100) {
-    throw new ValidationError('matchScore must be between 0 and 100');
-  }
-  if (rankingPosition < 1) {
-    throw new ValidationError('rankingPosition must be >= 1');
-  }
-
-  return {
-    matchId: `match-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`,
-    listingId,
-    offerId,
-    matchScore: Math.round(matchScore * 100) / 100, // Round to 2 decimal places
-    rankingPosition,
-    status: MatchStatus.PROPOSED,
-    reasoningTrace,
-  };
-}
+// Match recording moved to POST /api/marketplace/matches + MatchesRepository
+// (PRE-I-6 WS-02 D-M2): the former ephemeral-id createMatchProposal never persisted.
 
 /**
  * Builds a full ShipmentListing object from partial data for quote generation.

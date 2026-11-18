@@ -1,8 +1,10 @@
 // NexCargo MOD-014 — PATCH /api/fleet/drivers/[driverId]
 // I-5 §3D: the owning Transporter keeps its driver register current — certification standing, availability
-// and licence expiry. Both status vocabularies are the existing MOD-014 §4.3 sets; nothing here creates,
-// promotes or links a platform account, and the name and licence identity of a Driver are not editable
-// because no governing specification gives a re-identification path.
+// and licence expiry. Both status vocabularies are the existing MOD-014 §4.3 sets. The name and licence
+// identity of a Driver are not editable because no governing specification gives a re-identification path.
+// PRE-I-6 FINAL COMPLETION DIRECTIVE Item 3: the owning Transporter may optionally associate (or clear)
+// the platform-account link via platformUserId; the link itself confers no role — migration 070's driver
+// policies admit a linked account only through an assignment to a shipment.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { assertApiAuthorization } from '@/lib/supabase/api-auth';
@@ -13,6 +15,7 @@ import {
   fleetError,
   handleFleetError,
   isIsoDate,
+  isUuid,
   readJsonBody,
   requireOwnedDriver,
   textOf,
@@ -20,8 +23,8 @@ import {
 
 /**
  * PATCH /api/fleet/drivers/[driverId]
- * Body: { certificationStatus?, availabilityState?, licenseExpiryDate? } — at least one. `driverId` is the
- * drivers.id reference the fleet API returns as DriverApiShape.id.
+ * Body: { certificationStatus?, availabilityState?, licenseExpiryDate?, platformUserId? } — at least one.
+ * `driverId` is the drivers.id reference the fleet API returns as DriverApiShape.id.
  */
 export async function PATCH(
   request: NextRequest,
@@ -40,7 +43,12 @@ export async function PATCH(
       return fleetError(400, 'ERR_4000', 'A JSON body with at least one driver field is required');
     }
 
-    const updates: { certificationStatus?: string; availabilityState?: string; licenseExpiryDate?: string | null } = {};
+    const updates: {
+      certificationStatus?: string;
+      availabilityState?: string;
+      licenseExpiryDate?: string | null;
+      platformUserId?: string | null;
+    } = {};
 
     if ('certificationStatus' in body) {
       const status = textOf(body.certificationStatus);
@@ -70,13 +78,28 @@ export async function PATCH(
       }
     }
 
+    if ('platformUserId' in body) {
+      if (body.platformUserId === null) {
+        updates.platformUserId = null;
+      } else {
+        const linked = textOf(body.platformUserId);
+        if (!linked || !isUuid(linked)) {
+          return fleetError(400, 'ERR_4001', 'platformUserId must be a UUID of an existing platform account, or null to unlink');
+        }
+        updates.platformUserId = linked;
+      }
+    }
+
     if (Object.keys(updates).length === 0) {
-      return fleetError(400, 'ERR_4000', 'At least one of certificationStatus, availabilityState or licenseExpiryDate is required');
+      return fleetError(400, 'ERR_4000', 'At least one of certificationStatus, availabilityState, licenseExpiryDate or platformUserId is required');
     }
 
     const driver = await repo.updateDriver(driverId, updates);
     return NextResponse.json({ success: true, data: driver }, { status: 200 });
   } catch (error) {
+    if (error instanceof Error && error.message.includes('drivers_platform_user_id_fkey')) {
+      return fleetError(400, 'ERR_4001', 'platformUserId does not reference an existing platform account');
+    }
     return handleFleetError(error);
   }
 }

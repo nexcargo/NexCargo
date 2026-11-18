@@ -5,6 +5,7 @@ import { createCorrelationContext, resolveCorrelationId } from '@/shared/standar
 import { wrapInContractFramework } from '@/modules/mod-001-marketplace/infrastructure/integrations/integration-wiring';
 import { assertApiAuthorization } from '@/lib/supabase/api-auth';
 import { DocumentRepository } from '@/modules/mod-004-documents/infrastructure/repositories/document-repository';
+import { verifyDocumentAccess } from '@/modules/mod-004-documents/infrastructure/authorization/document-access';
 
 /**
  * GET /api/documents/[id]
@@ -21,7 +22,7 @@ export async function GET(
 
   try {
     // C1 Hardened: Mandatory auth — no session → 401 immediately. No x-user-role fallback.
-    await assertApiAuthorization(request, 'documents', 'read');
+    const authCtx = await assertApiAuthorization(request, 'documents', 'read');
 
     const { id } = await params;
 
@@ -39,6 +40,26 @@ export async function GET(
       return NextResponse.json(
         wrapInContractFramework({ error: 'Document not found', code: 'ERR_4004' }, correlationId),
         { status: 404, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+
+    // ── Verify specific document access ────────────────────────────────
+    // The repository reads through the service-role client (RLS bypassed), so the same
+    // ownership/party gate used by download and preview must be enforced here as well.
+    const hasAccess = await verifyDocumentAccess(
+      {
+        linked_entity_type: document.linkedEntityType,
+        linked_entity_id: document.linkedEntityId,
+        created_by: document.createdBy,
+      },
+      authCtx.userId,
+      authCtx.role,
+    );
+
+    if (!hasAccess) {
+      return NextResponse.json(
+        wrapInContractFramework({ error: 'You do not have permission to access this document', code: 'ERR_1004' }, correlationId),
+        { status: 403, headers: { 'x-correlation-id': correlationId } },
       );
     }
 

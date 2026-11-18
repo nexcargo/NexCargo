@@ -38,6 +38,8 @@ export interface CreateDriverIdentityVerificationParams {
   driverId: string;
   method: string;
   riskScore?: number;
+  status?: string;
+  verifiedAt?: string;
 }
 
 export interface UpdateDriverIdentityVerificationStatusParams {
@@ -63,8 +65,10 @@ export class DriverIdentityVerificationRepository {
         booking_id: params.bookingId,
         driver_id: params.driverId,
         method: params.method,
+        status: params.status ?? 'PENDING',
         attempt_count: 1,
         risk_score: params.riskScore ?? null,
+        verified_at: params.verifiedAt ?? null,
       })
       .select()
       .single();
@@ -109,9 +113,9 @@ export class DriverIdentityVerificationRepository {
 
   async updateStatus(params: UpdateDriverIdentityVerificationStatusParams): Promise<void> {
     const supabase = await createClient();
+    // driver_identity_verifications has no updated_at column (measured); writing one errors 42703.
     const updateData: Record<string, unknown> = {
       status: params.status,
-      updated_at: new Date().toISOString(),
     };
 
     if (params.failureReason !== undefined) {

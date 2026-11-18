@@ -44,10 +44,13 @@ describe('POST /api/tracking/[trackingId]/status — Authentication & RBAC', () 
   describe('unauthorized role denied', () => {
     it('denies SHIPPER status updates', async () => {
       await vi.resetModules();
+      // PRE-I-6 Item 3: after FORBIDDEN the route probes the role-less Driver fallback via
+      // assertApiAuth; a role-holder is never admitted by it, so the denial stands.
       vi.doMock('@/lib/supabase/api-auth', () => ({
         assertApiAuthorization: vi.fn().mockRejectedValue(
           new Error('FORBIDDEN: Role \'SHIPPER\' is not authorized to access resource'),
         ),
+        assertApiAuth: vi.fn().mockResolvedValue({ userId: 'shipper-user', email: 's@test.com', role: 'SHIPPER' }),
       }));
 
       const mod = await import('@/app/api/tracking/[trackingId]/status/route');
@@ -64,6 +67,7 @@ describe('POST /api/tracking/[trackingId]/status — Authentication & RBAC', () 
         assertApiAuthorization: vi.fn().mockRejectedValue(
           new Error('FORBIDDEN: Role \'DRIVER\' does not have \'status_update\' permission'),
         ),
+        assertApiAuth: vi.fn().mockResolvedValue({ userId: 'driver-user', email: 'd@test.com', role: 'DRIVER' }),
       }));
 
       const mod = await import('@/app/api/tracking/[trackingId]/status/route');
@@ -153,10 +157,15 @@ describe('POST /api/tracking/[trackingId]/gps — Authentication Gate', () => {
       vi.doMock('@modules/mod-003-tracking/application/services/gps-ingestion-service', () => ({
         GpsIngestionService: vi.fn(() => mockIngestion),
       }));
+      // PRE-I-6 Item 3: GPS is submitted by a role-less account holding a Driver assignment;
+      // DRIVER is not an account class. With the assignment gate satisfied, validation still runs.
       vi.doMock('@/lib/supabase/api-auth', () => ({
         assertApiAuth: vi.fn().mockResolvedValue({
-          userId: 'driver-user', email: 'driver@test.com', role: 'DRIVER',
+          userId: 'driver-user', email: 'driver@test.com', role: null,
         }),
+      }));
+      vi.doMock('@/lib/auth/driver-assignment', () => ({
+        resolveDriverAssignment: vi.fn().mockResolvedValue({ driverId: 'driver-row-1', assignmentId: 'assignment-1' }),
       }));
 
       const mod = await import('@/app/api/tracking/[trackingId]/gps/route');
@@ -201,6 +210,7 @@ describe('POST /api/tracking/[trackingId]/pod — Authentication Gate', () => {
       await vi.resetModules();
       vi.doMock('@/lib/supabase/api-auth', () => ({
         assertApiAuth: vi.fn().mockRejectedValue(new Error('UNAUTHORIZED')),
+        assertApiAuthorization: vi.fn().mockRejectedValue(new Error('UNAUTHORIZED')),
       }));
 
       const mod = await import('@/app/api/tracking/[trackingId]/pod/route');
@@ -213,10 +223,11 @@ describe('POST /api/tracking/[trackingId]/pod — Authentication Gate', () => {
   });
 
   describe('forbidden propagation for unauthorized roles', () => {
-    it('returns 403 when assertApiAuth also triggers FORBIDDEN path', async () => {
+    it('returns 403 when the authorization guard triggers the FORBIDDEN path', async () => {
       await vi.resetModules();
       vi.doMock('@/lib/supabase/api-auth', () => ({
-        assertApiAuth: vi.fn().mockRejectedValue(new Error('UNAUTHORIZED')),
+        assertApiAuth: vi.fn().mockRejectedValue(new Error('FORBIDDEN: no POD authority')),
+        assertApiAuthorization: vi.fn().mockRejectedValue(new Error('FORBIDDEN: no POD authority')),
       }));
 
       const mod = await import('@/app/api/tracking/[trackingId]/pod/route');
@@ -224,16 +235,22 @@ describe('POST /api/tracking/[trackingId]/pod — Authentication Gate', () => {
         makePodRequest('test-id'),
         { params: Promise.resolve({ trackingId: 'test-id' }) } as any,
       );
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(403);
     });
   });
 
   describe('validation preserved after auth', () => {
     beforeEach(async () => {
       await vi.resetModules();
+      // F-I5-02: the POD submit guard is assertApiAuthorization('pod_create','create');
+      // the authorized actor is an effective TRANSPORTER, not a DRIVER account class.
       vi.doMock('@/lib/supabase/api-auth', () => ({
         assertApiAuth: vi.fn().mockResolvedValue({
-          userId: 'driver-user', email: 'driver@test.com', role: 'DRIVER',
+          userId: 'transporter-user', email: 'transporter@test.com', role: 'TRANSPORTER',
+        }),
+        assertApiAuthorization: vi.fn().mockResolvedValue({
+          userId: 'transporter-user', email: 'transporter@test.com', role: 'TRANSPORTER',
+          marketplaceRole: 'TRANSPORTER', platformRole: null, delegation: null,
         }),
       }));
     });

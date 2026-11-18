@@ -91,7 +91,6 @@ export async function PATCH(
     if (!body.action) throw new ValidationError('action is required');
     if (!body.currentStatus) throw new ValidationError('currentStatus is required');
 
-    const currentStatus = body.currentStatus as BookingStatus;
     const targetAction = body.action;
 
     // Map action to target status
@@ -116,10 +115,7 @@ export async function PATCH(
         throw new ValidationError(`Invalid action: ${targetAction}. Allowed: align, confirm, cancel, fail`);
     }
 
-    // State machine validation — prevents bypass of required predecessor states
-    validateBookingTransition(currentStatus, targetStatus);
-
-    // Verify booking exists and user has access
+    // Verify booking exists and user has access before any state is disclosed or validated (F-I5-03 ordering).
     const repo = new BookingsRepository();
     const booking = await repo.getById(id);
     if (!booking) {
@@ -133,6 +129,22 @@ export async function PATCH(
     if (ctx.userId !== booking.shipperId && !GOVERNANCE_ROLES.includes(ctx.role ?? '')) {
       throw new Error('FORBIDDEN: Not authorized to update this booking');
     }
+
+    // WS-02 item 2: the persisted booking state, not the client's claim, governs the transition.
+    // A stale or forged currentStatus is a conflict, and the state machine runs on booking.status.
+    const currentStatus = booking.status as BookingStatus;
+    if (body.currentStatus !== currentStatus) {
+      return NextResponse.json(
+        wrapInContractFramework(
+          { error: `Booking status conflict: expected ${body.currentStatus}, persisted ${currentStatus}. Refresh and retry.`, code: 'ERR_4002' },
+          correlationId,
+        ),
+        { status: 409, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+
+    // State machine validation — prevents bypass of required predecessor states
+    validateBookingTransition(currentStatus, targetStatus);
 
     // Apply state transition via repository
     await repo.updateStatus(id, targetStatus);

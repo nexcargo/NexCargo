@@ -945,6 +945,8 @@ describe('F. Integration Flows — Conceptual Upload & Download Sequences', () =
       id: 's-row',
       documentId: 'doc-summary-001',
       documentType: 'CONTRACT',
+      linkedEntityType: 'contract',
+      linkedEntityId: 'contract-001',
       status: 'ACTIVE',
       fileReference: 'contracts/summary.pdf',
       fileHash: 'summary-hash',

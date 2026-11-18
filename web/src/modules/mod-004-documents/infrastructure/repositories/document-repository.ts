@@ -196,6 +196,8 @@ interface DocumentSummaryRow {
   id: string;
   document_id: string;
   document_type: string;
+  linked_entity_type: string;
+  linked_entity_id: string;
   status: string;
   file_reference: string;
   file_hash: string;
@@ -210,6 +212,8 @@ export interface DocumentSummary {
   id: string;
   documentId: string;
   documentType: string;
+  linkedEntityType: string;
+  linkedEntityId: string;
   status: string;
   fileReference: string;
   fileHash: string;
@@ -270,6 +274,8 @@ export class DocumentRepository {
       id: row.id,
       documentId: row.document_id,
       documentType: row.document_type,
+      linkedEntityType: row.linked_entity_type,
+      linkedEntityId: row.linked_entity_id,
       status: row.status,
       fileReference: row.file_reference,
       fileHash: row.file_hash,
@@ -613,7 +619,7 @@ export class DocumentRepository {
     let query = client
       .schema(this.schema).from('documents')
       .select(
-        'id, document_id, document_type, status, file_reference, file_hash, expiry_date, issue_date, created_at, updated_at, created_by',
+        'id, document_id, document_type, linked_entity_type, linked_entity_id, status, file_reference, file_hash, expiry_date, issue_date, created_at, updated_at, created_by',
       )
       .eq('linked_entity_type', entityType)
       .eq('linked_entity_id', entityId)
@@ -645,7 +651,7 @@ export class DocumentRepository {
     const result = await client
       .schema(this.schema).from('documents')
       .select(
-        'id, document_id, document_type, status, file_reference, file_hash, expiry_date, issue_date, created_at, updated_at, created_by',
+        'id, document_id, document_type, linked_entity_type, linked_entity_id, status, file_reference, file_hash, expiry_date, issue_date, created_at, updated_at, created_by',
       )
       .eq('status', status)
       .eq('is_deleted', false)

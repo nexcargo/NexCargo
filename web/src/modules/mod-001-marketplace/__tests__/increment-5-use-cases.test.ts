@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   createAdvisoryQuote,
-  createMatchProposal,
   applyOfferAction,
 } from '@/modules/mod-001-marketplace/application/use-cases/marketplace-use-cases';
 import { ListingStatus, OfferStatus, CargoType, PricingModel } from '@/modules/mod-001-marketplace/domain/enums';
@@ -135,90 +134,6 @@ describe('MOD-001 Marketplace Use Cases — Wave 1 Increment 5', () => {
           'basis',
         ]),
       );
-    });
-  });
-
-  // ============================================================
-  // Create Match Proposal (Application Layer)
-  // ============================================================
-
-  describe('createMatchProposal', () => {
-    const validParams = {
-      listingId: 'listing-001',
-      offerId: 'offer-001',
-      matchScore: 85.5,
-      rankingPosition: 1,
-    };
-
-    it('creates a match proposal with correct structure', () => {
-      const proposal = createMatchProposal(validParams);
-
-      expect(proposal.matchId).toBeDefined();
-      expect(proposal.listingId).toBe('listing-001');
-      expect(proposal.offerId).toBe('offer-001');
-      expect(proposal.matchScore).toBe(85.5);
-      expect(proposal.rankingPosition).toBe(1);
-      expect(proposal.status).toBe('PROPOSED');
-    });
-
-    it('rounds matchScore to 2 decimal places', () => {
-      const proposal = createMatchProposal({
-        ...validParams,
-        matchScore: 85.567,
-      });
-
-      expect(proposal.matchScore).toBe(85.57);
-    });
-
-    it('includes optional reasoningTrace', () => {
-      const proposal = createMatchProposal({
-        ...validParams,
-        reasoningTrace: 'High corridor match on Maputo-Beira route',
-      });
-
-      expect(proposal.reasoningTrace).toBe('High corridor match on Maputo-Beira route');
-    });
-
-    it('does not include BaseEntity persistence fields', () => {
-      const proposal = createMatchProposal(validParams);
-
-      expect('id' in proposal).toBe(false);
-      expect('created_at' in proposal).toBe(false);
-      expect('updated_at' in proposal).toBe(false);
-      expect('version' in proposal).toBe(false);
-    });
-
-    it('sets initial status to PROPOSED', () => {
-      const proposal = createMatchProposal(validParams);
-      expect(proposal.status).toBe('PROPOSED');
-    });
-
-    it('throws error for empty listingId', () => {
-      expect(() => createMatchProposal({
-        ...validParams,
-        listingId: '',
-      })).toThrow(ValidationError);
-    });
-
-    it('throws error for invalid matchScore (>100)', () => {
-      expect(() => createMatchProposal({
-        ...validParams,
-        matchScore: 150,
-      })).toThrow(ValidationError);
-    });
-
-    it('throws error for invalid matchScore (<0)', () => {
-      expect(() => createMatchProposal({
-        ...validParams,
-        matchScore: -5,
-      })).toThrow(ValidationError);
-    });
-
-    it('throws error for rankingPosition < 1', () => {
-      expect(() => createMatchProposal({
-        ...validParams,
-        rankingPosition: 0,
-      })).toThrow(ValidationError);
     });
   });
 

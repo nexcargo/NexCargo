@@ -102,7 +102,11 @@ describe('I-2 item 1: the tracking RPC resolves roles the way policies do', () =
 
   it('restates the search_path pin that CREATE OR REPLACE would otherwise drop', () => {
     const head = /CREATE OR REPLACE FUNCTION public\.atomic_tracking_status_update[\s\S]*?AS \$/i.exec(latest!.text)?.[0] ?? '';
-    expect(head).toMatch(/SET search_path = pg_catalog, public/i);
+    // Both spellings pin the identical search_path (proconfig search_path=pg_catalog, public): the
+    // hand-written `= pg_catalog, public` and the canonical pg_get_functiondef form
+    // `TO 'pg_catalog', 'public'` used by migrations 065/066. The security property asserted here is
+    // that the pin is restated, not which equivalent spelling the latest migration happens to use.
+    expect(head).toMatch(/SET search_path (?:=\s*pg_catalog,\s*public|TO\s+'pg_catalog',\s*'public')/i);
     expect(head).toMatch(/SECURITY DEFINER/i);
   });
 });

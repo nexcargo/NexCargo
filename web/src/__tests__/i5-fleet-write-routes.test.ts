@@ -308,14 +308,53 @@ describe('§3C PATCH /api/fleet/vehicles/[vehicleId] — status declaration insi
     expect(response.status).toBe(403);
     expect(fleetRepo.updateVehicle).not.toHaveBeenCalled();
   });
+
+  // F-I5-04: updated_at is maintained by the repository clock, never by the request body, and no body
+  // field may reassign ownership or the fleet reference through this endpoint.
+  it('never forwards a client-supplied updated_at, transporter_id, ownerId or fleet_id to the repository', async () => {
+    const response = await vehicleUpdate(
+      req('/api/fleet/vehicles/vehicle-mine-1', {
+        method: 'PATCH',
+        body: {
+          availabilityState: 'MAINTENANCE',
+          updated_at: '1999-01-01T00:00:00.000Z',
+          updatedAt: '1999-01-01T00:00:00.000Z',
+          transporter_id: FOREIGN_OWNER,
+          ownerId: FOREIGN_OWNER,
+          fleet_id: FOREIGN_FLEET,
+        },
+      }),
+      paramsOf({ vehicleId: 'vehicle-mine-1' }),
+    );
+    expect(response.status).toBe(200);
+    expect(fleetRepo.updateVehicle).toHaveBeenCalledWith('vehicle-mine-1', { availabilityState: 'MAINTENANCE' });
+  });
+
+  // F-I5-04 §6.2: an invalid vocabulary value is refused before any mutation, so no timestamp can advance.
+  it('does not touch the repository for an out-of-vocabulary permit status', async () => {
+    const response = await vehicleUpdate(req('/api/fleet/vehicles/vehicle-mine-1', { method: 'PATCH', body: { crossBorderPermitStatus: 'PERMANENT_INVALID' } }), paramsOf({ vehicleId: 'vehicle-mine-1' }));
+    expect(response.status).toBe(400);
+    expect(fleetRepo.updateVehicle).not.toHaveBeenCalled();
+  });
 });
 
 describe('§3D POST /api/fleet/drivers — a Driver is a register entry, not an account', () => {
-  it('refuses a body that tries to attach a platform account', async () => {
+  // PRE-I-6 FINAL COMPLETION DIRECTIVE Item 3 supersedes the I-5 blanket refusal: the owning Transporter
+  // may optionally associate an existing platform account. The link confers no role (migration 070 admits
+  // a linked account only through a shipment assignment); malformed references are still refused.
+  const LINK_ACCOUNT = '00000000-0000-4000-8000-0000000000d1';
+
+  it('refuses a platformUserId that is not a UUID', async () => {
     const response = await driverCreate(req('/api/fleet/drivers', { body: { fleetId: OWN_FLEET, firstName: 'Amina', lastName: 'Chissano', platformUserId: FOREIGN_OWNER } }));
     expect(response.status).toBe(400);
-    expect((await json(response)).error?.message).toMatch(/delegation/);
+    expect((await json(response)).error?.message).toMatch(/UUID/);
     expect(fleetRepo.createDriver).not.toHaveBeenCalled();
+  });
+
+  it('accepts an optional platform-account association and forwards it to the repository', async () => {
+    const response = await driverCreate(req('/api/fleet/drivers', { body: { fleetId: OWN_FLEET, firstName: 'Amina', lastName: 'Chissano', platformUserId: LINK_ACCOUNT } }));
+    expect(response.status).toBe(201);
+    expect(fleetRepo.createDriver.mock.calls[0][0].platformUserId).toBe(LINK_ACCOUNT);
   });
 
   it('attaches a driver to the caller\'s fleet with no platform account and the declared defaults', async () => {
@@ -325,7 +364,7 @@ describe('§3D POST /api/fleet/drivers — a Driver is a register entry, not an 
     expect(response.status).toBe(201);
     const input = fleetRepo.createDriver.mock.calls[0][0];
     expect(input).toMatchObject({ fleetId: OWN_FLEET, firstName: 'Amina', lastName: 'Chissano', certificationStatus: 'PENDING', availabilityState: 'AVAILABLE', createdBy: SESSION_USER });
-    expect(input.platformUserId).toBeUndefined();
+    expect(input.platformUserId).toBeNull();
   });
 
   it('answers 404 without probing the insert when the fleet is not the caller\'s', async () => {
@@ -381,6 +420,24 @@ describe('§3D PATCH /api/fleet/drivers/[driverId] — standing within your own 
     rpcAnswers = { ...DELEGATE };
     const response = await driverUpdate(req('/api/fleet/drivers/driver-mine-1', { method: 'PATCH', body: { certificationStatus: 'VERIFIED' } }), paramsOf({ driverId: 'driver-mine-1' }));
     expect(response.status).toBe(403);
+    expect(fleetRepo.updateDriver).not.toHaveBeenCalled();
+  });
+
+  // PRE-I-6 FINAL COMPLETION DIRECTIVE Item 3: optional platform-account association on the register entry.
+  it('links, relinks and clears the platform-account association', async () => {
+    const account = '00000000-0000-4000-8000-0000000000d1';
+    const linked = await driverUpdate(req('/api/fleet/drivers/driver-mine-1', { method: 'PATCH', body: { platformUserId: account } }), paramsOf({ driverId: 'driver-mine-1' }));
+    expect(linked.status).toBe(200);
+    expect(fleetRepo.updateDriver).toHaveBeenLastCalledWith('driver-mine-1', { platformUserId: account });
+
+    const cleared = await driverUpdate(req('/api/fleet/drivers/driver-mine-1', { method: 'PATCH', body: { platformUserId: null } }), paramsOf({ driverId: 'driver-mine-1' }));
+    expect(cleared.status).toBe(200);
+    expect(fleetRepo.updateDriver).toHaveBeenLastCalledWith('driver-mine-1', { platformUserId: null });
+  });
+
+  it('refuses a malformed platformUserId without touching the repository', async () => {
+    const response = await driverUpdate(req('/api/fleet/drivers/driver-mine-1', { method: 'PATCH', body: { platformUserId: 'not-a-uuid' } }), paramsOf({ driverId: 'driver-mine-1' }));
+    expect(response.status).toBe(400);
     expect(fleetRepo.updateDriver).not.toHaveBeenCalled();
   });
 });

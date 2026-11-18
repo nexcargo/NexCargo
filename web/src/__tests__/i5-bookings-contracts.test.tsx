@@ -616,4 +616,49 @@ describe('I-5 §3G — PATCH /api/booking/[id] exposes the alignment predecessor
     expect(response.status).toBe(400);
     expect(updateBookingStatus).not.toHaveBeenCalled();
   });
+
+  // WS-02 item 2 regressions: the persisted booking state, not the client claim, governs the transition.
+  it('refuses a forged currentStatus that would skip a required predecessor', async () => {
+    sessionUser = { id: SHIPPER_ID, email: 'shipper@example.mz', created_at: '', user_metadata: {} };
+    rpcAnswers = { ...SHIPPER };
+    // Persisted REQUESTED; the client claims ALIGNMENT_CHECKED to reach confirm without aligning.
+    const response = await PATCH(request({ action: 'confirm', currentStatus: 'ALIGNMENT_CHECKED' }), params);
+
+    expect(response.status).toBe(409);
+    expect(updateBookingStatus).not.toHaveBeenCalled();
+  });
+
+  it('refuses a stale currentStatus with a conflict instead of writing', async () => {
+    sessionUser = { id: SHIPPER_ID, email: 'shipper@example.mz', created_at: '', user_metadata: {} };
+    rpcAnswers = { ...SHIPPER };
+    getBooking.mockResolvedValue({ ...booking, status: 'ALIGNMENT_CHECKED' });
+
+    const response = await PATCH(request({ action: 'align', currentStatus: 'REQUESTED' }), params);
+
+    expect(response.status).toBe(409);
+    expect(updateBookingStatus).not.toHaveBeenCalled();
+  });
+
+  it('answers 404 for an unreadable booking before any status conflict is disclosed', async () => {
+    sessionUser = { id: SHIPPER_ID, email: 'shipper@example.mz', created_at: '', user_metadata: {} };
+    rpcAnswers = { ...SHIPPER };
+    getBooking.mockResolvedValue(null);
+
+    const response = await PATCH(request({ action: 'confirm', currentStatus: 'ALIGNMENT_CHECKED' }), params);
+
+    expect(response.status).toBe(404);
+    expect(updateBookingStatus).not.toHaveBeenCalled();
+  });
+
+  it('reports the persisted status as previousStatus on a lawful transition', async () => {
+    sessionUser = { id: SHIPPER_ID, email: 'shipper@example.mz', created_at: '', user_metadata: {} };
+    rpcAnswers = { ...SHIPPER };
+
+    const response = await PATCH(request({ action: 'align', currentStatus: 'REQUESTED' }), params);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(JSON.stringify(payload)).toContain('"previousStatus":"REQUESTED"');
+    expect(updateBookingStatus).toHaveBeenCalledWith('b-requested', 'ALIGNMENT_CHECKED');
+  });
 });

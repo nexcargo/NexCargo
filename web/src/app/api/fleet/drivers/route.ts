@@ -3,12 +3,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { assertApiAuth, assertApiAuthorization } from '@/lib/supabase/api-auth';
+import { handleFleetError } from '../fleet-write-guard';
 import { FleetRepository } from '@/modules/mod-014-fleet-assets/infrastructure/repositories/fleet-repository';
 import {
   DRIVER_AVAILABILITY_STATES,
   DRIVER_CERTIFICATIONS,
   fleetError,
   isIsoDate,
+  isUuid,
   readJsonBody,
   requireOwnedFleet,
   textOf,
@@ -45,13 +47,15 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/fleet/drivers
  * Body: { fleetId, firstName, lastName, licenseType?, licenseNumber?, licenseExpiryDate?,
- *         certificationStatus?, availabilityState?, contactNumber? }
+ *         certificationStatus?, availabilityState?, contactNumber?, platformUserId? }
  *
- * I-5 §3D: a Driver is a record in the Transporter's fleet register, not a marketplace member. The row is
- * created with platform_user_id null and the body cannot supply one — a Driver is onboarded to a platform
- * account only through the I-2 delegation machinery, which is a separate, auditable act. The caller's own
- * session fixes the fleet: an attempt to attach a Driver to a fleet the session does not own is refused
- * with the same 404 as an unknown fleet.
+ * I-5 §3D: a Driver is a record in the Transporter's fleet register, not a marketplace member.
+ * PRE-I-6 FINAL COMPLETION DIRECTIVE Item 3: the owning Transporter may optionally associate the
+ * record with an existing platform account (platformUserId). The association confers no role —
+ * migration 070's driver policies admit a linked account only through an assignment to a shipment,
+ * and the account keeps whatever roles it already had. The caller's own session fixes the fleet: an
+ * attempt to attach a Driver to a fleet the session does not own is refused with the same 404 as an
+ * unknown fleet.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -61,8 +65,13 @@ export async function POST(request: NextRequest) {
     if (!body) {
       return fleetError(400, 'ERR_4000', 'A JSON body with a fleetId, firstName and lastName is required');
     }
+    let platformUserId: string | null = null;
     if (body.platformUserId !== undefined && body.platformUserId !== null) {
-      return fleetError(400, 'ERR_4001', 'platformUserId is not accepted: a Driver is linked to a platform account through operational delegation, not here');
+      const linked = textOf(body.platformUserId);
+      if (!linked || !isUuid(linked)) {
+        return fleetError(400, 'ERR_4001', 'platformUserId must be a UUID of an existing platform account');
+      }
+      platformUserId = linked;
     }
 
     const firstName = textOf(body.firstName);
@@ -108,6 +117,7 @@ export async function POST(request: NextRequest) {
     const driver = await repo.createDriver({
       driverId: crypto.randomUUID(),
       fleetId: fleetId as string,
+      platformUserId,
       firstName,
       lastName,
       licenseType,
@@ -121,19 +131,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: driver }, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && error.message.includes('drivers_platform_user_id_fkey')) {
+      return fleetError(400, 'ERR_4001', 'platformUserId does not reference an existing platform account');
+    }
     return handleFleetError(error);
   }
-}
-
-function handleFleetError(error: unknown): NextResponse {
-  if (error instanceof Error) {
-    const message = error.message;
-    if (message.includes('UNAUTHORIZED')) {
-      return NextResponse.json({ success: false, error: { code: 'ERR_1003', message: 'Authentication required' } }, { status: 401 });
-    }
-    if (message.includes('FORBIDDEN')) {
-      return NextResponse.json({ success: false, error: { code: 'ERR_1004', message: 'Access denied' } }, { status: 403 });
-    }
-  }
-  return NextResponse.json({ success: false, error: { code: 'ERR_9001', message: 'Internal server error' } }, { status: 500 });
 }

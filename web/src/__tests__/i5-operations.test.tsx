@@ -14,6 +14,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { NextRequest } from 'next/server';
 import { ShipmentStatus } from '@/shared/types/enums';
+import { ValidationError } from '@/shared/errors/app-errors';
 import { AssignmentStatus } from '@/modules/mod-014-fleet-assets/domain/enums';
 import { nextAssignmentStatuses, nextTrackingStatuses } from '@/app/[locale]/(transporter)/operations-transitions';
 import { StatusUpdateForm } from '@/app/[locale]/(transporter)/transporter/operations/status-update';
@@ -954,11 +955,24 @@ describe('I-5 §3H/§4 — POST /api/tracking/[trackingId]/status decides on the
 
   it('stamps completion only when the transition actually reaches COMPLETED', async () => {
     getTracking.mockResolvedValue({ ...record, status: 'DELIVERED' });
+    // F-I5-02 / MOD-003 §7.5: completion additionally requires a VERIFIED POD.
+    listPods.mockResolvedValue([{ ...pod, verificationStatus: 'VERIFIED' }]);
 
     const response = await post({ targetStatus: 'COMPLETED' });
 
     expect(response.status).toBe(200);
     expect(markCompleted).toHaveBeenCalledWith(TRACKING_ID);
+  });
+
+  it('refuses COMPLETED at DELIVERED when no POD has been verified', async () => {
+    getTracking.mockResolvedValue({ ...record, status: 'DELIVERED' });
+    listPods.mockResolvedValue([pod]); // PENDING only — submission is not verification
+
+    const response = await post({ targetStatus: 'COMPLETED' });
+
+    expect(response.status).toBe(409);
+    expect(rpcCalls.filter((call) => call.name === 'atomic_tracking_status_update')).toHaveLength(0);
+    expect(markCompleted).not.toHaveBeenCalled();
   });
 
   it('admits a bounded delegation carrying tracking_update', async () => {
@@ -1061,16 +1075,31 @@ describe('I-5 §3C/§3H — PATCH /api/fleet/assignments binds the write to the 
     expect(updateAssignment).toHaveBeenCalledWith(ASSIGNMENT_ID, expect.objectContaining({ status: 'ACTIVE' }));
   });
 
-  // Pre-existing defect, disclosed rather than amended under I-5: applyAssignmentTransition throws instead of
-  // returning false, so the handler's boolean check never runs and the refusal escapes as a 500. The write is
-  // still refused, which is the security-relevant half; the status code is wrong.
-  it('refuses a forbidden assignment transition without writing, but reports it as a 500', async () => {
+  // WS-02 item 4 remediated: applyAssignmentTransition throws ValidationError on a forbidden transition;
+  // the route now catches it and answers with the 400 the branch always intended, instead of a 500.
+  it('refuses a forbidden assignment transition without writing, and reports it as a 400', async () => {
     getAssignment.mockResolvedValue({ ...assignment, status: 'COMPLETED' });
 
     const response = await patch({ action: 'update', id: ASSIGNMENT_ID, status: 'ACTIVE' });
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(400);
+    const payload = await response.json();
+    expect(payload.error.code).toBe('ERR_4002');
+    expect(payload.error.message).toContain('Invalid assignment transition');
     expect(updateAssignment).not.toHaveBeenCalled();
+  });
+
+  // WS-02 item 3 remediated: the route now uses the shared fleet-write-guard mapping, so a validation
+  // refusal keeps its message and answers 400 instead of being swallowed into a generic 500.
+  it('keeps a repository validation refusal as a 400 with its message', async () => {
+    updateAssignment.mockRejectedValueOnce(new ValidationError('Assignment update refused by validation'));
+
+    const response = await patch({ action: 'update', id: ASSIGNMENT_ID, notes: 'late arrival' });
+
+    expect(response.status).toBe(400);
+    const payload = await response.json();
+    expect(payload.error.code).toBe('ERR_4001');
+    expect(payload.error.message).toContain('Assignment update refused by validation');
   });
 
   it('refuses a transition on an assignment this session cannot read', async () => {

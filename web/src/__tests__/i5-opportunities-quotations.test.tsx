@@ -461,12 +461,33 @@ describe('I-5 §3F/§4 — the offers routes stay the authority', () => {
     offersPATCH = item.PATCH;
   });
 
-  it('pins the new quotation to the session user even when the body names another transporter', async () => {
+  // F-I5-01 §4.5/§6A: the I-5 behaviour silently rewrote a foreign transporterId to the session user and
+  // answered 201. The LA directive requires an explicit refusal instead, so the pinning guarantee is now
+  // asserted on a legitimate body and the injection case asserts 403 with no persistence.
+  it('refuses an offer that names another transporter and writes nothing', async () => {
     const request = new NextRequest('http://localhost:3000/api/marketplace/offers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         transporterId: OTHER_TRANSPORTER_ID,
+        listingId: 'l-general',
+        priceProposal: 450000,
+        availabilityWindow: { earliestPickup: '2026-12-01T09:00:00Z', latestPickup: '2026-12-01T14:00:00Z', estimatedDelivery: '2026-12-04T18:00:00Z' },
+        vehicleType: 'HEAVY_TRUCK',
+        declaredCapacity: { maxWeightKg: 20000, maxVolumeM3: 40 },
+      }),
+    });
+
+    const response = await offersPOST(request);
+    expect(response.status).toBe(403);
+    expect(createOffer).not.toHaveBeenCalled();
+  });
+
+  it('pins the new quotation to the session user', async () => {
+    const request = new NextRequest('http://localhost:3000/api/marketplace/offers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         listingId: 'l-general',
         priceProposal: 450000,
         availabilityWindow: { earliestPickup: '2026-12-01T09:00:00Z', latestPickup: '2026-12-01T14:00:00Z', estimatedDelivery: '2026-12-04T18:00:00Z' },

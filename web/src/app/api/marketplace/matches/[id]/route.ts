@@ -1,11 +1,12 @@
 // NexCargo MOD-001 — Match Proposal API Route (Item)
-// C2-Increment 002 Auth Migration: Pattern B (header-based) → Pattern A (session-based)
-// C2-Increment 003 Handoff Wiring: Accept route invokes executeMOD002Handoff() for
-//   atomic Match→Listing→Booking transition with alignment-first validation.
-// Authorized by HAO-WAVE1-005 + HAO C2-003 Authorization (2026-09-07)
-// Per MOD-001 §5.3 (Match Proposal) + §3.2 state machine
+// PRE-I-6 WS-02 match persistence (LA directive 2026-11-18, D-M1/D-M2 approved):
+// GET reads the persisted record; PATCH loads it before any transition, treats
+// the persisted state as authoritative (409 on conflict), derives party ids from
+// stored relationships, and accepts through the unchanged marketplace_book_handoff
+// RPC or persists the REJECTED transition. Migration 069 enforces the same
+// ownership/state boundaries in the database.
 //
-// GET    /api/marketplace/matches/[id]     — Get match proposal by ID
+// GET    /api/marketplace/matches/[id]     — Get persisted match proposal by ID
 // PATCH  /api/marketplace/matches/[id]     — Accept or reject a match proposal
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -17,34 +18,48 @@ import { wrapInContractFramework, recordMarketplaceMetric } from '@/modules/mod-
 import { executeMOD002Handoff, HandoffResult } from '@/modules/mod-002-booking/domain/services/booking-orchestration';
 import { assertApiAuthorization } from '@/lib/supabase/api-auth';
 import type { AuthContext } from '@/lib/supabase/api-auth';
+import { MatchesRepository } from '@/infrastructure/repositories/matches-repository';
+import { OffersRepository } from '@/infrastructure/repositories/offers-repository';
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * GET /api/marketplace/matches/[id]
- * Returns a single match proposal by ID.
+ * Returns the persisted match. Session RLS hides foreign records, so nonexistent
+ * and inaccessible ids both answer 404 without disclosing foreign metadata.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const correlationId = resolveCorrelationId(Object.fromEntries(_request.headers.entries()));
+  const correlationId = resolveCorrelationId(Object.fromEntries(request.headers.entries()));
   const context = createCorrelationContext({ correlationId });
 
   try {
     const { id } = await params;
 
-    // Pattern A auth: session-based RBAC, no x-user-role header fallback
-    await assertApiAuthorization(_request, 'matching', 'read');
+    await assertApiAuthorization(request, 'matching', 'read');
 
-    // Return stub match proposal data (actual DB query in later increment)
-    const matchProposal = {
-      matchId: id,
-      status: MatchStatus.PROPOSED,
-    };
+    if (!UUID_PATTERN.test(id)) {
+      return NextResponse.json(
+        wrapInContractFramework({ error: `Match ${id} not found` }, correlationId),
+        { status: 404, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+
+    const matchesRepository = new MatchesRepository();
+    const match = await matchesRepository.getById(id);
+    if (!match) {
+      return NextResponse.json(
+        wrapInContractFramework({ error: `Match ${id} not found` }, correlationId),
+        { status: 404, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
 
     recordMarketplaceMetric('matches.viewed', 1, 'count');
 
     return NextResponse.json(
-      wrapInContractFramework(matchProposal, correlationId),
+      wrapInContractFramework(match.toApiShape(), correlationId),
       {
         status: 200,
         headers: {
@@ -53,8 +68,25 @@ export async function GET(
         },
       },
     );
-  } catch (_error) {
-    const resolvedId = typeof _error === 'object' && _error !== null ? '' : '';
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      return NextResponse.json(
+        wrapInContractFramework({ error: error.message }, correlationId),
+        { status: 400, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+    if (error instanceof Error && error.message === 'UNAUTHORIZED') {
+      return NextResponse.json(
+        wrapInContractFramework({ error: 'Unauthorized' }, correlationId),
+        { status: 401, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+    if (error instanceof Error && error.message.startsWith('FORBIDDEN')) {
+      return NextResponse.json(
+        wrapInContractFramework({ error: error.message }, correlationId),
+        { status: 403, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
     return NextResponse.json(
       wrapInContractFramework(null, correlationId),
       { status: 500, headers: { 'x-correlation-id': correlationId } },
@@ -95,6 +127,23 @@ export async function PATCH(
       throw new ValidationError('Action must be "accept" or "reject"');
     }
 
+    // Load the persisted match before any disclosure or transition (F-I5-03
+    // ordering). Session RLS already hides foreign records → uniform 404.
+    if (!UUID_PATTERN.test(id)) {
+      return NextResponse.json(
+        wrapInContractFramework({ error: `Match ${id} not found` }, correlationId),
+        { status: 404, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+    const matchesRepository = new MatchesRepository();
+    const match = await matchesRepository.getById(id);
+    if (!match) {
+      return NextResponse.json(
+        wrapInContractFramework({ error: `Match ${id} not found` }, correlationId),
+        { status: 404, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+
     // Parse target status based on action
     const targetStatus = action === 'accept' ? MatchStatus.ACCEPTED : MatchStatus.REJECTED;
     const currentStatus = body.currentStatus as MatchStatus;
@@ -103,36 +152,62 @@ export async function PATCH(
       throw new ValidationError('currentStatus is required');
     }
 
-    // Apply state transition validation (advisory only)
-    const validatedStatus = applyMatchTransition(currentStatus, targetStatus);
+    // The persisted state is authoritative; body.currentStatus is only an
+    // optimistic-concurrency expectation (WS-02 item 2 precedent → 409).
+    if (currentStatus !== match.status) {
+      return NextResponse.json(
+        wrapInContractFramework(
+          { error: `Match status conflict: expected ${currentStatus}, persisted ${match.status}. Refresh and retry.` },
+          correlationId,
+        ),
+        { status: 409, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+    if (isMatchTerminal(match.status)) {
+      return NextResponse.json(
+        wrapInContractFramework({ error: `Match already in terminal state ${match.status}` }, correlationId),
+        { status: 409, headers: { 'x-correlation-id': correlationId } },
+      );
+    }
+
+    const validatedStatus = applyMatchTransition(match.status, targetStatus);
     const terminal = isMatchTerminal(validatedStatus);
 
     // Build base response fields shared by both accept and reject paths
     const baseResponse: Record<string, unknown> = {
-      matchId: id,
-      previousStatus: currentStatus,
+      matchId: match.id,
+      previousStatus: match.status,
       newStatus: validatedStatus,
       isTerminal: terminal,
       action,
     };
 
-    // ACCEPT path: Execute C2-003 handoff orchestrator
+    // ACCEPT path: Execute C2-003 handoff orchestrator on persisted relationships.
+    // listingId/offerId/transporterId are derived from stored rows, never from the
+    // body; supplied body values are only checked for consistency (409 on drift).
     if (action === 'accept') {
-      if (!body.listingId || !body.offerId) {
+      if ((body.listingId && body.listingId !== match.listingId)
+        || (body.offerId && body.offerId !== match.offerId)) {
         recordMarketplaceMetric('matches.accepted_failed', 1, 'count', {
-          reason: 'missing_listing_or_offer_id',
-          listingId: body.listingId,
-          offerId: body.offerId,
+          reason: 'body_relationship_mismatch',
+          listingId: match.listingId,
+          offerId: match.offerId,
         });
         return NextResponse.json(
-          wrapInContractFramework({ error: 'Accept requires listingId and offerId' }, correlationId),
-          { status: 400, headers: { 'x-correlation-id': correlationId } },
+          wrapInContractFramework({ error: 'Supplied listingId/offerId does not match the persisted match' }, correlationId),
+          { status: 409, headers: { 'x-correlation-id': correlationId } },
         );
       }
 
+      const offersRepository = new OffersRepository();
+      const offer = await offersRepository.getById(match.offerId);
+      if (!offer) {
+        throw new ValidationError('Linked offer is not available');
+      }
+
       recordMarketplaceMetric('matches.accepting', 1, 'count', {
-        listingId: body.listingId,
-        offerId: body.offerId,
+        listingId: match.listingId,
+        offerId: match.offerId,
       });
 
       try {
@@ -140,9 +215,10 @@ export async function PATCH(
           userId: authCtx.userId,
           email: authCtx.email,
           role: authCtx.role,
-          listingId: body.listingId,
-          offerId: body.offerId,
-          transporterId: body.transporterId ?? '',
+          matchId: match.id,
+          listingId: match.listingId,
+          offerId: match.offerId,
+          transporterId: offer.transporterId,
           shipperId: authCtx.userId,
         });
 
@@ -182,10 +258,20 @@ export async function PATCH(
           errorMessage = 'Handoff execution failed';
         }
 
+        // Repeated/concurrent acceptance: the RPC triad or listing guard refuses
+        // the second transition after the first committed — a state conflict.
+        if (errorMessage.includes('not found or not in PROPOSED state')
+          || errorMessage.includes('not found or not in PUBLISHED state')) {
+          statusCode = 409;
+        }
+        if (errorMessage.includes('row-level security')) {
+          statusCode = 403;
+        }
+
         recordMarketplaceMetric('matches.accepted_handoff_failure', 1, 'count', {
           reason: errorMessage,
-          listingId: body.listingId,
-          offerId: body.offerId,
+          listingId: match.listingId,
+          offerId: match.offerId,
         });
 
         return NextResponse.json(
@@ -198,9 +284,30 @@ export async function PATCH(
       }
     }
 
-    // REJECT path: Standard advisory rejection (no handoff needed)
+    // REJECT path: persist the PROPOSED→REJECTED transition (migration 069's
+    // UPDATE policy scopes it to the owning Shipper and the three granted columns).
+    try {
+      await matchesRepository.reject(match.id, match.version);
+    } catch (rejectError) {
+      const message = rejectError instanceof Error ? rejectError.message : 'Rejection failed';
+      if (message.startsWith('MATCH_STATE_CONFLICT')) {
+        return NextResponse.json(
+          wrapInContractFramework({ error: 'Match is no longer PROPOSED. Refresh and retry.' }, correlationId),
+          { status: 409, headers: { 'x-correlation-id': correlationId } },
+        );
+      }
+      if (message.includes('row-level security')) {
+        return NextResponse.json(
+          wrapInContractFramework({ error: 'FORBIDDEN: match rejection denied by row-level security' }, correlationId),
+          { status: 403, headers: { 'x-correlation-id': correlationId } },
+        );
+      }
+      throw rejectError;
+    }
+
+    baseResponse.persisted = true;
     recordMarketplaceMetric('matches.rejected', 1, 'count', {
-      listingId: body.listingId ?? '',
+      listingId: match.listingId,
     });
 
     return NextResponse.json(

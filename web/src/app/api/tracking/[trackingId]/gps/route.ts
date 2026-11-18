@@ -6,16 +6,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GpsIngestionService } from '@/modules/mod-003-tracking/application/services/gps-ingestion-service';
 import { ValidationError } from '@/shared/errors/app-errors';
 import { assertApiAuth } from '@/lib/supabase/api-auth';
+import { resolveDriverAssignment } from '@/lib/auth/driver-assignment';
 
 /**
  * POST /api/tracking/[trackingId]/gps
- * 
+ *
  * Submits a GPS coordinate update after validation.
- * Requires authentication via Supabase session.
- * Role enforcement is handled by RLS at database layer (DRIVER role).
- * API gate ensures only authenticated users can submit GPS data;
- * database row-level security restricts inserts to DRIVER role per app.platform_roles.
- * 
+ * Requires authentication via Supabase session, and the caller must be a Driver linked to a
+ * PLANNED/ACTIVE assignment for this tracking record (PRE-I-6 FINAL COMPLETION DIRECTIVE Item 3,
+ * migration 070). The sole INSERT policy on logistics_schema.gps_location_updates enforces the same
+ * assignment scope plus the role-less boundary at the database; this gate is the application half.
+ * A Driver is a MOD-014 asset record subordinate to a Transporter, not an account class.
+ *
  * Body:
  * - latitude: decimal (-90 to 90)
  * - longitude: decimal (-180 to 180)
@@ -23,7 +25,7 @@ import { assertApiAuth } from '@/lib/supabase/api-auth';
  * - headingDegrees: optional (0–360)
  * - accuracyMeters: optional (>0)
  * - batteryLevel: optional (0–100)
- * 
+ *
  * Idempotency key supported via tracking record's version field.
  */
 export async function POST(
@@ -32,12 +34,25 @@ export async function POST(
 ) {
   try {
     // Auth guard: requires valid Supabase session
-    await assertApiAuth(request);
+    const authCtx = await assertApiAuth(request);
     const { trackingId } = await params;
     if (!trackingId || typeof trackingId !== 'string') {
       return NextResponse.json(
         { error: 'validation_error', message: 'trackingId is required' },
         { status: 400 }
+      );
+    }
+
+    // Assignment-scoped Driver authorization: only a role-less account linked to a driver holding a
+    // PLANNED/ACTIVE assignment for this shipment may submit telemetry — the same boundary the
+    // database INSERT policy enforces. Fail closed when there is no link or no active assignment.
+    const assignment = authCtx.role === null
+      ? await resolveDriverAssignment(authCtx.userId, trackingId)
+      : null;
+    if (!assignment) {
+      return NextResponse.json(
+        { error: 'forbidden', message: 'GPS submission requires an assigned Driver for this tracking record' },
+        { status: 403 }
       );
     }
 

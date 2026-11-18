@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { assertApiAuthorization, type AuthContext } from '@/lib/supabase/api-auth';
 import { FleetRepository } from '@/modules/mod-014-fleet-assets/infrastructure/repositories/fleet-repository';
-import { fleetError, readJsonBody, textOf } from './fleet-write-guard';
+import { fleetError, handleFleetError, readJsonBody, textOf } from './fleet-write-guard';
 
 /**
  * GET /api/fleet
@@ -142,17 +142,4 @@ async function assertFleetReadable(
     { success: false, error: { code: 'ERR_1004', message: 'Fleet not found for this session' } },
     { status: 404 },
   );
-}
-
-function handleFleetError(error: unknown): NextResponse {
-  if (error instanceof Error) {
-    const message = error.message;
-    if (message.includes('UNAUTHORIZED')) {
-      return NextResponse.json({ success: false, error: { code: 'ERR_1003', message: 'Authentication required' } }, { status: 401 });
-    }
-    if (message.includes('FORBIDDEN')) {
-      return NextResponse.json({ success: false, error: { code: 'ERR_1004', message: 'Access denied' } }, { status: 403 });
-    }
-  }
-  return NextResponse.json({ success: false, error: { code: 'ERR_9001', message: 'Internal server error' } }, { status: 500 });
 }

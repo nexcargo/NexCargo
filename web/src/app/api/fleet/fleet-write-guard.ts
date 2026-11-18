@@ -70,6 +70,11 @@ export function isIsoDate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value));
 }
 
+/** drivers.platform_user_id is a uuid column; reject malformed values before they reach Postgres. */
+export function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
 /**
  * The fleet a mutation may touch: readable under this session and owned by it. Governance tiers keep
  * their platform-wide reach, exactly as GET /api/fleet does.

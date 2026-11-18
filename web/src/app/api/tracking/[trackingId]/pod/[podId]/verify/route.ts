@@ -60,12 +60,9 @@ export async function PATCH(
     const podService = new PodSubmissionService();
     await podService.verifyPOD(podId, verify, adminOverride);
 
-    // If approved and POD verification succeeded, complete tracking record
-    if (verify === true) {
-      // Optionally mark tracking as completed after successful POD verification
-      // Note: actual completion is handled by delivery confirmation event flow
-      // This route focuses on POD approval only
-    }
+    // F-I5-02: verification does not itself complete the shipment. Completion is a separate
+    // transition (POST /api/tracking/[trackingId]/status or completeAfterPODVVerification)
+    // and TrackingOrchestratorService refuses COMPLETED without a VERIFIED POD (MOD-003 §7.5).
 
     return NextResponse.json({ success: true });
   } catch (error) {

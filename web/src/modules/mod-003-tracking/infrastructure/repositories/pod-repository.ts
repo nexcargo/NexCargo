@@ -3,6 +3,7 @@
 // Proof of Delivery evidence persistence per MOD-003 §4.6/§7.5
 
 import { createClient } from '@/lib/supabase/server';
+import { ValidationError } from '@/shared/errors/app-errors';
 
 interface PodRow {
   id: string;
@@ -135,7 +136,8 @@ export class PodRepository {
       .schema(this.schema).from(this.table)
       .update(updateData)
       .eq('id', params.podId)
-      .in('verification_status', ['PENDING']); // Only allow verifying PENDING PODs
+      .in('verification_status', ['PENDING']) // Only allow verifying PENDING PODs
+      .select(); // F-I5-02: without .select() PostgREST returns no representation and the guard below throws even on success
 
     if (result.error) {
       throw new Error(`Failed to verify POD: ${result.error.message}`);
@@ -143,7 +145,7 @@ export class PodRepository {
 
     const updatedRows = result.data as unknown as PodRow[];
     if (!updatedRows || updatedRows.length === 0) {
-      throw new Error(`POD not found or already verified/rejected`);
+      throw new ValidationError('POD not found or already verified/rejected');
     }
   }
 

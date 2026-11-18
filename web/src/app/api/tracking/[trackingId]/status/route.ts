@@ -6,7 +6,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TrackingOrchestratorService } from '@/modules/mod-003-tracking/application/services/tracking-orchestrator-service';
 import { ValidationError } from '@/shared/errors/app-errors';
 import { ShipmentStatus } from '@/shared/types/enums';
-import { assertApiAuthorization } from '@/lib/supabase/api-auth';
+import { assertApiAuth, assertApiAuthorization } from '@/lib/supabase/api-auth';
+import { resolveDriverAssignment } from '@/lib/auth/driver-assignment';
 
 /**
  * POST /api/tracking/[trackingId]/status
@@ -26,15 +27,33 @@ export async function POST(
   { params }: { params: Promise<{ trackingId: string }> }
 ) {
   try {
-    // Auth guard: only authorized roles may mutate tracking status
-    await assertApiAuthorization(request, 'tracking_status', 'status_update');
-
     const { trackingId } = await params;
     if (!trackingId || typeof trackingId !== 'string') {
       return NextResponse.json(
         { error: 'validation_error', message: 'trackingId is required' },
         { status: 400 }
       );
+    }
+
+    // Authorization: platform/marketplace roles through the tracking_status matrix; a role-less
+    // account linked to a PLANNED/ACTIVE Driver assignment for this record through the
+    // assignment-scoped fallback (PRE-I-6 FINAL COMPLETION DIRECTIVE Item 3, migration 070).
+    // Role-holders keep exactly their matrix authority — the fallback admits only role-less callers,
+    // matching the database driver branch's role-less conjunct.
+    let driverPath = false;
+    try {
+      await assertApiAuthorization(request, 'tracking_status', 'status_update');
+    } catch (authError) {
+      if (authError instanceof Error && authError.message.startsWith('FORBIDDEN')) {
+        const authCtx = await assertApiAuth(request);
+        const assignment = authCtx.role === null
+          ? await resolveDriverAssignment(authCtx.userId, trackingId)
+          : null;
+        if (!assignment) throw authError;
+        driverPath = true;
+      } else {
+        throw authError;
+      }
     }
 
     // Parse request body
@@ -55,6 +74,15 @@ export async function POST(
       return NextResponse.json(
         { error: 'validation_error', message: `Invalid target status: ${targetStatus}` },
         { status: 400 }
+      );
+    }
+
+    // Drivers submit operational progress only; lifecycle termination and completion remain with the
+    // Transporter/platform. The database driver branch refuses the same targets independently.
+    if (driverPath && (targetStatus === 'COMPLETED' || targetStatus === 'CANCELLED')) {
+      return NextResponse.json(
+        { error: 'forbidden', message: 'FORBIDDEN: an assigned driver may not complete or cancel a shipment' },
+        { status: 403 }
       );
     }
 

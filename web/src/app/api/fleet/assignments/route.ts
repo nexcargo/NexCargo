@@ -5,6 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { assertApiAuthorization } from '@/lib/supabase/api-auth';
+import { ValidationError } from '@/shared/errors/app-errors';
+import { handleFleetError } from '../fleet-write-guard';
 import { FleetRepository } from '@/modules/mod-014-fleet-assets/infrastructure/repositories/fleet-repository';
 import { applyAssignmentTransition, validateAssignmentTimeWindow } from '@/modules/mod-014-fleet-assets/domain/services/asset-state-machine';
 import { AssignmentStatus } from '@/modules/mod-014-fleet-assets/domain/enums';
@@ -124,12 +126,20 @@ export async function PATCH(request: NextRequest) {
 
         const currentStatus = existing.status as AssignmentStatus;
         const targetStatus = body.status as AssignmentStatus;
-        
-        if (!applyAssignmentTransition(currentStatus, targetStatus)) {
-          return NextResponse.json(
-            { success: false, error: { code: 'ERR_4002', message: `Invalid transition from ${currentStatus} to ${targetStatus}` } },
-            { status: 400 }
-          );
+
+        // WS-02 item 4: applyAssignmentTransition returns the validated state and THROWS ValidationError
+        // on a forbidden transition — it never returns false. Catch the refusal here so it answers with
+        // the 400 this branch always intended instead of escaping as a 500.
+        try {
+          applyAssignmentTransition(currentStatus, targetStatus);
+        } catch (error) {
+          if (error instanceof ValidationError) {
+            return NextResponse.json(
+              { success: false, error: { code: 'ERR_4002', message: error.message } },
+              { status: 400 }
+            );
+          }
+          throw error;
         }
       }
 
@@ -152,17 +162,4 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     return handleFleetError(error);
   }
-}
-
-function handleFleetError(error: unknown): NextResponse {
-  if (error instanceof Error) {
-    const message = error.message;
-    if (message.includes('UNAUTHORIZED')) {
-      return NextResponse.json({ success: false, error: { code: 'ERR_1003', message: 'Authentication required' } }, { status: 401 });
-    }
-    if (message.includes('FORBIDDEN')) {
-      return NextResponse.json({ success: false, error: { code: 'ERR_1004', message: 'Access denied' } }, { status: 403 });
-    }
-  }
-  return NextResponse.json({ success: false, error: { code: 'ERR_9001', message: 'Internal server error' } }, { status: 500 });
 }

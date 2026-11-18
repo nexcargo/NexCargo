@@ -73,9 +73,12 @@ describe('Tracking Status — RBAC Registry', () => {
   describe('endpoint auth guard behavior', () => {
     it('returns 403 when assertApiAuthorization throws FORBIDDEN', async () => {
       await vi.resetModules();
-      
+
+      // PRE-I-6 Item 3: after FORBIDDEN the route probes the role-less Driver fallback via
+      // assertApiAuth; a role-holder is never admitted by it, so the denial stands.
       vi.doMock('@/lib/supabase/api-auth', () => ({
         assertApiAuthorization: vi.fn().mockRejectedValue(new Error('FORBIDDEN: Role is not authorized to access resource')),
+        assertApiAuth: vi.fn().mockResolvedValue({ userId: 'shipper-user', email: 's@test.com', role: 'SHIPPER' }),
       }));
 
       const mod = await import('@/app/api/tracking/[trackingId]/status/route');

@@ -49,7 +49,7 @@ const alignmentPassResult = {
 describe('MOD-002 Booking Orchestration — C2-Increment 003', () => {
   const fullContext = {
     userId: 'user-1', email: 'test@test.com', role: 'SHIPPER',
-    listingId: 'listing-test', offerId: 'offer-test',
+    matchId: 'match-test', listingId: 'listing-test', offerId: 'offer-test',
     transporterId: 'transporter-1', shipperId: 'shipper-1',
   };
 
@@ -79,6 +79,10 @@ describe('MOD-002 Booking Orchestration — C2-Increment 003', () => {
     });
     it('throws when offerId is missing', async () => {
       await expect(executeMOD002Handoff({ ...fullContext, offerId: '' as unknown as string })).rejects.toThrow(/requires.*offerId/);
+    });
+    // WS-02 item 1: the handoff must carry the match's own id, not the listing id.
+    it('throws when matchId is missing', async () => {
+      await expect(executeMOD002Handoff({ ...fullContext, matchId: '' })).rejects.toThrow(/requires.*matchId/);
     });
   });
 
@@ -152,6 +156,9 @@ describe('MOD-002 Booking Orchestration — C2-Increment 003', () => {
       expect(rpcCallParams).not.toBeNull();
       expect(rpcCallParams?.p_listing_id).toBe('listing-test');
       expect(rpcCallParams?.p_offer_id).toBe('offer-test');
+      // WS-02 item 1 regression: p_match_id is the match id, never the listing id.
+      expect(rpcCallParams?.p_match_id).toBe('match-test');
+      expect(rpcCallParams?.p_match_id).not.toBe(rpcCallParams?.p_listing_id);
     });
   });
 

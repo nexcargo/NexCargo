@@ -5,6 +5,7 @@
 
 import { TrackingRecordRepository } from '../../infrastructure/repositories/tracking-record-repository';
 import { TrackingEventRepository } from '../../infrastructure/repositories/tracking-event-repository';
+import { PodRepository } from '../../infrastructure/repositories/pod-repository';
 import type { CreateTrackingRecordParams, TrackingRecordApiShape } from '../../infrastructure/repositories/tracking-record-repository';
 import type { CreateTrackingEventParams } from '../../infrastructure/repositories/tracking-event-repository';
 import { applyTrackingTransition, isTrackingTerminal } from '@/modules/mod-003-tracking/domain/services/tracking-state-machine';
@@ -18,6 +19,7 @@ import { createClient } from '@/lib/supabase/server';
 export class TrackingOrchestratorService {
   private readonly trackingRecordRepo = new TrackingRecordRepository();
   private readonly trackingEventRepo = new TrackingEventRepository();
+  private readonly podRepo = new PodRepository();
 
   /**
    * Initialize tracking record when a booking reaches CONFIRMED status.
@@ -81,6 +83,18 @@ export class TrackingOrchestratorService {
         throw error;
       }
       throw new ValidationError(`Invalid state transition: ${currentState} → ${targetStatus}`);
+    }
+
+    // F-I5-02 / MOD-003 §5 + §7.5: Completed requires a submitted AND verified POD.
+    // Submission alone (PENDING) or a REJECTED POD does not authorize completion.
+    if (targetStatus === ShipmentStatus.COMPLETED) {
+      const pods = await this.podRepo.getByTrackingId(trackingId);
+      if (!pods.some(pod => pod.verificationStatus === 'VERIFIED')) {
+        throw new ValidationError(
+          `Shipment completion requires a verified POD (MOD-003 §7.5); tracking ${trackingId} has none`,
+          { trackingId, podCount: pods.length },
+        );
+      }
     }
 
     // Execute atomic status + event persistence via Supabase client

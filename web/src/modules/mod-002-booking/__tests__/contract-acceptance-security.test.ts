@@ -11,9 +11,19 @@ const mockUser = {
   user_metadata: { role: 'SHIPPER' },
 };
 
+// F-I5-03: the route now establishes party visibility through an RLS-scoped read before the
+// SECDEF is invoked. These tests exercise authorized-party paths, so the gate sees the contract.
+const mockMaybeSingle = vi.fn();
+const mockContractQuery: Record<string, unknown> = {
+  select: vi.fn(() => mockContractQuery),
+  eq: vi.fn(() => mockContractQuery),
+  maybeSingle: mockMaybeSingle,
+};
+
 const mockSupabase = {
   auth: { getUser: vi.fn().mockResolvedValue({ data: { user: mockUser }, error: null }) },
   rpc: vi.fn(),
+  schema: vi.fn(() => ({ from: vi.fn(() => mockContractQuery) })),
 };
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -32,6 +42,8 @@ describe('Contract Acceptance — SECDEF Authorization', () => {
     vi.clearAllMocks();
     mockSupabase.auth.getUser.mockReset();
     mockSupabase.rpc.mockReset();
+    mockMaybeSingle.mockReset();
+    mockMaybeSingle.mockResolvedValue({ data: { id: validContractId }, error: null });
   });
 
   describe('authentication required', () => {

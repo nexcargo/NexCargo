@@ -5,8 +5,8 @@
 // stubbed too, which pins the read scope (the session user's own fleets) and lets the empty and populated
 // branches be exercised without a live database. Nothing here proves RLS — the route-level boundary lives in
 // i5-fleet-write-routes.test.ts and the live policy is verified against the project separately.
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, type RenderResult } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { fireEvent, render, screen, waitFor, type RenderResult } from '@testing-library/react';
 
 const { createClientMock } = vi.hoisted(() => ({ createClientMock: vi.fn() }));
 
@@ -225,5 +225,46 @@ describe('§3B /transporter/profile', () => {
   it('scopes the fleet read to the session account', async () => {
     await renderProfile();
     expect(listFleets.mock.calls[0][0]).toBe(USER_ID);
+  });
+});
+
+// The MOD-014 write routes resolve vehicles.id and drivers.id, while the repository shape also carries the
+// separate vehicle_id / driver_id business keys. The pages map the primary key into the editor's identifier
+// prop; addressing a mutation by the business key instead answers 404, so that mapping is part of the contract.
+describe('§3C/§3D row editors address the primary key', () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true, data: {} }) });
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchMock.mockReset();
+  });
+
+  it('sends the vehicle update to vehicles.id, not the vehicle_id business key', async () => {
+    const { container } = await renderFleet();
+    const state = container.querySelector('#v1-state') as HTMLSelectElement;
+
+    fireEvent.change(state, { target: { value: 'AVAILABLE' } });
+    fireEvent.submit(state.closest('form') as HTMLFormElement);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/fleet/vehicles/v1');
+    expect(fetchMock.mock.calls[0][1].method).toBe('PATCH');
+  });
+
+  it('sends the driver update to drivers.id, not the driver_id business key', async () => {
+    const { container } = await renderDrivers();
+    const certification = container.querySelector('#d1-cert') as HTMLSelectElement;
+
+    fireEvent.change(certification, { target: { value: 'VERIFIED' } });
+    fireEvent.submit(certification.closest('form') as HTMLFormElement);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/fleet/drivers/d1');
+    expect(fetchMock.mock.calls[0][1].method).toBe('PATCH');
   });
 });
