@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { DATABASE_URL } from '@/lib/env';
 
-const BUCKET_NAME = 'nexcargow-documents';
+const BUCKET_NAME = 'nexcargo-documents';
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25MB per MOD-004 §7.3
 const ALLOWED_CONTENT_TYPES = [
   'application/pdf',
@@ -123,7 +123,7 @@ export async function ensureBucketExists(): Promise<void> {
     }
     throw new Error(
       `Bucket '${BUCKET_NAME}' does not exist and could not be created. Please run:\n` +
-        `  supabase storage bucket create nexcargow-documents --project-ref <your-project-ref>\n` +
+        `  supabase storage bucket create nexcargo-documents --project-ref <your-project-ref>\n` +
         `Then ensure the SUPABASE_SERVICE_ROLE_KEY environment variable is configured.`,
     );
   }

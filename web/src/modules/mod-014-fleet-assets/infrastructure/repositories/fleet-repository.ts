@@ -467,6 +467,20 @@ export class FleetRepository {
     return result.data ? this.toDriverShape(result.data as DriverRow) : null;
   }
 
+  async getDriverByBusinessKey(driverId: string): Promise<DriverApiShape | null> {
+    const supabase = await createClient();
+    const result = await supabase
+      .schema(this.schema).from('drivers')
+      .select('*')
+      .eq('driver_id', driverId)
+      .maybeSingle();
+
+    if (result.error && !result.data) {
+      throw new Error(`Failed to get driver: ${result.error.message}`);
+    }
+    return result.data ? this.toDriverShape(result.data as DriverRow) : null;
+  }
+
   async createDriver(params: {
     driverId: string;
     fleetId: string;

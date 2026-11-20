@@ -138,6 +138,9 @@ const listDrivers = vi.fn();
 const createAssignment = vi.fn();
 const updateAssignment = vi.fn();
 const getAssignment = vi.fn();
+const fetchDriverById = vi.fn();
+const fetchDriverByBusinessKey = vi.fn();
+const fetchFleetById = vi.fn();
 
 vi.doMock('@/infrastructure/repositories/bookings-repository', () => ({
   BookingsRepository: class {
@@ -169,6 +172,9 @@ vi.doMock('@/modules/mod-014-fleet-assets/infrastructure/repositories/fleet-repo
     createAssignment = createAssignment;
     updateAssignment = updateAssignment;
     getAssignmentById = getAssignment;
+    getDriverById = fetchDriverById;
+    getDriverByBusinessKey = fetchDriverByBusinessKey;
+    getFleetById = fetchFleetById;
   },
 }));
 
@@ -280,6 +286,9 @@ beforeEach(() => {
   createAssignment.mockResolvedValue(assignment);
   updateAssignment.mockResolvedValue({ ...assignment, status: 'ACTIVE' });
   getAssignment.mockResolvedValue(assignment);
+  fetchDriverById.mockResolvedValue(driver);
+  fetchDriverByBusinessKey.mockResolvedValue(driver);
+  fetchFleetById.mockResolvedValue({ id: driver.fleetId, ownerId: USER_ID });
 });
 
 describe('I-5 §3H — the offered transitions come from the authoritative state machines', () => {
@@ -1066,6 +1075,47 @@ describe('I-5 §3C/§3H — PATCH /api/fleet/assignments binds the write to the 
     expect(input.vehicleId).toBe(VEHICLE_ID);
     expect(input.driverId).toBe(DRIVER_ID);
     expect(input.shipmentTrackingId).toBe(TRACKING_ID);
+  });
+
+  // API-ID-CONTRACT-01: POST /api/fleet/drivers returns drivers.driverId (the business key), but the
+  // assignment FK stores drivers.id. The route must accept either reference and bind the primary key.
+  it('resolves a driver business key to the primary key the assignment FK expects', async () => {
+    const response = await patch({ action: 'create', shipmentTrackingId: TRACKING_ID, vehicleId: VEHICLE_ID, driverId: driver.driverId });
+
+    expect(response.status).toBe(201);
+    expect(fetchDriverByBusinessKey).toHaveBeenCalledWith(driver.driverId);
+    expect(createAssignment.mock.calls[0][0].driverId).toBe(driver.id);
+  });
+
+  it('answers 404 for a driver reference outside this session without creating an assignment', async () => {
+    fetchDriverById.mockResolvedValueOnce(null);
+    fetchDriverByBusinessKey.mockResolvedValueOnce(null);
+
+    const response = await patch({ action: 'create', shipmentTrackingId: TRACKING_ID, driverId: DRIVER_ID });
+
+    expect(response.status).toBe(404);
+    expect(createAssignment).not.toHaveBeenCalled();
+  });
+
+  it('answers 404 for a driver in a fleet this session does not own', async () => {
+    fetchFleetById.mockResolvedValueOnce({ id: driver.fleetId, ownerId: OTHER_TRANSPORTER_ID });
+
+    const response = await patch({ action: 'create', shipmentTrackingId: TRACKING_ID, driverId: DRIVER_ID });
+
+    expect(response.status).toBe(404);
+    expect(createAssignment).not.toHaveBeenCalled();
+  });
+
+  it('maps an assignment foreign-key refusal to a 400 instead of a 500', async () => {
+    createAssignment.mockRejectedValueOnce(new Error(
+      'Failed to create assignment: insert or update on table "asset_assignments" violates foreign key constraint "asset_assignments_shipment_tracking_id_fkey"'
+    ));
+
+    const response = await patch({ action: 'create', shipmentTrackingId: TRACKING_ID, vehicleId: VEHICLE_ID });
+
+    expect(response.status).toBe(400);
+    const payload = await response.json();
+    expect(payload.error.code).toBe('ERR_4001');
   });
 
   it('applies a permitted assignment transition', async () => {

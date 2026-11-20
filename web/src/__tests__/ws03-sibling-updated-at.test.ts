@@ -151,7 +151,11 @@ const CASES: Case[] = [
       certificationStatus: 'VERIFIED', updated_at: HOSTILE_TS, updatedAt: HOSTILE_TS,
       fleet_id: 'foreign-fleet', created_by: 'attacker-id', platform_user_id: 'attacker-id',
     } as any),
-    reads: async (repo) => [await repo.getDriverById(DRIVER_PK), (await repo.listDrivers())[0]],
+    reads: async (repo) => [
+      await repo.getDriverById(DRIVER_PK),
+      await repo.getDriverByBusinessKey(DRIVER_ROW.driver_id),
+      (await repo.listDrivers())[0],
+    ],
     create: (repo) => repo.createDriver({
       driverId: 'new-driver-id', fleetId: FLEET_ID, firstName: 'WS03', lastName: 'New', createdBy: OWNER,
     }),

@@ -42,6 +42,21 @@ export function handleFleetError(error: unknown): NextResponse {
     return fleetError(400, 'ERR_4001', error.message);
   }
   if (error instanceof Error) {
+    if (error.message.includes('asset_assignments_driver_id_fkey')) {
+      return fleetError(400, 'ERR_4001', 'driverId does not reference a driver in this session');
+    }
+    if (error.message.includes('asset_assignments_vehicle_id_fkey')) {
+      return fleetError(400, 'ERR_4001', 'vehicleId does not reference a vehicle in this session');
+    }
+    if (error.message.includes('asset_assignments_shipment_tracking_id_fkey')) {
+      return fleetError(400, 'ERR_4001', 'shipmentTrackingId does not reference a tracking record');
+    }
+    if (error.message.includes('violates foreign key constraint')) {
+      return fleetError(400, 'ERR_4001', 'A referenced record does not exist');
+    }
+    if (error.message.includes('chk_assignment_has_asset')) {
+      return fleetError(400, 'ERR_4001', 'At least one of vehicleId or driverId must be provided');
+    }
     if (error.message.includes('UNAUTHORIZED')) {
       return fleetError(401, 'ERR_1003', 'Authentication required');
     }

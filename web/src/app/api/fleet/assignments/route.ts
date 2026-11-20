@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { assertApiAuthorization } from '@/lib/supabase/api-auth';
 import { ValidationError } from '@/shared/errors/app-errors';
-import { handleFleetError } from '../fleet-write-guard';
+import { handleFleetError, isUuid, requireOwnedDriver, textOf } from '../fleet-write-guard';
 import { FleetRepository } from '@/modules/mod-014-fleet-assets/infrastructure/repositories/fleet-repository';
 import { applyAssignmentTransition, validateAssignmentTimeWindow } from '@/modules/mod-014-fleet-assets/domain/services/asset-state-machine';
 import { AssignmentStatus } from '@/modules/mod-014-fleet-assets/domain/enums';
@@ -77,6 +77,30 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
+      // The response shape exposes both drivers.id and drivers.driver_id. Resolve either reference to the
+      // primary key the assignment FK expects, scoped to a fleet this session can write.
+      let driverId: string | null = null;
+      if (body.driverId) {
+        const driverRef = textOf(body.driverId);
+        if (!driverRef) {
+          return NextResponse.json(
+            { success: false, error: { code: 'ERR_4000', message: 'driverId must be a non-empty string' } },
+            { status: 400 }
+          );
+        }
+        const driver = (isUuid(driverRef) ? await repo.getDriverById(driverRef) : null)
+          ?? await repo.getDriverByBusinessKey(driverRef);
+        if (!driver) {
+          return NextResponse.json(
+            { success: false, error: { code: 'ERR_1004', message: 'Driver not found for this session' } },
+            { status: 404 }
+          );
+        }
+        const owned = await requireOwnedDriver(repo, driver.id, ctx);
+        if (!owned.ok) return owned.response;
+        driverId = driver.id;
+      }
+
       // Validate time window if provided
       if (body.scheduledStart && body.scheduledEnd) {
         const timeResult = validateAssignmentTimeWindow({
@@ -94,7 +118,7 @@ export async function PATCH(request: NextRequest) {
       const assignment = await repo.createAssignment({
         assignmentId: crypto.randomUUID(),
         vehicleId: body.vehicleId || null,
-        driverId: body.driverId || null,
+        driverId,
         shipmentTrackingId: body.shipmentTrackingId,
         status: (body.status ?? 'PLANNED') as AssignmentStatus,
         scheduledStart: body.scheduledStart || null,
